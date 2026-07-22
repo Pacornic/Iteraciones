@@ -9,6 +9,6 @@ anonKey: ""    // p. ej. "eyJhbGciOi..."
 };
 
 window.SUPABASE_CONFIG = {
-     url: "https://msukaisuigtvrtcxnepe.supabase.co/rest/v1/",
+     url: "https://msukaisuigtvrtcxnepe.supabase.co",
      anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zdWthaXN1aWd0dnJ0Y3huZXBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3MzI5MDIsImV4cCI6MjEwMDMwODkwMn0.jtw6k_1j36aeyLxH5H5n62jJLVIEKnNDqeecZTosiAE"
    };
