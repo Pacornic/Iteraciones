@@ -194,9 +194,8 @@
     <h3 id="cmTitle">Nueva idea</h3>
     <div class="hint" id="cmHint">Algo que quieres probar en esta versión.</div>
     <div class="field"><label for="cmName">Nombre</label><input type="text" id="cmName" placeholder="p. ej. Bajar el coste de vía"></div>
+    <div class="field"><label for="cmIdea">Idea</label><textarea id="cmIdea" style="min-height:150px;" placeholder="Desarrolla aquí la idea que quieres probar…"></textarea></div>
     <div class="field"><label for="cmSection">Apartado del reglamento al que apunta <span style="text-transform:none;letter-spacing:0;color:var(--faint)">(opcional)</span></label><select id="cmSection"></select></div>
-    <div class="field" id="cmSecTextF" style="display:none;"><label for="cmSecText" id="cmSecTextL">Desarrolla la idea</label><textarea id="cmSecText" style="min-height:130px;"></textarea></div>
-    <div class="field"><label for="cmIssue">Efecto secundario observado <span style="text-transform:none;letter-spacing:0;color:var(--faint)">(opcional)</span></label><textarea id="cmIssue"></textarea></div>
     <div class="field"><label for="cmNote">Qué esperas que mejore <span style="text-transform:none;letter-spacing:0;color:var(--faint)">(opcional)</span></label><textarea id="cmNote"></textarea></div>
     <div class="macts"><button class="btn-q" id="cmCancel">Cancelar</button><button class="btn" id="cmSave">Guardar</button></div>
   </div>
@@ -312,7 +311,7 @@ function seedSetsunaHistory(game){
     const sections=RB_SECTIONS.map(([k,t])=>({ key:k, title:t, content:acc[k] }));
     let changesTxt=`Aplica al apartado: ${RB_TITLE[st.section]}`;
     versions.push({ id:uid(), n:i+1, createdAt: Date.now()-(SETSUNA_STAGES.length-i)*86400000, summary:st.title, changes:changesTxt, sections });
-    changes.push({ id:uid(), title:st.title, note:'', issue: i===SETSUNA_STAGES.length-1?'Pendiente: equilibrar arriba/abajo.':'', state:'funciona', section:st.section, sectionText:st.patch[st.section]||'', implemented:true, createdAt: Date.now()-(SETSUNA_STAGES.length-i)*86400000 });
+    changes.push({ id:uid(), title:st.title, idea:st.patch[st.section]||'', note:'', state:'funciona', section:st.section, implemented:true, createdAt: Date.now()-(SETSUNA_STAGES.length-i)*86400000 });
   });
   game.rulebookVersions=versions;
   game.changes=changes;
@@ -368,7 +367,7 @@ function updateBackend(){ $('backend').textContent='· '+Store.label(); $('signO
 
 async function loadState(){
   try{ const res=await Store.get('games-data'); if(res&&res.value){ state=JSON.parse(res.value); if(typeof state.preloadVersion!=='number') state.preloadVersion=0; if(state.games&&state.games.length){ const ch=applyPreload(); if(ch) await saveState(); return; } } }catch(e){}
-  state.games = SEED_GAMES.map((g,i)=>({ id:uid(), name:g.name, color:SPINE_COLORS[i%SPINE_COLORS.length], rulebook:makeRulebook(), rulebookVersions:[], changes: g.seedProblema?[{ id:uid(), title:'Problema inicial', note:'', issue:g.seedProblema, state:'porprobar', section:'', sectionText:'', implemented:false, createdAt:Date.now() }]:[], pendingChanges:[], currentSummary:'', migrated:true, flattened:true }));
+  state.games = SEED_GAMES.map((g,i)=>({ id:uid(), name:g.name, color:SPINE_COLORS[i%SPINE_COLORS.length], rulebook:makeRulebook(), rulebookVersions:[], changes: g.seedProblema?[{ id:uid(), title:'Problema inicial', idea:g.seedProblema, note:'', state:'porprobar', section:'', implemented:false, createdAt:Date.now() }]:[], pendingChanges:[], currentSummary:'', migrated:true, flattened:true }));
   state.currentGameId=state.games[0].id; state.preloadVersion=0; applyPreload(); await saveState();
 }
 function applyPreload(){
@@ -395,13 +394,15 @@ function normalizeStructures(){
     if(typeof g.currentSummary!=='string') { g.currentSummary=''; ch=true; }
     if(!Array.isArray(g.changes)) { g.changes=[]; ch=true; }
     const vTitles=new Set(g.rulebookVersions.map(v=>(v.summary||'').trim()).filter(Boolean));
-    const pushChange=(o)=>{ const hist=vTitles.has((o.title||'').trim()); g.changes.push({ id:o.id||uid(), title:o.title||'(sin título)', note:o.note||'', issue:o.issue||'', state: hist?'funciona':(o.state||'porprobar'), section:o.section||'', sectionText:o.sectionText||'', implemented: hist?true:!!o.implemented, createdAt:o.createdAt||Date.now() }); };
+    const pushChange=(o)=>{ const hist=vTitles.has((o.title||'').trim()); g.changes.push({ id:o.id||uid(), title:o.title||'(sin título)', idea:o.idea||o.sectionText||o.mejora||o.problema||o.issue||'', note:o.note||o.mejora||'', state: hist?'funciona':(o.state||OLD_OUTCOME[o.outcome]||'porprobar'), section:o.section||'', implemented: hist?true:!!o.implemented, createdAt:o.createdAt||Date.now() }); };
     // migrar nodes (semilla antigua) -> changes
-    if(!g.migrated && Array.isArray(g.nodes) && g.nodes.length){ g.nodes.forEach(n=>pushChange({ id:n.id, title:n.title, note:n.mejora, issue:n.problema, state:n.active?'porprobar':'porprobar', section:n.section, sectionText:n.sectionText, createdAt:n.createdAt })); ch=true; }
+    if(!g.migrated && Array.isArray(g.nodes) && g.nodes.length){ g.nodes.forEach(n=>pushChange({ id:n.id, title:n.title, mejora:n.mejora, problema:n.problema, section:n.section, sectionText:n.sectionText, createdAt:n.createdAt })); ch=true; }
     g.migrated=true; g.nodes=[];
     // aplanar problems[].tests -> changes
-    if(!g.flattened && Array.isArray(g.problems) && g.problems.length){ g.problems.forEach(p=>{ (p.tests||[]).forEach(t=>pushChange({ id:t.id, title:t.title, note:t.mejora!==undefined?t.mejora:t.note, issue:t.problema!==undefined?t.problema:t.issue, state: OLD_OUTCOME[t.outcome]||t.state, section:t.section, sectionText:t.sectionText, implemented:t.implemented, createdAt:t.createdAt })); }); ch=true; }
+    if(!g.flattened && Array.isArray(g.problems) && g.problems.length){ g.problems.forEach(p=>{ (p.tests||[]).forEach(t=>pushChange({ id:t.id, title:t.title, mejora:t.mejora, problema:t.problema, note:t.note, issue:t.issue, outcome:t.outcome, state:t.state, section:t.section, sectionText:t.sectionText, implemented:t.implemented, createdAt:t.createdAt })); }); ch=true; }
     g.flattened=true;
+    // adaptar changes existentes al modelo nuevo (idea; sin issue/sectionText)
+    g.changes.forEach(c=>{ if(c.idea===undefined){ c.idea=c.sectionText||c.issue||c.note||''; ch=true; } if('issue' in c){ delete c.issue; ch=true; } if('sectionText' in c){ delete c.sectionText; ch=true; } });
   });
   return ch;
 }
@@ -482,9 +483,9 @@ function openChangeDetail(g,c){
   const stateBtns='<div class="states">'+STATES.map(([k,l])=>`<button class="st s-${k} ${c.state===k?'on':''}" data-s="${k}">${l}</button>`).join('')+'</div>';
   b.innerHTML=`<h3>${escapeHtml(c.title)}</h3>
     <div class="field"><label>Estado</label>${stateBtns}</div>
-    ${c.note?`<div class="field"><label>Qué aporta</label><div style="font-size:13.5px;white-space:pre-wrap;">${escapeHtml(c.note)}</div></div>`:''}
-    ${c.issue?`<div class="field"><label>Efecto secundario</label><div style="font-size:13.5px;white-space:pre-wrap;">${escapeHtml(c.issue)}</div></div>`:''}
-    ${c.section&&RB_TITLE[c.section]?`<div class="field"><label>Apartado · ${escapeHtml(RB_TITLE[c.section])}</label><div style="font-size:13px;color:var(--muted);white-space:pre-wrap;">${c.sectionText?escapeHtml(c.sectionText):'—'}</div></div>`:''}
+    ${c.idea?`<div class="field"><label>Idea</label><div style="font-size:13.5px;white-space:pre-wrap;">${escapeHtml(c.idea)}</div></div>`:''}
+    ${c.section&&RB_TITLE[c.section]?`<div class="field"><label>Apunta a · ${escapeHtml(RB_TITLE[c.section])}</label></div>`:''}
+    ${c.note?`<div class="field"><label>Qué esperas que mejore</label><div style="font-size:13.5px;white-space:pre-wrap;">${escapeHtml(c.note)}</div></div>`:''}
     ${c.implemented?`<div class="field"><label>Reglamento</label><div style="font-size:13px;color:#f0cf92;">✓ Llevado al borrador${c.implementedSection?' · '+escapeHtml(RB_TITLE[c.implementedSection]||c.implementedSection):''}</div></div>`:''}
     <div class="pactions">
       ${c.state==='funciona'?`<button class="btn" id="pImpl">${c.implemented?'Volver a llevar al reglamento':'Llevar al reglamento'}</button>`:''}
@@ -501,19 +502,17 @@ function closePanel(){ $('panel').classList.remove('open'); }
 
 /* change modal */
 function cmSectionOptions(sel){ return `<option value="">— ninguno —</option>`+RB_SECTIONS.map(([k,t])=>`<option value="${k}" ${k===sel?'selected':''}>${escapeHtml(t)}</option>`).join(''); }
-function cmSync(g,fromUser){ const key=$('cmSection').value, f=$('cmSecTextF'), ta=$('cmSecText'); if(!key){ f.style.display='none'; return; } f.style.display=''; $('cmSecTextL').textContent='Desarrolla la idea → irá a «'+RB_TITLE[key]+'»'; ta.placeholder=RB_PLACEHOLDER[key]||''; if(fromUser){ ta.value=''; } }
 function openChangeModal(id){
   const g=currentGame(); lastFocused=document.activeElement; editingChangeId=id||null;
-  const fSec=$('cmSection'); fSec.onchange=()=>cmSync(g,true);
-  if(id){ const c=changeById(g,id); $('cmTitle').textContent='Editar idea'; $('cmHint').textContent='Ajusta esta idea.'; $('cmName').value=c.title; $('cmNote').value=c.note||''; $('cmIssue').value=c.issue||''; fSec.innerHTML=cmSectionOptions(c.section||''); $('cmSecText').value=c.sectionText||''; cmSync(g,false); }
-  else { $('cmTitle').textContent='Nueva idea'; $('cmHint').textContent='Algo que quieres probar en esta versión.'; $('cmName').value=''; $('cmNote').value=''; $('cmIssue').value=''; fSec.innerHTML=cmSectionOptions(''); $('cmSecText').value=''; cmSync(g,false); }
+  if(id){ const c=changeById(g,id); $('cmTitle').textContent='Editar idea'; $('cmHint').textContent='Ajusta esta idea.'; $('cmName').value=c.title; $('cmIdea').value=c.idea||''; $('cmNote').value=c.note||''; $('cmSection').innerHTML=cmSectionOptions(c.section||''); }
+  else { $('cmTitle').textContent='Nueva idea'; $('cmHint').textContent='Algo que quieres probar en esta versión.'; $('cmName').value=''; $('cmIdea').value=''; $('cmNote').value=''; $('cmSection').innerHTML=cmSectionOptions(''); }
   $('chgModal').style.display='flex'; $('cmName').focus();
 }
 async function saveChange(){
   const g=currentGame(); const title=$('cmName').value.trim(); if(!title){ $('cmName').focus(); return; }
-  const note=$('cmNote').value.trim(), issue=$('cmIssue').value.trim(), section=$('cmSection').value||'', sectionText=section?$('cmSecText').value.replace(/\s+$/,''):'';
-  if(editingChangeId){ const c=changeById(g,editingChangeId); c.title=title; c.note=note; c.issue=issue; c.section=section; c.sectionText=sectionText; toast('Idea actualizada.'); }
-  else { g.changes.push({ id:uid(), title, note, issue, state:'porprobar', section, sectionText, implemented:false, createdAt:Date.now() }); toast('Idea añadida.'); }
+  const idea=$('cmIdea').value.replace(/\s+$/,''), note=$('cmNote').value.trim(), section=$('cmSection').value||'';
+  if(editingChangeId){ const c=changeById(g,editingChangeId); c.title=title; c.idea=idea; c.note=note; c.section=section; toast('Idea actualizada.'); }
+  else { g.changes.push({ id:uid(), title, idea, note, state:'porprobar', section, implemented:false, createdAt:Date.now() }); toast('Idea añadida.'); }
   await saveState(); closeChangeModal(); renderBoard();
 }
 function closeChangeModal(){ $('chgModal').style.display='none'; editingChangeId=null; restoreFocus(); }
@@ -521,7 +520,7 @@ function closeChangeModal(){ $('chgModal').style.display='none'; editingChangeId
 /* implement */
 function openImplModal(g,c){ implRef={g,c}; lastFocused=document.activeElement;
   $('imSection').innerHTML=RB_SECTIONS.map(([k,t])=>`<option value="${k}" ${(c.section===k||c.implementedSection===k)?'selected':''}>${escapeHtml(t)}</option>`).join('');
-  $('imText').value = c.sectionText&&c.sectionText.trim()?c.sectionText:(c.note||''); $('implModal').style.display='flex'; $('imText').focus();
+  $('imText').value = c.idea&&c.idea.trim()?c.idea:(c.note||''); $('implModal').style.display='flex'; $('imText').focus();
 }
 async function saveImpl(){ const {g,c}=implRef||{}; if(!c) return; const key=$('imSection').value; const text=$('imText').value.replace(/\s+$/,''); if(!text){ $('imText').focus(); return; }
   const sec=g.rulebook.sections.find(s=>s.key===key); if(sec){ sec.content = sec.content.trim()?(sec.content.replace(/\s+$/,'')+'\n\n'+text):text; }
