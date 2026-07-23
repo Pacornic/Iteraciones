@@ -218,7 +218,7 @@
   <div class="modal">
     <h3 id="svTitle">Guardar versión</h3>
     <div class="hint" id="svHint"></div>
-    <div class="field"><label for="svSum">Resumen del cambio principal</label><input type="text" id="svSum" placeholder="p. ej. Nueva economía Plenitud/Estela"></div>
+    <div class="field"><label for="svSum">Título de la versión</label><input type="text" id="svSum" placeholder="p. ej. Nueva economía Plenitud/Estela"></div>
     <div class="macts"><button class="btn-q" id="svCancel">Cancelar</button><button class="btn" id="svSave">Consolidar versión</button></div>
   </div>
 </div>
@@ -416,7 +416,8 @@ async function importData(file){ try{ const parsed=JSON.parse(await file.text())
 function currentGame(){ return state.games.find(g=>g.id===state.currentGameId); }
 function changeById(g,id){ return g.changes.find(c=>c.id===id); }
 function majorNext(g){ return g.rulebookVersions.reduce((m,x)=>Math.max(m,x.n),0)+1; }
-function currentLabel(g){ return 'v'+majorNext(g)+'.'+g.pendingChanges.length; }
+function lastVersion(g){ return g.rulebookVersions.length ? g.rulebookVersions.slice().sort((a,b)=>b.n-a.n)[0] : null; }
+function hasUnsaved(g){ if(g.pendingChanges.length) return true; const lv=lastVersion(g); if(!lv) return g.rulebook.sections.some(s=>s.content.trim()); return g.rulebook.sections.some(s=>{ const o=lv.sections.find(x=>x.key===s.key); return (o?o.content:'')!==s.content; }); }
 
 /* ---------- Render ---------- */
 function render(){ renderSidebar(); renderBoard(); }
@@ -441,16 +442,20 @@ function renderBoard(){
 }
 
 function renderHome(g, host){
+  const lv=lastVersion(g); const unsaved=hasUnsaved(g);
   const vh=document.createElement('div'); vh.className='vhead';
-  vh.innerHTML=`<div class="vrow"><span class="vtag">${currentLabel(g)}</span><span class="vsub">versión en curso</span></div>`;
-  const sum=document.createElement('input'); sum.className='sum'; sum.placeholder='Resumen del cambio principal que estás probando…'; sum.value=g.currentSummary||'';
+  vh.innerHTML=`<div class="vrow"><span class="vtag">${lv?('v'+lv.n):'Borrador'}</span><span class="vsub">${lv?(lv.summary?escapeHtml(lv.summary):'versión actual'):'sin versiones guardadas'}</span></div>`;
+  const sum=document.createElement('input'); sum.className='sum'; sum.placeholder='¿En qué estás trabajando ahora? (será el título de la próxima versión)'; sum.value=g.currentSummary||'';
   sum.addEventListener('input',()=>{ g.currentSummary=sum.value; }); sum.addEventListener('blur',()=>saveState());
   vh.appendChild(sum);
   const act=document.createElement('div'); act.className='vact';
   const add=document.createElement('button'); add.className='btn'; add.textContent='＋ Añadir idea'; add.onclick=()=>openChangeModal(null);
-  const save=document.createElement('button'); save.className='btn-q'; save.textContent='Guardar versión v'+majorNext(g); save.onclick=()=>openSaveModal(g);
+  act.appendChild(add);
+  if(unsaved){ const save=document.createElement('button'); save.className='btn-q'; save.textContent='Guardar versión v'+majorNext(g); save.onclick=()=>startSaveVersion(g); act.appendChild(save);
+    const info=document.createElement('span'); info.style.cssText='font-size:11.5px;color:var(--faint);'; info.textContent=g.pendingChanges.length?`${g.pendingChanges.length} cambio(s) por consolidar`:'cambios sin guardar'; act.appendChild(info); }
+  const sp=document.createElement('span'); sp.style.flex='1'; act.appendChild(sp);
   const rules=document.createElement('button'); rules.className='link'; rules.textContent='Ver reglas →'; rules.onclick=()=>{ currentTab='reglas'; rbView='draft'; renderBoard(); };
-  act.appendChild(add); act.appendChild(save); const sp=document.createElement('span'); sp.style.flex='1'; act.appendChild(sp); act.appendChild(rules);
+  act.appendChild(rules);
   vh.appendChild(act); host.appendChild(vh);
 
   const todo=g.changes.filter(c=>c.state==='porprobar'||c.state==='aparcada');
@@ -540,7 +545,10 @@ function renderDraft(g, host){
   if(g.pendingChanges.length){ const ban=document.createElement('div'); ban.className='pend'; ban.innerHTML=`<h4>Pendiente de consolidar (${g.pendingChanges.length})</h4>`;
     g.pendingChanges.forEach(p=>{ const it=document.createElement('div'); it.className='pi'; it.innerHTML=`<span>${escapeHtml(p.changeTitle)}</span><span class="ar">→</span><span class="sc">${escapeHtml(RB_TITLE[p.sectionKey]||p.sectionKey)}</span>`; const rm=document.createElement('button'); rm.textContent='✕'; rm.title='Quitar'; rm.onclick=async()=>{ g.pendingChanges=g.pendingChanges.filter(x=>x.id!==p.id); const c=changeById(g,p.changeId); if(c) c.implemented=false; await saveState(); renderBoard(); }; it.appendChild(rm); ban.appendChild(it); }); host.appendChild(ban); }
   g.rulebook.sections.forEach(sec=>{ const w=document.createElement('div'); w.className='sec'+(pend[sec.key]?' pending':''); const l=document.createElement('label'); l.textContent=sec.title; const ta=document.createElement('textarea'); ta.value=sec.content; ta.placeholder=RB_PLACEHOLDER[sec.key]||''; ta.addEventListener('input',()=>{ sec.content=ta.value; }); ta.addEventListener('blur',()=>saveState()); w.appendChild(l); w.appendChild(ta); host.appendChild(w); });
-  const bar=document.createElement('div'); bar.className='rbbar'; const save=document.createElement('button'); save.className='btn'; save.textContent='✓ Guardar versión v'+majorNext(g); save.onclick=()=>openSaveModal(g); const note=document.createElement('span'); note.style.cssText='font-size:11.5px;color:var(--faint);'; note.textContent='Congela el reglamento como v'+majorNext(g)+'.'; bar.appendChild(save); bar.appendChild(note); host.appendChild(bar);
+  const bar=document.createElement('div'); bar.className='rbbar';
+  if(hasUnsaved(g)){ const save=document.createElement('button'); save.className='btn'; save.textContent='✓ Guardar versión v'+majorNext(g); save.onclick=()=>startSaveVersion(g); const note=document.createElement('span'); note.style.cssText='font-size:11.5px;color:var(--faint);'; note.textContent='Congela los cambios como v'+majorNext(g)+'.'; bar.appendChild(save); bar.appendChild(note); }
+  else { const note=document.createElement('span'); note.style.cssText='font-size:12.5px;color:var(--faint);'; note.textContent=g.rulebookVersions.length?'Todo guardado en la última versión.':'Escribe el reglamento y podrás guardar la primera versión.'; bar.appendChild(note); }
+  host.appendChild(bar);
 }
 function renderVersionList(g, host){
   if(!g.rulebookVersions.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML=`<p>Aún no hay versiones. Ajusta el borrador y pulsa «Guardar versión».</p>`; host.appendChild(e); return; }
@@ -559,13 +567,22 @@ function renderVersionDoc(g, host){ const v=g.rulebookVersions.find(x=>x.id===rb
   bar.appendChild(pr); const sp=document.createElement('span'); sp.style.flex='1'; bar.appendChild(sp); bar.appendChild(rs); bar.appendChild(dl); host.appendChild(bar);
 }
 function openSaveModal(g){ lastFocused=document.activeElement; $('svHint').textContent=`Se guardará como v${majorNext(g)} con el reglamento actual y ${g.pendingChanges.length} cambio(s) incorporado(s).`; $('svSum').value=g.currentSummary||''; $('svModal').style.display='flex'; $('svSum').focus(); }
-async function consolidateVersion(){ const g=currentGame(); const summary=$('svSum').value.trim(); const n=majorNext(g);
+async function startSaveVersion(g){
+  if(!hasUnsaved(g) && g.rulebookVersions.length){ toast('No hay cambios que guardar.'); return; }
+  const title=(g.currentSummary||'').trim();
+  if(!title){ openSaveModal(g); return; }   // sin título → pídelo
+  const ok=await confirmDialog(`Se guardará el reglamento actual como v${majorNext(g)} «${title}».`, { okLabel:'Guardar versión', danger:false });
+  if(ok) await doConsolidate(g, title);
+}
+async function doConsolidate(g, summary){
+  const n=majorNext(g);
   const sections=g.rulebook.sections.map(s=>({key:s.key,title:s.title,content:s.content}));
   const changesTxt=g.pendingChanges.length?g.pendingChanges.map(p=>`• ${p.changeTitle} → ${RB_TITLE[p.sectionKey]||p.sectionKey}`).join('\n'):'Consolidación manual del borrador.';
   g.rulebookVersions.push({ id:uid(), n, createdAt:Date.now(), summary:summary||('Versión '+n), changes:changesTxt, sections });
   g.pendingChanges=[]; g.changes.forEach(c=>{ if(c.implemented) c.implemented=false; }); g.currentSummary='';
-  await saveState(); $('svModal').style.display='none'; restoreFocus(); currentTab='reglas'; rbView='doc'; rbVersionId=g.rulebookVersions[g.rulebookVersions.length-1].id; renderBoard(); toast(`Versión v${n} consolidada.`);
+  await saveState(); currentTab='reglas'; rbView='doc'; rbVersionId=g.rulebookVersions[g.rulebookVersions.length-1].id; renderBoard(); toast(`Versión v${n} consolidada.`);
 }
+async function consolidateVersion(){ const g=currentGame(); if(!hasUnsaved(g) && g.rulebookVersions.length){ $('svModal').style.display='none'; restoreFocus(); toast('No hay cambios que guardar.'); return; } const summary=$('svSum').value.trim(); $('svModal').style.display='none'; restoreFocus(); await doConsolidate(g, summary); }
 function closeSaveModal(){ $('svModal').style.display='none'; restoreFocus(); }
 async function restoreVersion(g,v){ const ok=await confirmDialog(`¿Restaurar la v${v.n} al borrador? Sobrescribe el borrador actual.`); if(!ok) return; g.rulebook.sections=v.sections.map(s=>({key:s.key,title:s.title,content:s.content})); await saveState(); rbView='draft'; rbVersionId=null; renderBoard(); toast(`Borrador restaurado desde v${v.n}.`); }
 async function deleteVersion(g,v){ const ok=await confirmDialog(`¿Eliminar la versión v${v.n}?`); if(!ok) return; g.rulebookVersions=g.rulebookVersions.filter(x=>x.id!==v.id); await saveState(); rbView='versions'; rbVersionId=null; renderBoard(); toast(`Versión v${v.n} eliminada.`); }
@@ -583,7 +600,7 @@ function openGameMenu(anchor,id){ closeMenu(); const m=document.createElement('d
 
 /* confirm / toast / focus */
 let confirmResolver=null;
-function confirmDialog(msg){ $('cfMsg').textContent=msg; lastFocused=document.activeElement; $('cfModal').style.display='flex'; $('cfOk').focus(); return new Promise(res=>{ confirmResolver=res; }); }
+function confirmDialog(msg, opts){ opts=opts||{}; $('cfMsg').textContent=msg; $('cfOk').textContent=opts.okLabel||'Eliminar'; $('cfOk').className=(opts.danger===false)?'btn':'btn-danger'; lastFocused=document.activeElement; $('cfModal').style.display='flex'; $('cfOk').focus(); return new Promise(res=>{ confirmResolver=res; }); }
 function resolveConfirm(v){ $('cfModal').style.display='none'; if(confirmResolver){ confirmResolver(v); confirmResolver=null; } restoreFocus(); }
 function toast(msg,kind='',ms=2600){ const w=$('toasts'); const t=document.createElement('div'); t.className='toast'+(kind?' '+kind:''); t.textContent=msg; w.appendChild(t); requestAnimationFrame(()=>t.classList.add('show')); setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(),220); },ms); }
 function restoreFocus(){ if(lastFocused&&lastFocused.focus){ try{ lastFocused.focus(); }catch(e){} } lastFocused=null; }
