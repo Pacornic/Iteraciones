@@ -154,7 +154,7 @@
   }
   ::-webkit-scrollbar{ width:9px;height:9px; } ::-webkit-scrollbar-thumb{ background:#2a3340; border-radius:6px; }
   .sr-only{ position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0); }
-  @media (max-width:720px){ .sidebar{ display:none; } .backend{ display:none; } .game-select-mobile{ display:block; } .game-select-mobile select{ background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 9px; font-size:13px; max-width:140px; } }
+  @media (max-width:720px){ .sidebar{ display:none; } .backend{ display:none; } .game-select-mobile{ display:flex; align-items:center; gap:6px; } .game-select-mobile select{ background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 9px; font-size:13px; max-width:130px; } }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
@@ -169,7 +169,7 @@
     <button class="ibtn" id="importBtn" title="Importar copia (.json)" aria-label="Importar">⤒</button>
     <input type="file" id="importFile" accept="application/json,.json" style="display:none;">
     <button class="ibtn" id="signOutBtn" title="Cerrar sesión" aria-label="Cerrar sesión" style="display:none;">⎋</button>
-    <div class="game-select-mobile"><label class="sr-only" for="mgs">Juego</label><select id="mgs"></select></div>
+    <div class="game-select-mobile"><label class="sr-only" for="mgs">Juego</label><select id="mgs"></select><button class="ibtn" id="addGameMobile" title="Añadir juego" aria-label="Añadir juego">+</button></div>
   </div>
 </div>
 
@@ -606,6 +606,7 @@ function restoreFocus(){ if(lastFocused&&lastFocused.focus){ try{ lastFocused.fo
 
 /* wiring */
 $('addGameBtn').onclick=()=>openGameModal(false);
+$('addGameMobile').onclick=()=>openGameModal(false);
 $('gmCancel').onclick=closeGameModal; $('gmSave').onclick=saveGame;
 $('gameMenuBtn').onclick=(e)=>{ const g=currentGame(); if(g) openGameMenu(e.currentTarget,g.id); };
 $('panelClose').onclick=closePanel;
