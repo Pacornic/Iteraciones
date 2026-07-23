@@ -8,244 +8,153 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#141a22; --bg-grid: rgba(255,255,255,0.035);
-    --surface:#1c232e; --surface-2:#212a36; --surface-3:#26303d;
-    --border:#2c3546; --border-soft:#252e3a;
-    --text:#e7eaee; --text-muted:#8993a4; --text-faint:#5b6577;
-    --amber:#e8a33d; --amber-dim: rgba(232,163,61,0.18);
-    --teal:#4fa98b; --teal-dim: rgba(79,169,139,0.15);
-    --brick:#d9634a; --brick-dim: rgba(217,99,74,0.15);
-    --blue:#5fb3d9; --blue-dim: rgba(95,179,217,0.14);
-    --violet:#7b839a; --focus:#7db8e8;
-    --radius:10px; --shadow-pop:0 10px 30px rgba(0,0,0,0.45);
+    --bg:#151b23; --surface:#1b222c; --surface-2:#212a35; --surface-3:#28323f;
+    --border:#28313f; --line:#222b37;
+    --text:#e9ecf1; --muted:#939db0; --faint:#5b6577;
+    --amber:#e8a33d; --amber-dim:rgba(232,163,61,0.14);
+    --teal:#57b394; --teal-dim:rgba(87,179,148,0.14);
+    --brick:#d9634a; --brick-dim:rgba(217,99,74,0.13);
+    --blue:#66b6df; --violet:#8891a6; --focus:#7db8e8;
+    --radius:9px; --shadow:0 10px 30px rgba(0,0,0,0.45);
   }
   *{box-sizing:border-box;}
   html,body{height:100%;}
-  body{ margin:0; background:var(--bg);
-    background-image:linear-gradient(var(--bg-grid) 1px, transparent 1px),linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
-    background-size:28px 28px; color:var(--text); font-family:'IBM Plex Sans', sans-serif; display:flex; flex-direction:column; overflow:hidden; }
+  body{ margin:0; background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans-serif; display:flex; flex-direction:column; overflow:hidden; line-height:1.55; }
   :focus-visible{ outline:2px solid var(--focus); outline-offset:2px; border-radius:4px; }
   button{ font-family:inherit; }
 
-  .topbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 18px; border-bottom:1px solid var(--border-soft); background:linear-gradient(180deg, rgba(28,35,46,0.9), rgba(20,26,34,0.9)); backdrop-filter:blur(4px); z-index:20; }
-  .brand{ font-family:'Fraunces', serif; font-size:19px; font-weight:600; display:flex; align-items:center; gap:9px; }
-  .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber);}
-  .kbd-hint{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--text-faint); }
-  .kbd-hint kbd{ background:var(--surface-3); border:1px solid var(--border); border-bottom-width:2px; border-radius:4px; padding:1px 5px; color:var(--text-muted); font-size:10px; }
-  .game-select-mobile{display:none;}
+  .topbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 18px; border-bottom:1px solid var(--line); }
+  .brand{ font-family:'Fraunces',serif; font-size:18px; font-weight:600; display:flex; align-items:center; gap:9px; }
+  .brand .dot{ width:8px;height:8px;border-radius:50%;background:var(--amber); }
+  .topbar .tools{ display:flex; align-items:center; gap:8px; }
+  .ibtn{ width:32px;height:32px; display:inline-flex; align-items:center; justify-content:center; background:none; border:1px solid transparent; border-radius:7px; color:var(--muted); cursor:pointer; font-size:15px; }
+  .ibtn:hover{ background:var(--surface-2); color:var(--text); }
+  .backend{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint); }
+  .game-select-mobile{ display:none; }
 
   .layout{ flex:1; display:flex; min-height:0; }
-  .sidebar{ width:224px; min-width:224px; border-right:1px solid var(--border-soft); background:rgba(18,23,30,0.5); display:flex; flex-direction:column; overflow-y:auto; }
-  .sidebar-header{ padding:14px 16px 8px; font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-faint); }
-  .game-item{ display:flex; align-items:center; gap:10px; padding:10px 12px 10px 16px; cursor:pointer; border-left:3px solid transparent; position:relative; }
-  .game-item:hover{background:rgba(255,255,255,0.03);}
-  .game-item.active{ background:rgba(232,163,61,0.07); border-left-color:var(--amber); }
-  .game-item .spine{ width:4px;height:22px;border-radius:2px;flex-shrink:0; }
-  .game-item .name{ font-size:13.5px; font-weight:500; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .game-item .count{ margin-left:auto; font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--text-faint); }
-  .game-item .menu-btn{ opacity:0; margin-left:4px; flex-shrink:0; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px; line-height:1; padding:2px 4px; border-radius:5px; }
-  .game-item:hover .menu-btn, .game-item .menu-btn:focus-visible{ opacity:1; }
-  .game-item .menu-btn:hover{ background:rgba(255,255,255,0.08); color:var(--text); }
-  .add-game-btn{ margin:10px 16px; padding:9px 10px; border:1px dashed var(--border); border-radius:8px; background:transparent; color:var(--text-muted); font-size:12.5px; cursor:pointer; text-align:center; }
-  .add-game-btn:hover{border-color:var(--amber);color:var(--amber);}
+  .sidebar{ width:210px; min-width:210px; border-right:1px solid var(--line); display:flex; flex-direction:column; overflow-y:auto; padding-top:6px; }
+  .side-h{ padding:12px 18px 6px; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:var(--faint); }
+  .game-item{ display:flex; align-items:center; gap:10px; padding:9px 14px 9px 18px; cursor:pointer; border-left:2px solid transparent; }
+  .game-item:hover{ background:rgba(255,255,255,0.025); }
+  .game-item.active{ border-left-color:var(--amber); background:rgba(232,163,61,0.06); }
+  .game-item .nm{ font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+  .game-item .ct{ font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--faint); }
+  .game-item .mn{ opacity:0; background:none; border:none; color:var(--muted); cursor:pointer; font-size:15px; padding:0 3px; }
+  .game-item:hover .mn{ opacity:1; }
+  .addg{ margin:10px 16px; padding:8px; border:1px dashed var(--border); border-radius:8px; background:none; color:var(--muted); font-size:12.5px; cursor:pointer; }
+  .addg:hover{ border-color:var(--amber); color:var(--amber); }
 
-  .main{ flex:1; display:flex; flex-direction:column; min-width:0; position:relative; }
-  .board-header{ padding:14px 22px 0; display:flex; align-items:center; justify-content:space-between; gap:12px; }
-  .board-head-left{ display:flex; align-items:center; gap:10px; min-width:0; }
-  .board-title{ font-family:'Fraunces', serif; font-size:23px; font-weight:600; }
-  .icon-btn{ width:34px;height:34px; display:inline-flex; align-items:center; justify-content:center; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text-muted); cursor:pointer; font-size:15px; }
-  .icon-btn:hover{ border-color:#3a4457; color:var(--text); }
-  .tabs{ display:flex; gap:2px; padding:10px 22px 0; border-bottom:1px solid var(--border-soft); }
-  .tab{ background:none; border:none; border-bottom:2px solid transparent; color:var(--text-muted); font-size:14px; font-weight:500; padding:9px 14px; cursor:pointer; display:flex; align-items:center; gap:7px; }
-  .tab .cnt{ font-family:'IBM Plex Mono',monospace; font-size:10px; background:var(--surface-3); border-radius:10px; padding:1px 7px; color:var(--text-faint); }
-  .tab:hover{ color:var(--text); } .tab.active{ color:var(--amber); border-bottom-color:var(--amber); }
-  .tab-content{ flex:1; overflow:auto; position:relative; }
-  .pad{ padding:18px 24px 40px; }
+  .main{ flex:1; display:flex; flex-direction:column; min-width:0; }
+  .head{ padding:16px 26px 0; display:flex; align-items:center; gap:12px; }
+  .title{ font-family:'Fraunces',serif; font-size:24px; font-weight:600; }
+  .head .mn{ background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px; }
+  .head .mn:hover{ color:var(--text); }
+  .tabs{ display:flex; gap:22px; padding:12px 26px 0; }
+  .tab{ background:none; border:none; padding:6px 0 12px; color:var(--muted); font-size:14.5px; cursor:pointer; border-bottom:2px solid transparent; }
+  .tab.on{ color:var(--text); border-bottom-color:var(--amber); }
+  .content{ flex:1; overflow:auto; }
+  .wrap{ max-width:680px; margin:0 auto; padding:22px 26px 60px; }
 
-  .btn-primary{ background:var(--amber); border:none; color:#1a1206; font-weight:600; padding:9px 16px; border-radius:7px; cursor:pointer; font-size:13px; }
-  .btn-primary:disabled{opacity:0.4; cursor:not-allowed;}
-  .btn-ghost{ background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:9px 14px; border-radius:7px; cursor:pointer; font-size:13px; }
-  .btn-ghost:hover{ border-color:#3a4457; color:var(--text); }
-  .btn-danger{ background:transparent; border:1px solid rgba(217,99,74,0.5); color:#eaa393; padding:9px 14px; border-radius:7px; cursor:pointer; font-size:13px; }
-  .btn-danger:hover{ background:var(--brick-dim); color:#f3c3b7; }
-  .btn-sm{ padding:6px 11px; font-size:12px; border-radius:6px; }
+  .btn{ background:var(--amber); border:none; color:#1a1206; font-weight:600; padding:9px 15px; border-radius:8px; cursor:pointer; font-size:13px; }
+  .btn:disabled{ opacity:0.4; cursor:not-allowed; }
+  .btn-q{ background:none; border:1px solid var(--border); color:var(--muted); padding:8px 13px; border-radius:8px; cursor:pointer; font-size:13px; }
+  .btn-q:hover{ border-color:#3a4658; color:var(--text); }
+  .btn-danger{ background:none; border:1px solid rgba(217,99,74,0.5); color:#eaa393; padding:8px 13px; border-radius:8px; cursor:pointer; font-size:13px; }
+  .btn-danger:hover{ background:var(--brick-dim); }
+  .link{ background:none; border:none; color:var(--blue); cursor:pointer; font-size:13.5px; padding:0; }
+  .link:hover{ text-decoration:underline; }
 
-  .section-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
-  .section-head h2{ font-family:'Fraunces',serif; font-size:18px; margin:0; }
-  .muted{ color:var(--text-muted); } .faint{ color:var(--text-faint); }
-  .empty-state{ margin:40px auto; text-align:center; color:var(--text-muted); max-width:430px; padding:20px; }
-  .empty-state h3{font-family:'Fraunces',serif; color:var(--text); font-size:19px; margin:0 0 6px;}
-  .empty-state p{font-size:13.5px; line-height:1.55;}
-  .breadcrumb{ display:flex; align-items:center; gap:7px; flex-wrap:wrap; font-size:13px; margin-bottom:16px; color:var(--text-muted); }
-  .breadcrumb a{ color:var(--blue); cursor:pointer; } .breadcrumb a:hover{ text-decoration:underline; }
-  .breadcrumb .sep{ color:var(--text-faint); } .breadcrumb .cur{ color:var(--text); }
+  /* version header */
+  .vhead{ margin-bottom:26px; }
+  .vhead .vrow{ display:flex; align-items:baseline; gap:10px; }
+  .vhead .vtag{ font-family:'Fraunces',serif; font-size:30px; font-weight:600; color:var(--amber); }
+  .vhead .vsub{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--faint); }
+  .vhead input.sum{ width:100%; background:none; border:none; border-bottom:1px solid var(--line); color:var(--text); font-family:'IBM Plex Sans',sans-serif; font-size:16px; padding:8px 2px; margin-top:6px; }
+  .vhead input.sum::placeholder{ color:var(--faint); } .vhead input.sum:focus{ outline:none; border-bottom-color:var(--amber); }
+  .vhead .vact{ display:flex; align-items:center; gap:14px; margin-top:14px; }
 
-  /* ---------- Version boxes ---------- */
-  .ver-box{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:12px; max-width:860px; cursor:pointer; display:flex; align-items:flex-start; gap:16px; }
-  .ver-box:hover{ border-color:#3a4457; }
-  .ver-box.current{ border-color:var(--amber); box-shadow:0 0 0 1px rgba(232,163,61,0.4), 0 6px 20px rgba(0,0,0,0.25); background:linear-gradient(180deg, rgba(232,163,61,0.07), var(--surface) 45%); cursor:default; }
-  .ver-tag{ font-family:'Fraunces',serif; font-weight:600; font-size:26px; line-height:1; color:var(--amber); min-width:78px; }
-  .ver-box.committed .ver-tag{ color:var(--text); }
-  .ver-main{ flex:1; min-width:0; }
-  .ver-main .lbl{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.6px; text-transform:uppercase; color:var(--text-faint); }
-  .ver-main .sum{ font-size:14px; margin-top:4px; line-height:1.45; }
-  .ver-main .sum.empty{ color:var(--text-faint); font-style:italic; }
-  .ver-main .stats{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
-  .ver-main .stats .chip{ font-family:'IBM Plex Mono',monospace; font-size:10px; background:var(--surface-3); border-radius:6px; padding:3px 8px; color:var(--text-muted); }
-  .ver-actions{ display:flex; flex-direction:column; gap:8px; align-items:stretch; }
-  .cur-summary-input{ width:100%; background:var(--bg); border:1px solid var(--border); border-radius:7px; color:var(--text); font-family:'IBM Plex Sans',sans-serif; font-size:13.5px; padding:8px 10px; }
-  .cur-summary-input:focus{ outline:none; border-color:var(--amber); }
+  .grouph{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--faint); margin:24px 0 4px; }
+  .chg{ display:flex; align-items:center; gap:12px; padding:12px 4px; border-top:1px solid var(--line); cursor:pointer; }
+  .chg:hover{ background:rgba(255,255,255,0.02); }
+  .chg .ico{ font-family:'IBM Plex Mono',monospace; width:16px; text-align:center; flex-shrink:0; }
+  .chg .t{ flex:1; font-size:14.5px; }
+  .chg.done .t{ color:var(--muted); }
+  .chg.dropped .t{ color:var(--faint); text-decoration:line-through; }
+  .pill{ font-size:11px; padding:3px 10px; border-radius:20px; white-space:nowrap; }
+  .p-porprobar{ background:var(--surface-3); color:var(--muted); }
+  .p-funciona{ background:var(--teal-dim); color:#a9ddc8; }
+  .p-descartada{ background:var(--surface-2); color:var(--faint); }
+  .p-aparcada{ background:rgba(102,182,223,0.13); color:#a6d6ee; }
+  .impl-tag{ font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#f0cf92; }
 
-  /* ---------- Kanban (problemas de la versión) ---------- */
-  .kanban{ display:flex; gap:14px; align-items:flex-start; min-height:200px; }
-  .kan-col{ flex:1; min-width:210px; background:rgba(0,0,0,0.14); border:1px solid var(--border-soft); border-radius:12px; padding:10px; display:flex; flex-direction:column; }
-  .kan-col.drag-over{ border-color:var(--amber); background:rgba(232,163,61,0.06); }
-  .kan-col-head{ display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; padding:4px 6px 10px; color:var(--text); }
-  .kan-col-head .dotc{ width:9px;height:9px;border-radius:50%; }
-  .kan-col-head .n{ margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--text-faint); }
-  .kan-card{ background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:11px 12px; margin-bottom:9px; cursor:pointer; }
-  .kan-card:hover{ border-color:#3a4457; transform:translateY(-1px); } .kan-card.dragging{ opacity:0.5; }
-  .kan-card .kt{ font-family:'Fraunces',serif; font-weight:600; font-size:14px; line-height:1.25; }
-  .kan-card .kmeta{ display:flex; gap:8px; margin-top:8px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-faint); flex-wrap:wrap; }
-  .kan-card .kmeta .chip{ background:var(--surface-3); border-radius:5px; padding:2px 6px; } .kan-card .kmeta .chip.sub{ color:#c9a6e0; }
-  .kan-add{ background:transparent; border:1px dashed var(--border); border-radius:8px; color:var(--text-muted); font-size:12.5px; padding:8px; cursor:pointer; }
-  .kan-add:hover{ border-color:var(--amber); color:var(--amber); }
+  .empty{ text-align:center; color:var(--muted); padding:38px 10px; }
+  .empty p{ font-size:13.5px; }
+  .addline{ margin-top:16px; }
 
-  .prob-meta{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:18px; }
-  .prob-meta h2{ font-family:'Fraunces',serif; font-size:20px; margin:0 0 6px; }
-  .prob-meta .desc{ font-size:13.5px; line-height:1.55; color:var(--text); white-space:pre-wrap; } .prob-meta .desc.empty{ color:var(--text-faint); font-style:italic; }
-  .prob-controls{ display:flex; align-items:center; gap:10px; margin-top:14px; flex-wrap:wrap; }
-  .status-pick{ display:flex; gap:6px; }
-  .status-pill{ font-size:11.5px; padding:5px 10px; border-radius:20px; border:1px solid var(--border); background:var(--surface-3); color:var(--text-muted); cursor:pointer; }
-  .status-pill.on{ color:#111; font-weight:600; }
-  .st-detectado{ background:var(--brick-dim); } .status-pill.on.st-detectado{ background:var(--brick); }
-  .st-prueba{ background:var(--amber-dim); } .status-pill.on.st-prueba{ background:var(--amber); }
-  .st-resuelto{ background:var(--teal-dim); } .status-pill.on.st-resuelto{ background:var(--teal); }
-  .st-descartado{ background:rgba(139,147,164,0.14); } .status-pill.on.st-descartado{ background:var(--violet); }
+  /* rules */
+  .sec{ margin-bottom:18px; }
+  .sec label{ display:block; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.6px; text-transform:uppercase; color:var(--amber); margin-bottom:6px; }
+  .sec.pending label::after{ content:' · pendiente'; color:#f0cf92; }
+  .sec textarea{ width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'IBM Plex Sans',sans-serif; font-size:13.5px; line-height:1.55; padding:10px 12px; resize:vertical; min-height:60px; }
+  .sec.pending textarea{ border-color:rgba(232,163,61,0.45); } .sec textarea:focus{ outline:none; border-color:var(--amber); }
+  .pend{ background:var(--amber-dim); border:1px solid rgba(232,163,61,0.35); border-radius:9px; padding:11px 14px; margin-bottom:18px; }
+  .pend h4{ margin:0 0 6px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.6px; text-transform:uppercase; color:#f0cf92; }
+  .pend .pi{ display:flex; align-items:center; gap:8px; font-size:13px; padding:3px 0; }
+  .pend .pi .ar{ color:var(--faint); } .pend .pi .sc{ color:var(--blue); } .pend .pi button{ margin-left:auto; background:none; border:none; color:var(--faint); cursor:pointer; }
+  .pend .pi button:hover{ color:var(--brick); }
+  .rbbar{ display:flex; align-items:center; gap:14px; margin:6px 0 22px; }
+  .verline{ display:flex; align-items:center; gap:12px; padding:12px 4px; border-top:1px solid var(--line); cursor:pointer; }
+  .verline:hover{ background:rgba(255,255,255,0.02); }
+  .verline .vn{ font-family:'Fraunces',serif; font-size:16px; font-weight:600; color:var(--amber); width:42px; }
+  .verline .vt{ flex:1; font-size:13.5px; } .verline .vd{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint); }
+  .doc h1{ font-family:'Fraunces',serif; font-size:22px; margin:0 0 2px; }
+  .doc .dm{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--faint); margin-bottom:14px; }
+  .doc h2{ font-family:'Fraunces',serif; font-size:15px; color:var(--amber); margin:18px 0 4px; }
+  .doc .b{ font-size:13.5px; white-space:pre-wrap; } .doc .b.e{ color:var(--faint); font-style:italic; }
+  .doc .cb{ background:var(--amber-dim); border:1px solid rgba(232,163,61,0.3); border-radius:8px; padding:10px 12px; white-space:pre-wrap; font-size:13px; }
 
-  .canvas-wrap{ position:relative; overflow:auto; padding:6px 6px 30px; }
-  .canvas{ position:relative; display:inline-flex; gap:60px; padding:16px 8px 40px; min-height:220px; }
-  .gen-col{ display:flex; flex-direction:column; gap:24px; width:240px; flex-shrink:0; padding-top:4px; }
-  .gen-label{ font-family:'IBM Plex Mono', monospace; font-size:9.5px; letter-spacing:1px; text-transform:uppercase; color:var(--text-faint); margin-bottom:-12px; padding-left:2px; }
-  svg.traces{ position:absolute; top:0;left:0; pointer-events:none; overflow:visible; }
-  .trace-line{ fill:none; stroke:var(--border); stroke-width:2; }
-  .trace-line.lineage{ stroke:var(--amber); stroke-width:2.2; stroke-dasharray:5 5; animation:flow 1.1s linear infinite; filter:drop-shadow(0 0 3px rgba(232,163,61,0.55)); }
-  @keyframes flow{ to { stroke-dashoffset:-20; } }
-  @media (prefers-reduced-motion: reduce){ .trace-line.lineage{ animation:none; } }
-  .node{ position:relative; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:12px 13px 11px; cursor:pointer; transition:border-color .15s, transform .15s, box-shadow .15s; }
-  .node:hover{border-color:#3a4457; transform:translateY(-1px); box-shadow:0 4px 14px rgba(0,0,0,0.25);}
-  .node.active-node{ border-color:var(--amber); box-shadow:0 0 0 1px var(--amber), 0 0 16px rgba(232,163,61,0.22); background:linear-gradient(180deg, rgba(232,163,61,0.08), var(--surface) 40%); }
-  .node.selected{outline:2px solid var(--focus); outline-offset:2px;}
-  .node-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:6px; }
-  .node-title{ font-family:'Fraunces', serif; font-weight:600; font-size:14.5px; line-height:1.25; }
-  .active-badge{ font-family:'IBM Plex Mono', monospace; font-size:9px; letter-spacing:0.6px; color:var(--amber); border:1px solid rgba(232,163,61,0.5); border-radius:4px; padding:2px 5px; white-space:nowrap; flex-shrink:0; }
-  .node-date{ font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--text-faint); margin-top:2px; }
-  .tag-row{ margin-top:8px; display:flex; flex-direction:column; gap:5px; }
-  .tag{ display:flex; gap:6px; align-items:flex-start; font-size:11.5px; line-height:1.35; padding:5px 7px; border-radius:6px; }
-  .tag.mejora{background:var(--teal-dim); color:#bfe9db;} .tag.problema{background:var(--brick-dim); color:#f3c3b7;}
-  .tag .icon{font-family:'IBM Plex Mono',monospace;font-weight:600;flex-shrink:0;} .tag.mejora .icon{color:var(--teal);} .tag.problema .icon{color:var(--brick);}
-  .clamp{ display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
-  .no-issue{ font-size:11px; color:var(--text-faint); font-style:italic; margin-top:6px; }
-  .chips{ display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
-  .mini-chip{ display:inline-flex; align-items:center; gap:5px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.3px; border-radius:5px; padding:3px 7px; }
-  .mc-sec{ color:#9fd0f0; background:var(--blue-dim); border:1px solid rgba(95,179,217,0.3); }
-  .mc-impl{ color:#f3d59a; background:var(--amber-dim); border:1px solid rgba(232,163,61,0.4); }
-  .mc-s-porprobar{ color:var(--text-faint); background:var(--surface-3); border:1px solid var(--border); }
-  .mc-s-funciona{ color:#bfe9db; background:var(--teal-dim); border:1px solid rgba(79,169,139,0.4); }
-  .mc-s-descartada{ color:#f3c3b7; background:var(--brick-dim); border:1px solid rgba(217,99,74,0.4); }
-  .mc-s-aparcada{ color:#a9dcf2; background:var(--blue-dim); border:1px solid rgba(95,179,217,0.4); }
-
-  .subprob{ margin-top:26px; }
-  .subprob .sp-item{ display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:10px 12px; margin-bottom:8px; cursor:pointer; }
-  .subprob .sp-item:hover{ border-color:#3a4457; }
-  .subprob .sp-dot{ width:9px;height:9px;border-radius:50%; flex-shrink:0; } .subprob .sp-t{ font-weight:500; font-size:13.5px; }
-  .subprob .sp-st{ margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-faint); }
-
-  /* pending banner + draft */
-  .pending-banner{ background:var(--amber-dim); border:1px solid rgba(232,163,61,0.4); border-radius:10px; padding:12px 14px; margin-bottom:16px; max-width:860px; }
-  .pending-banner h4{ margin:0 0 8px; font-size:13px; color:var(--amber); font-family:'IBM Plex Mono',monospace; letter-spacing:0.4px; text-transform:uppercase; }
-  .pending-item{ display:flex; align-items:center; gap:8px; font-size:12.5px; padding:4px 0; color:var(--text); }
-  .pending-item .arrow{ color:var(--text-faint); } .pending-item .sec{ color:#9fd0f0; }
-  .pending-item button{ margin-left:auto; background:none; border:none; color:var(--text-faint); cursor:pointer; font-size:13px; }
-  .pending-item button:hover{ color:var(--brick); }
-  .rb-section{ margin-bottom:16px; max-width:860px; }
-  .rb-section label{ display:block; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.6px; text-transform:uppercase; color:var(--amber); margin-bottom:6px; }
-  .rb-section.has-pending label::after{ content:' ● pendiente'; color:#f3d59a; }
-  .rb-section textarea{ width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'IBM Plex Sans',sans-serif; font-size:13.5px; line-height:1.55; padding:10px 12px; resize:vertical; min-height:64px; }
-  .rb-section.has-pending textarea{ border-color:rgba(232,163,61,0.5); }
-  .rb-section textarea:focus{ outline:none; border-color:var(--amber); }
-  .rb-note{ font-size:11.5px; color:var(--text-faint); }
-  .rb-bar{ display:flex; align-items:center; gap:10px; margin:6px 0 18px; max-width:860px; }
-  .ver-doc{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px 22px; max-width:860px; }
-  .ver-doc h1{ font-family:'Fraunces',serif; font-size:22px; margin:0 0 2px; }
-  .ver-doc .docmeta{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-faint); margin-bottom:14px; }
-  .ver-doc h2{ font-family:'Fraunces',serif; font-size:15px; color:var(--amber); margin:16px 0 4px; border-bottom:1px solid var(--border-soft); padding-bottom:4px; }
-  .ver-doc .sec-body{ font-size:13.5px; line-height:1.6; white-space:pre-wrap; color:var(--text); } .ver-doc .sec-body.empty{ color:var(--text-faint); font-style:italic; }
-  .ver-doc .changes-box{ background:var(--amber-dim); border:1px solid rgba(232,163,61,0.35); border-radius:8px; padding:10px 12px; white-space:pre-wrap; font-size:13px; line-height:1.55; }
-
-  /* Editoriales */
-  .ed-table{ width:100%; border-collapse:collapse; max-width:960px; }
-  .ed-table th{ text-align:left; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.6px; color:var(--text-faint); padding:8px 10px; border-bottom:1px solid var(--border-soft); }
-  .ed-table td{ padding:11px 10px; border-bottom:1px solid var(--border-soft); font-size:13px; vertical-align:top; }
-  .ed-table tr:hover td{ background:rgba(255,255,255,0.02); }
-  .ed-name{ font-weight:600; }
-  .ed-badge{ font-size:11px; padding:3px 9px; border-radius:20px; white-space:nowrap; }
-  .ed-contactar{ background:rgba(139,147,164,0.18); color:#c3cad6; } .ed-enviado{ background:var(--blue-dim); color:#a9dcf2; }
-  .ed-revision{ background:var(--amber-dim); color:#f3d59a; } .ed-rechazado{ background:var(--brick-dim); color:#f3c3b7; } .ed-aceptado{ background:var(--teal-dim); color:#bfe9db; }
-  .ed-actions{ display:flex; gap:6px; } .ed-actions button{ background:none; border:none; color:var(--text-faint); cursor:pointer; font-size:14px; padding:3px 5px; border-radius:5px; } .ed-actions button:hover{ background:rgba(255,255,255,0.06); color:var(--text); }
-
-  .overlay{ position:fixed; inset:0; background:rgba(10,13,17,0.65); display:flex; align-items:center; justify-content:center; z-index:100; padding:16px; }
-  .modal{ background:var(--surface-2); border:1px solid var(--border); border-radius:14px; width:100%; max-width:480px; padding:22px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-pop); }
-  .modal h3{ font-family:'Fraunces', serif; margin:0 0 4px; font-size:19px; }
-  .modal .hint{font-size:12px; color:var(--text-faint); margin-bottom:16px; line-height:1.4;}
-  .field{margin-bottom:14px;}
-  .field label{ display:block; font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:0.6px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
-  .field input, .field textarea, .field select{ width:100%; background:var(--bg); border:1px solid var(--border); border-radius:7px; color:var(--text); font-family:'IBM Plex Sans', sans-serif; font-size:13.5px; padding:9px 10px; resize:vertical; }
-  .field textarea{min-height:56px;}
+  /* detail panel */
+  .panel{ position:fixed; top:0; right:0; bottom:0; width:340px; max-width:90vw; background:var(--surface-2); border-left:1px solid var(--border); z-index:60; padding:22px; overflow-y:auto; transform:translateX(100%); transition:transform .2s ease; box-shadow:var(--shadow); }
+  .panel.open{ transform:translateX(0); }
+  .pclose{ position:absolute; top:14px; right:14px; background:none; border:none; color:var(--faint); font-size:22px; cursor:pointer; }
+  .panel h3{ font-family:'Fraunces',serif; margin:0 30px 12px 0; font-size:19px; }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.6px; color:var(--faint); margin-bottom:5px; }
+  .field input, .field textarea, .field select{ width:100%; background:var(--bg); border:1px solid var(--border); border-radius:7px; color:var(--text); font-family:'IBM Plex Sans',sans-serif; font-size:13.5px; padding:9px 10px; resize:vertical; }
   .field input:focus, .field textarea:focus, .field select:focus{ outline:none; border-color:var(--amber); }
-  .row2{ display:flex; gap:10px; } .row2 > *{ flex:1; }
-  .modal-actions{ display:flex; gap:10px; margin-top:18px; justify-content:flex-end; align-items:center; } .modal-actions .spacer{ flex:1; }
+  .states{ display:flex; gap:6px; flex-wrap:wrap; }
+  .st{ font-size:11.5px; padding:5px 10px; border-radius:16px; border:1px solid var(--border); background:var(--surface-3); color:var(--muted); cursor:pointer; }
+  .st.on{ color:#111; font-weight:600; }
+  .st.on.s-porprobar{ background:var(--violet); } .st.on.s-funciona{ background:var(--teal); } .st.on.s-descartada{ background:var(--brick); } .st.on.s-aparcada{ background:var(--blue); }
+  .pactions{ display:flex; flex-direction:column; gap:8px; margin-top:16px; }
+  .pactions button{ padding:9px; border-radius:7px; font-size:13px; cursor:pointer; }
 
-  .detail-panel{ position:fixed; top:0; right:0; bottom:0; width:340px; max-width:88vw; background:var(--surface-2); border-left:1px solid var(--border); z-index:90; padding:20px; overflow-y:auto; transform:translateX(100%); transition:transform .2s ease; box-shadow:var(--shadow-pop); }
-  .detail-panel.open{transform:translateX(0);}
-  .detail-close{ background:none;border:none;color:var(--text-faint);font-size:22px;cursor:pointer; position:absolute; top:12px; right:12px; width:32px;height:32px;border-radius:6px; } .detail-close:hover{ background:rgba(255,255,255,0.06); color:var(--text); }
-  .detail-panel h3{font-family:'Fraunces',serif; margin:0 30px 2px 0; font-size:19px;}
-  .detail-section{margin-bottom:14px;}
-  .detail-section .lbl{ font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.6px; color:var(--text-faint); margin-bottom:5px; }
-  .detail-section .body-text{font-size:13.5px; line-height:1.5; color:var(--text); white-space:pre-wrap;}
-  .detail-actions{display:flex; flex-direction:column; gap:8px; margin-top:18px;}
-  .detail-actions button{ padding:10px; border-radius:7px; font-size:13px; cursor:pointer; font-weight:500; }
-  .btn-activate{background:var(--amber); color:#1a1206; border:none; font-weight:600;}
-  .btn-secondary{background:transparent; border:1px solid var(--border); color:var(--text);} .btn-secondary:hover{border-color:var(--amber); color:var(--amber);}
-  .detail-row2{ display:flex; gap:8px; } .detail-row2 button{ flex:1; }
-  .state-pick{ display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
-  .st-pill{ font-size:11px; padding:5px 9px; border-radius:16px; border:1px solid var(--border); background:var(--surface-3); color:var(--text-muted); cursor:pointer; }
-  .st-pill.on{ font-weight:600; color:#111; }
-  .st-pill.on.s-funciona{ background:var(--teal); } .st-pill.on.s-descartada{ background:var(--brick); } .st-pill.on.s-aparcada{ background:var(--blue); } .st-pill.on.s-porprobar{ background:var(--violet); }
+  /* modal */
+  .ov{ position:fixed; inset:0; background:rgba(8,11,15,0.62); display:flex; align-items:center; justify-content:center; z-index:100; padding:16px; }
+  .modal{ background:var(--surface-2); border:1px solid var(--border); border-radius:13px; width:100%; max-width:440px; padding:22px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow); }
+  .modal h3{ font-family:'Fraunces',serif; margin:0 0 4px; font-size:18px; }
+  .modal .hint{ font-size:12px; color:var(--faint); margin-bottom:14px; }
+  .macts{ display:flex; gap:10px; margin-top:16px; justify-content:flex-end; align-items:center; }
+  .macts .sp{ flex:1; }
 
-  .ctx-menu{ position:fixed; z-index:120; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:5px; min-width:176px; box-shadow:var(--shadow-pop); }
-  .ctx-menu button{ display:flex; align-items:center; gap:9px; width:100%; text-align:left; background:none; border:none; color:var(--text); font-size:13px; padding:8px 10px; border-radius:6px; cursor:pointer; }
-  .ctx-menu button:hover, .ctx-menu button:focus-visible{ background:rgba(255,255,255,0.06); outline:none; }
-  .ctx-menu button.danger{ color:#eaa393; } .ctx-menu button.danger:hover{ background:var(--brick-dim); }
-  .ctx-menu .sep{ height:1px; background:var(--border-soft); margin:5px 4px; } .ctx-menu .ico{ width:16px; text-align:center; font-family:'IBM Plex Mono',monospace; color:var(--text-faint); }
+  .menu{ position:fixed; z-index:120; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:5px; min-width:170px; box-shadow:var(--shadow); }
+  .menu button{ display:flex; gap:9px; width:100%; text-align:left; background:none; border:none; color:var(--text); font-size:13px; padding:8px 10px; border-radius:6px; cursor:pointer; }
+  .menu button:hover{ background:rgba(255,255,255,0.06); } .menu button.dg{ color:#eaa393; }
 
-  .toast-wrap{ position:fixed; bottom:18px; left:50%; transform:translateX(-50%); z-index:300; display:flex; flex-direction:column; gap:8px; align-items:center; }
-  .toast{ background:var(--surface-3); border:1px solid var(--border); color:var(--text); font-size:12.5px; padding:10px 16px; border-radius:8px; box-shadow:var(--shadow-pop); opacity:0; transform:translateY(8px); transition:opacity .18s, transform .18s; }
+  .toasts{ position:fixed; bottom:18px; left:50%; transform:translateX(-50%); z-index:300; display:flex; flex-direction:column; gap:8px; align-items:center; }
+  .toast{ background:var(--surface-3); border:1px solid var(--border); color:var(--text); font-size:12.5px; padding:10px 16px; border-radius:8px; box-shadow:var(--shadow); opacity:0; transform:translateY(8px); transition:.18s; }
   .toast.show{ opacity:1; transform:translateY(0); } .toast.warn{ background:#3a2a1a; border-color:rgba(232,163,61,0.4); color:#f3c98a; }
 
   #printArea{ display:none; }
-  @media print{
-    body{ background:#fff !important; } .topbar,.layout,.detail-panel,.overlay,.toast-wrap{ display:none !important; }
-    #printArea{ display:block !important; position:absolute; top:0; left:0; width:100%; background:#fff; color:#111; font-family:'IBM Plex Sans',sans-serif; padding:24px 28px; }
-    #printArea h1{ font-family:'Fraunces',serif; font-size:24px; margin:0 0 2px; }
-    #printArea .docmeta{ font-size:12px; color:#555; margin-bottom:16px; font-family:'IBM Plex Mono',monospace; }
-    #printArea h2{ font-family:'Fraunces',serif; font-size:16px; margin:16px 0 4px; border-bottom:1px solid #ccc; padding-bottom:3px; }
-    #printArea .sec-body{ font-size:12.5px; line-height:1.6; white-space:pre-wrap; }
-    #printArea .changes-box{ border:1px solid #ddd; background:#faf3e6; padding:8px 10px; white-space:pre-wrap; font-size:12.5px; }
+  @media print{ body{ background:#fff; } .topbar,.layout,.panel,.ov,.toasts{ display:none !important; }
+    #printArea{ display:block !important; padding:24px 28px; color:#111; font-family:'IBM Plex Sans',sans-serif; }
+    #printArea h1{ font-family:'Fraunces',serif; font-size:24px; margin:0 0 2px; } #printArea .dm{ color:#555; font-size:12px; margin-bottom:16px; font-family:'IBM Plex Mono',monospace; }
+    #printArea h2{ font-family:'Fraunces',serif; font-size:16px; margin:16px 0 4px; border-bottom:1px solid #ccc; } #printArea .b{ font-size:12.5px; white-space:pre-wrap; } #printArea .cb{ border:1px solid #ddd; background:#faf3e6; padding:8px 10px; white-space:pre-wrap; }
   }
-  ::-webkit-scrollbar{width:9px; height:9px;} ::-webkit-scrollbar-thumb{background:#2c3546; border-radius:6px;} ::-webkit-scrollbar-track{background:transparent;}
-  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;}
-  @media (max-width: 760px){ .sidebar{display:none;} .kbd-hint{display:none;} .game-select-mobile{display:block;} .kanban{ flex-direction:column; } .kan-col{ width:100%; } .ver-box{ flex-direction:column; } }
+  ::-webkit-scrollbar{ width:9px;height:9px; } ::-webkit-scrollbar-thumb{ background:#2a3340; border-radius:6px; }
+  .sr-only{ position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0); }
+  @media (max-width:720px){ .sidebar{ display:none; } .backend{ display:none; } .game-select-mobile{ display:block; } .game-select-mobile select{ background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 9px; font-size:13px; max-width:140px; } }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
@@ -253,135 +162,104 @@
 <body>
 
 <div class="topbar">
-  <div class="brand"><span class="dot"></span> Bitácora de Iteraciones</div>
-  <div style="display:flex;align-items:center;gap:10px;">
-    <span id="backendBadge" class="kbd-hint" title="Dónde se guardan tus datos"></span>
-    <button class="icon-btn" id="exportBtn" title="Exportar copia (.json)" aria-label="Exportar">⤓</button>
-    <button class="icon-btn" id="importBtn" title="Importar copia (.json)" aria-label="Importar">⤒</button>
+  <div class="brand"><span class="dot"></span> Bitácora</div>
+  <div class="tools">
+    <span class="backend" id="backend"></span>
+    <button class="ibtn" id="exportBtn" title="Exportar copia (.json)" aria-label="Exportar">⤓</button>
+    <button class="ibtn" id="importBtn" title="Importar copia (.json)" aria-label="Importar">⤒</button>
     <input type="file" id="importFile" accept="application/json,.json" style="display:none;">
-    <button class="icon-btn" id="signOutBtn" title="Cerrar sesión" aria-label="Cerrar sesión" style="display:none;">⎋</button>
-    <div class="kbd-hint"><kbd>Esc</kbd> cerrar</div>
-    <div class="game-select-mobile"><label class="sr-only" for="mobileGameSelect">Juego</label><select id="mobileGameSelect"></select></div>
-  </div>
-</div>
-
-<div class="overlay" id="authGate" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="agTitle">
-  <div class="modal" style="max-width:420px;">
-    <h3 id="agTitle">Entra con tu correo</h3>
-    <div class="hint">Tus datos se guardan en tu cuenta de Supabase y se sincronizan entre dispositivos. Te enviamos un enlace mágico de acceso (sin contraseña).</div>
-    <div class="field"><label for="agEmail">Correo</label><input type="email" id="agEmail" placeholder="tucorreo@ejemplo.com"></div>
-    <div class="modal-actions"><button class="btn-primary" id="agSend">Enviar enlace</button></div>
-    <div class="rb-note" id="agMsg" style="margin-top:10px;"></div>
+    <button class="ibtn" id="signOutBtn" title="Cerrar sesión" aria-label="Cerrar sesión" style="display:none;">⎋</button>
+    <div class="game-select-mobile"><label class="sr-only" for="mgs">Juego</label><select id="mgs"></select></div>
   </div>
 </div>
 
 <div class="layout">
-  <nav class="sidebar" id="sidebar" aria-label="Lista de juegos">
-    <div class="sidebar-header">Tus juegos</div>
+  <nav class="sidebar" aria-label="Juegos">
+    <div class="side-h">Tus juegos</div>
     <div id="gameList"></div>
-    <button class="add-game-btn" id="addGameBtn">+ Añadir juego</button>
+    <button class="addg" id="addGameBtn">+ Añadir juego</button>
   </nav>
   <div class="main">
-    <div class="board-header">
-      <div class="board-head-left">
-        <div class="board-title" id="boardTitle">—</div>
-        <button class="icon-btn" id="gameMenuBtn" title="Opciones del juego" aria-label="Opciones del juego" style="display:none;">⋯</button>
-      </div>
-    </div>
-    <div class="tabs" id="tabBar"></div>
-    <div class="tab-content" id="tabContent"></div>
+    <div class="head"><span class="title" id="title">—</span><button class="mn" id="gameMenuBtn" title="Opciones" aria-label="Opciones del juego" style="display:none;">⋯</button></div>
+    <div class="tabs" id="tabs"></div>
+    <div class="content"><div class="wrap" id="wrap"></div></div>
   </div>
 </div>
 
-<aside class="detail-panel" id="detailPanel" role="dialog" aria-label="Detalle" aria-modal="false">
-  <button class="detail-close" id="detailClose" aria-label="Cerrar detalle">&times;</button>
-  <div id="detailContent"></div>
-</aside>
+<aside class="panel" id="panel" role="dialog" aria-label="Detalle"><button class="pclose" id="panelClose" aria-label="Cerrar">&times;</button><div id="panelBody"></div></aside>
 
-<!-- Solution / test modal -->
-<div class="overlay" id="testModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="tmTitle">
+<!-- Change modal -->
+<div class="ov" id="chgModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="cmTitle">
   <div class="modal">
-    <h3 id="tmTitle">Nueva solución</h3>
-    <div class="hint" id="tmHint"></div>
-    <div class="field" id="tmParentField"><label for="tmParent">Deriva de</label><select id="tmParent"></select></div>
-    <div class="field"><label for="tmName">Nombre de la solución</label><input type="text" id="tmName" placeholder="p. ej. Bajar el coste de vía"></div>
-    <div class="field"><label for="tmSection">Apartado del reglamento al que apunta <span style="text-transform:none;letter-spacing:0;color:var(--text-faint)">(opcional)</span></label><select id="tmSection"></select></div>
-    <div class="field" id="tmSectionTextField" style="display:none;"><label for="tmSectionText" id="tmSectionTextLabel">Texto propuesto</label><textarea id="tmSectionText"></textarea><div class="rb-note" style="margin-top:6px;">Este será el texto que se lleve al borrador cuando implementes la solución.</div></div>
-    <div class="field"><label for="tmMejora">Qué aporta / hipótesis <span style="text-transform:none;letter-spacing:0;color:var(--text-faint)">(nota)</span></label><textarea id="tmMejora" placeholder="¿Qué esperas que mejore?"></textarea></div>
-    <div class="field"><label for="tmProblema">Efecto secundario observado</label><textarea id="tmProblema" placeholder="¿Qué desequilibrio nuevo aparece?"></textarea></div>
-    <div class="modal-actions"><button class="btn-ghost" id="tmCancel">Cancelar</button><button class="btn-primary" id="tmSave">Guardar</button></div>
-  </div>
-</div>
-
-<!-- Problem modal -->
-<div class="overlay" id="probModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="pmTitle">
-  <div class="modal">
-    <h3 id="pmTitle">Nuevo problema</h3>
-    <div class="hint" id="pmHint"></div>
-    <div class="field"><label for="pmName">Problema detectado</label><input type="text" id="pmName" placeholder="p. ej. La zona de arriba domina sobre la de abajo"></div>
-    <div class="field"><label for="pmDesc">Descripción / contexto</label><textarea id="pmDesc" placeholder="¿Cómo se manifiesta? ¿En qué situaciones?"></textarea></div>
-    <div class="field"><label for="pmStatus">Estado</label><select id="pmStatus"></select></div>
-    <div class="modal-actions"><button class="btn-ghost" id="pmCancel">Cancelar</button><button class="btn-primary" id="pmSave">Guardar</button></div>
+    <h3 id="cmTitle">Nueva idea</h3>
+    <div class="hint" id="cmHint">Algo que quieres probar en esta versión.</div>
+    <div class="field"><label for="cmName">Nombre</label><input type="text" id="cmName" placeholder="p. ej. Bajar el coste de vía"></div>
+    <div class="field"><label for="cmNote">Qué esperas que mejore <span style="text-transform:none;letter-spacing:0;color:var(--faint)">(opcional)</span></label><textarea id="cmNote"></textarea></div>
+    <div class="field"><label for="cmIssue">Efecto secundario observado <span style="text-transform:none;letter-spacing:0;color:var(--faint)">(opcional)</span></label><textarea id="cmIssue"></textarea></div>
+    <div class="field"><label for="cmSection">Apartado del reglamento al que apunta <span style="text-transform:none;letter-spacing:0;color:var(--faint)">(opcional)</span></label><select id="cmSection"></select></div>
+    <div class="field" id="cmSecTextF" style="display:none;"><label for="cmSecText" id="cmSecTextL">Texto propuesto</label><textarea id="cmSecText"></textarea></div>
+    <div class="macts"><button class="btn-q" id="cmCancel">Cancelar</button><button class="btn" id="cmSave">Guardar</button></div>
   </div>
 </div>
 
 <!-- Implement modal -->
-<div class="overlay" id="implModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="imTitle">
+<div class="ov" id="implModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="imTitle">
   <div class="modal">
-    <h3 id="imTitle">Implementar en el reglamento</h3>
-    <div class="hint">Elige a qué apartado del borrador va este cambio. El texto entrará como pendiente de consolidar; luego lo ajustas en Borrador vivo.</div>
+    <h3 id="imTitle">Llevar al reglamento</h3>
+    <div class="hint">Elige a qué apartado va este cambio. Entra como pendiente; luego lo ajustas en Reglas.</div>
     <div class="field"><label for="imSection">Apartado</label><select id="imSection"></select></div>
     <div class="field"><label for="imText">Texto a incorporar</label><textarea id="imText" style="min-height:90px;"></textarea></div>
-    <div class="modal-actions"><button class="btn-ghost" id="imCancel">Cancelar</button><button class="btn-primary" id="imSave">Implementar</button></div>
+    <div class="macts"><button class="btn-q" id="imCancel">Cancelar</button><button class="btn" id="imSave">Añadir al borrador</button></div>
   </div>
 </div>
 
 <!-- Save version modal -->
-<div class="overlay" id="saveVerModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="svTitle">
+<div class="ov" id="svModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="svTitle">
   <div class="modal">
     <h3 id="svTitle">Guardar versión</h3>
     <div class="hint" id="svHint"></div>
-    <div class="field"><label for="svSummary">Resumen del cambio principal</label><input type="text" id="svSummary" placeholder="p. ej. Nueva economía Plenitud/Estela"></div>
-    <div class="modal-actions"><button class="btn-ghost" id="svCancel">Cancelar</button><button class="btn-primary" id="svSave">Consolidar versión</button></div>
-  </div>
-</div>
-
-<!-- Editorial modal -->
-<div class="overlay" id="edModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="emTitle">
-  <div class="modal">
-    <h3 id="emTitle">Nueva editorial</h3>
-    <div class="field"><label for="emName">Editorial</label><input type="text" id="emName" placeholder="p. ej. Devir"></div>
-    <div class="row2"><div class="field"><label for="emStatus">Estado</label><select id="emStatus"></select></div><div class="field"><label for="emDate">Fecha</label><input type="date" id="emDate"></div></div>
-    <div class="field"><label for="emContact">Contacto</label><input type="text" id="emContact" placeholder="Persona / email"></div>
-    <div class="field"><label for="emNotes">Feedback / notas</label><textarea id="emNotes" placeholder="Respuesta recibida, próximos pasos…"></textarea></div>
-    <div class="modal-actions"><button class="btn-ghost" id="emCancel">Cancelar</button><button class="btn-primary" id="emSave">Guardar</button></div>
+    <div class="field"><label for="svSum">Resumen del cambio principal</label><input type="text" id="svSum" placeholder="p. ej. Nueva economía Plenitud/Estela"></div>
+    <div class="macts"><button class="btn-q" id="svCancel">Cancelar</button><button class="btn" id="svSave">Consolidar versión</button></div>
   </div>
 </div>
 
 <!-- Game modal -->
-<div class="overlay" id="gameModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="gmTitle">
+<div class="ov" id="gameModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="gmTitle">
   <div class="modal">
     <h3 id="gmTitle">Añadir juego</h3>
-    <div class="hint" id="gmHint">Se creará vacío: define su reglamento y añade problemas cuando quieras.</div>
-    <div class="field"><label for="gmName">Nombre del juego</label><input type="text" id="gmName" placeholder="p. ej. Nombre del proyecto"></div>
-    <div class="modal-actions"><button class="btn-ghost" id="gmCancel">Cancelar</button><button class="btn-primary" id="gmSave">Crear</button></div>
+    <div class="hint" id="gmHint">Se crea vacío.</div>
+    <div class="field"><label for="gmName">Nombre del juego</label><input type="text" id="gmName" placeholder="Nombre del proyecto"></div>
+    <div class="macts"><button class="btn-q" id="gmCancel">Cancelar</button><button class="btn" id="gmSave">Crear</button></div>
   </div>
 </div>
 
 <!-- Confirm -->
-<div class="overlay" id="confirmModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="cfTitle">
+<div class="ov" id="cfModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="cfTitle">
   <div class="modal" style="max-width:400px;">
     <h3 id="cfTitle">Confirmar</h3>
-    <div class="hint" id="cfMsg" style="font-size:13px;color:var(--text-muted);"></div>
-    <div class="modal-actions"><button class="btn-ghost" id="cfCancel">Cancelar</button><button class="btn-danger" id="cfOk">Eliminar</button></div>
+    <div class="hint" id="cfMsg" style="font-size:13px;color:var(--muted);"></div>
+    <div class="macts"><button class="btn-q" id="cfCancel">Cancelar</button><button class="btn-danger" id="cfOk">Eliminar</button></div>
+  </div>
+</div>
+
+<!-- Auth gate -->
+<div class="ov" id="authGate" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="agTitle">
+  <div class="modal" style="max-width:420px;">
+    <h3 id="agTitle">Entrar</h3>
+    <div class="hint">Tus datos se guardan en tu cuenta de Supabase y se sincronizan. Entra con tu correo y contraseña.</div>
+    <div class="field"><label for="agEmail">Correo</label><input type="email" id="agEmail" placeholder="tucorreo@ejemplo.com" autocomplete="username"></div>
+    <div class="field"><label for="agPass">Contraseña</label><input type="password" id="agPass" placeholder="tu contraseña" autocomplete="current-password"></div>
+    <div class="macts"><button class="btn-q" id="agSignup">Crear cuenta</button><div class="sp"></div><button class="btn" id="agLogin">Entrar</button></div>
+    <div class="hint" style="margin-top:12px;">¿Sin contraseña? <a href="#" id="agMagic" style="color:var(--blue);text-decoration:none;">Enviarme un enlace por correo</a></div>
+    <div class="hint" id="agMsg" style="margin-top:8px;"></div>
   </div>
 </div>
 
 <div id="printArea"></div>
-<div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script>
-const SPINE_COLORS = ['#e8a33d','#4fa98b','#d9634a','#7b839a','#c99edb','#5fb3d9','#e0c05f','#d98fae'];
+const SPINE_COLORS = ['#e8a33d','#57b394','#d9634a','#8891a6','#c99edb','#66b6df','#e0c05f','#d98fae'];
 const SEED_GAMES = [
   { name:'Bazaar', seedProblema:'' }, { name:'Caja Fuerte', seedProblema:'' }, { name:'Dinastía', seedProblema:'' },
   { name:'Kura', seedProblema:'' }, { name:'Misohouse', seedProblema:'' },
@@ -391,93 +269,72 @@ const SEED_GAMES = [
 ];
 const RB_SECTIONS = [
   ['idea','Idea del juego','En una frase: ¿de qué va y qué se siente al jugarlo? Tema, nº de jugadores, duración.'],
-  ['componentes','Componentes','Lista de materiales con cantidades: cartas, fichas, tableros, dados…'],
-  ['setup','Preparación (setup)','Cómo se prepara la mesa: reparto inicial, mazos, mano de salida.'],
-  ['flujo','Flujo del juego','Estructura de la partida: rondas o fases, cómo se avanza y cuándo termina.'],
+  ['componentes','Componentes','Lista de materiales con cantidades.'],
+  ['setup','Preparación (setup)','Cómo se prepara la mesa antes de empezar.'],
+  ['flujo','Flujo del juego','Estructura de la partida: rondas o fases y cuándo termina.'],
   ['turno','Turno de acción','Qué hace un jugador en su turno, en orden.'],
-  ['acciones','Acciones disponibles','Lista de acciones que puede hacer un jugador y su efecto.'],
-  ['final','Final de partida y puntuación','Cuándo y cómo acaba, y cómo se cuentan los puntos.'],
+  ['acciones','Acciones disponibles','Lista de acciones y su efecto.'],
+  ['final','Final de partida y puntuación','Cuándo acaba y cómo se cuentan los puntos.'],
 ];
-const RB_TITLE = Object.fromEntries(RB_SECTIONS.map(([k,t]) => [k,t]));
-const RB_PLACEHOLDER = Object.fromEntries(RB_SECTIONS.map(([k,,p]) => [k,p]));
-function makeRulebook(content){ return { sections: RB_SECTIONS.map(([key,title]) => ({ key, title, content: (content && content[key]) || '' })) }; }
-
-const PROBLEM_STATUSES = [['detectado','Detectado'],['prueba','En prueba'],['resuelto','Resuelto'],['descartado','Descartado']];
-const PS_TITLE = Object.fromEntries(PROBLEM_STATUSES.map(([k,t]) => [k,t]));
-const SOL_STATES = [['porprobar','Por probar'],['funciona','Funciona'],['descartada','Descartada'],['aparcada','Aparcada']];
-const SOL_TITLE = Object.fromEntries(SOL_STATES.map(([k,t]) => [k,t]));
-const OUTCOME_MAP = { pendiente:'porprobar', funciona:'funciona', falla:'descartada', genera:'aparcada' };
-const ED_STATUSES = [['contactar','Por contactar'],['enviado','Enviado'],['revision','En revisión'],['rechazado','Rechazado'],['aceptado','Aceptado']];
-const ES_TITLE = Object.fromEntries(ED_STATUSES.map(([k,t]) => [k,t]));
+const RB_TITLE = Object.fromEntries(RB_SECTIONS.map(([k,t])=>[k,t]));
+const RB_PLACEHOLDER = Object.fromEntries(RB_SECTIONS.map(([k,,p])=>[k,p]));
+function makeRulebook(c){ return { sections: RB_SECTIONS.map(([k,t])=>({ key:k, title:t, content:(c&&c[k])||'' })) }; }
+const STATES = [['porprobar','Por probar'],['funciona','Funciona'],['descartada','Descartada'],['aparcada','Aparcada']];
+const STATE_TITLE = Object.fromEntries(STATES.map(([k,t])=>[k,t]));
+const OLD_OUTCOME = { pendiente:'porprobar', funciona:'funciona', falla:'descartada', genera:'aparcada' };
 
 const SETSUNA_RB = {
   idea:'Setsuna (刹那), «el instante fugaz». Filler de colocación efímera para 2–4 jugadores, tema mono no aware. Coleccionas instantes de cuatro categorías —Flor (花), Ave (鳥), Viento (風) y Luna (月)— que se «viven» y se desvanecen.',
-  componentes:'· 48 cartas de motivo (12 por categoría), cada una con un Valor de Plenitud (alto) y un Valor de Estela (bajo).\n· Fichas de Recuerdo.\n· Un cuaderno personal por jugador con 3 huecos.\n· Mazo de revelación de categorías.',
-  setup:'· Cada jugador toma su cuaderno (3 huecos, vacío).\n· Se forma el mazo de revelación con 12 cartas (3 por categoría); se retiran 2 sin verlas y se revelan las 10 restantes → 10 rondas.',
-  flujo:'La partida dura 10 rondas. En cada ronda se revela la categoría activa; los apuntes de esa categoría se viven. ~16% de las cartas colocadas nunca florecen: incertidumbre y apuesta.',
-  turno:'En tu turno coges un apunte del display y lo colocas en uno de los 3 huecos de tu cuaderno.',
-  acciones:'· Colocar un apunte en un hueco libre.\n· Descartar a mano una carta ya vivida: cobra Estela, sin Ficha.\n· Descartar antes del 1er encuentro: nada.',
-  final:'· Inspiración (1er encuentro): banca el Valor de Plenitud (alto) + bonus de conjunto. Sin Ficha.\n· Recuerdo (2º encuentro): banca el Valor de Estela (bajo) + bonus y genera 1 Ficha; la carta se retira.\n· Bonus de conjunto: +0/+1/+2 según 1/2/3+.\n· Fin: las cartas vivas cobran su Estela.\n· Fichas finales = (nº de Fichas) × (nº de categorías distintas), tope 6.'
+  componentes:'· 48 cartas de motivo (12 por categoría), cada una con Valor de Plenitud (alto) y de Estela (bajo).\n· Fichas de Recuerdo.\n· Un cuaderno por jugador con 3 huecos.\n· Mazo de revelación.',
+  setup:'· Cada jugador toma su cuaderno (3 huecos).\n· Mazo de revelación de 12 cartas; se retiran 2 sin verlas y se revelan 10 → 10 rondas.',
+  flujo:'10 rondas. En cada una se revela la categoría activa; los apuntes de esa categoría se viven. ~16% de las cartas nunca florecen.',
+  turno:'Coges un apunte del display y lo colocas en uno de los 3 huecos de tu cuaderno.',
+  acciones:'· Colocar un apunte.\n· Descartar carta ya vivida: cobra Estela, sin Ficha.\n· Descartar antes del 1er encuentro: nada.',
+  final:'· Inspiración (1er encuentro): Plenitud (alto) + conjunto, sin Ficha.\n· Recuerdo (2º): Estela (bajo) + conjunto y 1 Ficha; se retira.\n· Conjunto +0/+1/+2 según 1/2/3+.\n· Fin: cartas vivas cobran Estela.\n· Fichas finales = Fichas × categorías distintas, tope 6.'
 };
 const SETSUNA_STAGES = [
-  { title:'Concepto base — Utsuroi', section:'idea', patch:{ idea:'Utsuroi. Colocación efímera para 2–4 jugadores; tema mono no aware. Cuatro categorías Flor (花), Ave (鳥), Viento (風) y Luna (月) que aparecen y se desvanecen.' } },
-  { title:'Renombre a Setsuna (刹那)', section:'idea', patch:{ idea:'Setsuna (刹那), «el instante fugaz». Filler de colocación efímera 2–4 jug., tema mono no aware. Cuatro categorías Flor/Ave/Viento/Luna que se viven y se desvanecen.' } },
-  { title:'Economía: Plenitud / Estela', section:'final', patch:{ componentes:'48 cartas de motivo (12 por categoría). Cada carta lleva Valor de Plenitud (alto) y Valor de Estela (bajo).', final:'Coges un «apunte»; al revelarse su categoría se «vive» y banca su valor. Cada carta ofrece Plenitud (alto) y Estela (bajo).' } },
-  { title:'Inspiración + Recuerdo (modelo A)', section:'final', patch:{ componentes:'48 cartas (12 por categoría) con Plenitud (alto) y Estela (bajo). Fichas de Recuerdo.', acciones:'· Colocar un apunte.\n· Descartar carta ya vivida: cobra Estela, sin Ficha.\n· Descartar antes del 1er encuentro: nada.', final:'· Inspiración (1er encuentro): Plenitud (alto) + conjunto, sin Ficha.\n· Recuerdo (2º): Estela (bajo) + conjunto y 1 Ficha; se retira.\n· Conjunto +0/+1/+2 según 1/2/3+.\n· Fichas finales = Fichas × categorías distintas, tope 6.' } },
-  { title:'Cuaderno 5 → 3 huecos', section:'setup', patch:{ componentes:'48 cartas con Plenitud/Estela. Fichas de Recuerdo. Cuaderno de 3 huecos por jugador.', setup:'Cada jugador recibe su cuaderno con 3 huecos (bajado de 5 para ahogar el apilado y forzar a diversificar).', turno:'Coges un apunte del display y lo colocas en uno de los 3 huecos.' } },
-  { title:'Mazo de revelación 12 → revela 10', section:'flujo', patch:{ componentes:'48 cartas con Plenitud/Estela. Fichas. Cuaderno de 3 huecos. Mazo de revelación.', setup:'Forma el mazo de revelación con 12 cartas (3 por categoría); retira 2 sin verlas y revela 10 → 10 rondas.', flujo:'10 rondas; cada una revela la categoría activa. Como 2 cartas se retiran sin ver, ~16% nunca florecen: incertidumbre.' } },
-  { title:'Versión FASES (2 zonas × 2 huecos)', section:'final', patch:{ flujo:'10 rondas; se revela la categoría activa. Variante FASES: cada apunte vive en una de dos zonas —Instante (arriba) o Recuerdo (abajo)—, 2 huecos cada una.', turno:'Colocas el apunte en Instante (nº alto) o en Recuerdo (nº bajo + Ficha): «o lo uno o lo otro».', final:'Según la zona:\n· Instante: Plenitud (alto) + conjunto, sin Ficha.\n· Recuerdo: Estela (bajo) + conjunto y 1 Ficha.\n· Conjunto +0/+1/+2.\n· Fichas finales = Fichas × categorías, tope 6.\nPendiente: equilibrar arriba/abajo.' } },
+  { title:'Concepto base — Utsuroi', section:'idea', patch:{ idea:'Utsuroi. Colocación efímera 2–4 jug.; tema mono no aware. Cuatro categorías Flor/Ave/Viento/Luna que aparecen y se desvanecen.' } },
+  { title:'Renombre a Setsuna (刹那)', section:'idea', patch:{ idea:'Setsuna (刹那), «el instante fugaz». Filler de colocación efímera 2–4 jug., tema mono no aware.' } },
+  { title:'Economía: Plenitud / Estela', section:'final', patch:{ componentes:'48 cartas (12 por categoría) con Plenitud (alto) y Estela (bajo).', final:'Coges un apunte; al revelarse su categoría se vive y banca su valor (Plenitud alto / Estela bajo).' } },
+  { title:'Inspiración + Recuerdo (modelo A)', section:'final', patch:{ componentes:'48 cartas con Plenitud/Estela. Fichas de Recuerdo.', acciones:'· Colocar apunte.\n· Descartar carta vivida: Estela sin Ficha.\n· Descartar antes: nada.', final:'· Inspiración: Plenitud + conjunto, sin Ficha.\n· Recuerdo: Estela + conjunto y 1 Ficha.\n· Fichas finales = Fichas × categorías, tope 6.' } },
+  { title:'Cuaderno 5 → 3 huecos', section:'setup', patch:{ componentes:'48 cartas con Plenitud/Estela. Fichas. Cuaderno de 3 huecos.', setup:'Cuaderno de 3 huecos (bajado de 5 para diversificar).', turno:'Coges un apunte y lo colocas en uno de los 3 huecos.' } },
+  { title:'Mazo de revelación 12 → revela 10', section:'flujo', patch:{ setup:'Cuaderno de 3 huecos. Mazo de 12 cartas; retira 2 sin ver y revela 10 → 10 rondas.', flujo:'10 rondas; cada una revela la categoría activa. ~16% de cartas nunca florecen: incertidumbre.' } },
+  { title:'Versión FASES (2 zonas × 2 huecos)', section:'final', patch:{ flujo:'10 rondas. Variante FASES: cada apunte vive en Instante (arriba) o Recuerdo (abajo), 2 huecos cada una.', turno:'Colocas el apunte en Instante (nº alto) o en Recuerdo (nº bajo + Ficha): «o lo uno o lo otro».', final:'Según la zona:\n· Instante: Plenitud + conjunto, sin Ficha.\n· Recuerdo: Estela + conjunto y 1 Ficha.\nPendiente: equilibrar arriba/abajo.' } },
 ];
 function buildPreloadGames(){
-  const chain = [
-    { title:'Concepto base — Utsuroi', mejora:'Filler de colocación efímera (2–4 jug.), tema mono no aware; cuatro categorías 花鳥風月.', problema:'' },
-    { title:'Renombre a Setsuna (刹那)', mejora:'«El instante fugaz», encaja mejor que «Kachō Fūgetsu».', problema:'«Kachō» sonaba a «cacho».' },
-    { title:'Economía: Plenitud / Estela', mejora:'Cada carta trae Plenitud (alto) y Estela (bajo).', problema:'' },
-    { title:'Inspiración + Recuerdo (modelo A)', mejora:'1er encuentro Plenitud sin Ficha; 2º Estela + Ficha.', problema:'' },
-    { title:'Cuaderno 5 → 3 huecos', mejora:'Ahoga el apilado y favorece diversificar.', problema:'' },
-    { title:'Mazo de revelación 12 → revela 10', mejora:'Retira 2 sin ver, revela 10 → incertidumbre (~16% nunca florecen).', problema:'La IA necesita estimar encuentros esperados.' },
-    { title:'Versión FASES (2 zonas × 2 huecos)', mejora:'Instante vs Recuerdo, «o lo uno o lo otro». En 200 partidas compiten de verdad.', problema:'Equilibrar arriba/abajo (abajo pinta fuerte).' },
-  ];
-  const now = Date.now(); let parentId = null;
-  const nodes = chain.map((s,i) => { const id=uid(); const n={ id, parentId, title:s.title, mejora:s.mejora, problema:s.problema, createdAt: now-(chain.length-i)*86400000, active: i===chain.length-1 }; parentId=id; return n; });
-  return [{ id: uid(), name:'Setsuna', color: SPINE_COLORS[4], nodes, rulebook: makeRulebook(SETSUNA_RB), rulebookVersions: [] }];
+  const chain = SETSUNA_STAGES.map((s,i)=>({ title:s.title, note:'', createdAt: Date.now()-(SETSUNA_STAGES.length-i)*86400000 }));
+  return [{ id:uid(), name:'Setsuna', color:SPINE_COLORS[4], _setsunaChain:chain, rulebook:makeRulebook(SETSUNA_RB), rulebookVersions:[] }];
 }
 function seedSetsunaHistory(game){
-  const byTitle = Object.fromEntries(SETSUNA_STAGES.map(s=>[s.title,s]));
-  game.nodes.forEach(nd=>{ const st=byTitle[nd.title]; if(st){ nd.section=st.section; nd.sectionText=st.patch[st.section]||''; } });
-  const acc={}; RB_SECTIONS.forEach(([k])=>acc[k]=''); const versions=[];
+  const acc={}; RB_SECTIONS.forEach(([k])=>acc[k]=''); const versions=[]; const changes=[];
   SETSUNA_STAGES.forEach((st,i)=>{
     Object.keys(st.patch).forEach(k=>{ acc[k]=st.patch[k]; });
-    const node=game.nodes.find(n=>n.title===st.title);
-    const sections=RB_SECTIONS.map(([k,t])=>({key:k,title:t,content:acc[k]}));
-    const evolNotes=SETSUNA_STAGES.slice(0,i+1).map((s2,j)=>{ const n2=game.nodes.find(n=>n.title===s2.title); return `${j}. ${s2.title}`+(n2&&n2.mejora?` — ${n2.mejora}`:''); }).join('\n');
-    let changes=`Probando: ${st.title}\nAplica al apartado: ${RB_TITLE[st.section]}`;
-    if(node&&node.mejora) changes+=`\nMejora: ${node.mejora}`; if(node&&node.problema) changes+=`\nRiesgo/Problema: ${node.problema}`;
-    versions.push({ id:uid(), n:i+1, createdAt: node?node.createdAt:(Date.now()-(SETSUNA_STAGES.length-i)*86400000), basedOnNodeId: node?node.id:null, activeTitle: st.title, summary: st.title, changes, evolNotes, sections, problemsSnapshot:[] });
+    const sections=RB_SECTIONS.map(([k,t])=>({ key:k, title:t, content:acc[k] }));
+    let changesTxt=`Aplica al apartado: ${RB_TITLE[st.section]}`;
+    versions.push({ id:uid(), n:i+1, createdAt: Date.now()-(SETSUNA_STAGES.length-i)*86400000, summary:st.title, changes:changesTxt, sections });
+    changes.push({ id:uid(), title:st.title, note:'', issue: i===SETSUNA_STAGES.length-1?'Pendiente: equilibrar arriba/abajo.':'', state:'funciona', section:st.section, sectionText:st.patch[st.section]||'', implemented:true, createdAt: Date.now()-(SETSUNA_STAGES.length-i)*86400000 });
   });
   game.rulebookVersions=versions;
+  game.changes=changes;
   const untouched=game.rulebook.sections.every(s=>{ const sd=SETSUNA_RB[s.key]||''; return s.content===sd||!s.content.trim(); });
-  if(untouched) game.rulebook.sections=RB_SECTIONS.map(([k,t])=>({key:k,title:t,content:acc[k]}));
+  if(untouched) game.rulebook.sections=RB_SECTIONS.map(([k,t])=>({ key:k, title:t, content:acc[k] }));
+  delete game._setsunaChain;
 }
-const PRELOAD_VERSION = 3;
+const PRELOAD_VERSION = 4;
 
-/* ---------- State ---------- */
-let state = { games: [], currentGameId: null, preloadVersion: 0 };
-let currentTab = 'diseno';                 // diseno | editoriales
-let nav = { view:'versions', problemId:null, versionId:null };  // versions | workspace | problem | draft | versiondoc
-let selectedTestId = null;
-let editingTestId = null; let tmProblemRef = null; let testParentDefault = null;
-let editingProblemId = null, pendingProblemParent = null, pendingProblemOrigin = null;
-let implRef = null;              // {problem, test} para implementar
-let editingEdId = null, editingGameId = null;
-let lastFocused = null, dragProblemId = null;
+let state = { games:[], currentGameId:null, preloadVersion:0 };
+let currentTab = 'inicio';                 // inicio | reglas
+let rbView = 'draft';                      // draft | versions | doc
+let rbVersionId = null;
+let editingChangeId = null; let implRef = null; let editingGameId = null;
+let lastFocused = null;
 
-function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
-function fmtDate(ts){ return new Date(ts).toLocaleDateString('es-ES', {day:'2-digit', month:'short', year:'numeric'}); }
-function escapeHtml(s){ const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+function uid(){ return Math.random().toString(36).slice(2,10)+Date.now().toString(36); }
+function fmtDate(ts){ return new Date(ts).toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}); }
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
 function $(id){ return document.getElementById(id); }
 
-/* ---------- Almacenamiento (Cowork / Supabase / localStorage) ---------- */
+/* ---------- Storage (Cowork / Supabase / localStorage) ---------- */
 const Store = {
   backend:'local', supa:null, userId:null, email:null,
   async init(){
@@ -487,56 +344,44 @@ const Store = {
         const { data } = await this.supa.auth.getSession();
         if(data && data.session){ this.backend='supabase'; this.userId=data.session.user.id; this.email=data.session.user.email; }
         else { this.backend='supabase-anon'; }
-        this.supa.auth.onAuthStateChange((_ev, session)=>{
-          if(session && this.backend!=='supabase'){ this.backend='supabase'; this.userId=session.user.id; this.email=session.user.email; hideAuthGate(); bootApp(); }
-        });
+        this.supa.auth.onAuthStateChange((_e,session)=>{ if(session && this.backend!=='supabase'){ this.backend='supabase'; this.userId=session.user.id; this.email=session.user.email; hideAuthGate(); bootApp(); } });
         return;
-      }catch(e){ console.warn('Supabase init falló, uso local:', e); }
+      }catch(e){ console.warn('Supabase init falló:', e); }
     }
     if(window.storage){ this.backend='cowork'; return; }
     this.backend='local';
   },
-  ready(){ return this.backend !== 'supabase-anon'; },
-  label(){ return { local:'localStorage', cowork:'Cowork', supabase:'Supabase · '+(this.email||''), 'supabase-anon':'Supabase (sin sesión)' }[this.backend] || this.backend; },
-  async get(key){
-    if(this.backend==='supabase'){ const { data, error } = await this.supa.from('app_state').select('data').eq('user_id', this.userId).maybeSingle(); if(error) throw error; return data ? { value: JSON.stringify(data.data) } : null; }
-    if(this.backend==='cowork'){ return await window.storage.get(key, false); }
-    const v = localStorage.getItem(key); return v!=null ? { value:v } : null;
-  },
-  async set(key, val){
-    if(this.backend==='supabase'){ const { error } = await this.supa.from('app_state').upsert({ user_id:this.userId, data: JSON.parse(val), updated_at: new Date().toISOString() }); return !error; }
-    if(this.backend==='cowork'){ return await window.storage.set(key, val, false); }
-    try{ localStorage.setItem(key, val); return true; }catch(e){ return false; }
-  },
-  async signIn(email){ const { error } = await this.supa.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href.split('#')[0] } }); if(error) throw error; },
-  async signOut(){ if(this.supa){ await this.supa.auth.signOut(); } location.reload(); }
+  ready(){ return this.backend!=='supabase-anon'; },
+  label(){ return { local:'localStorage', cowork:'Cowork', supabase:'Supabase · '+(this.email||''), 'supabase-anon':'Supabase (sin sesión)' }[this.backend]||this.backend; },
+  async get(k){ if(this.backend==='supabase'){ const {data,error}=await this.supa.from('app_state').select('data').eq('user_id',this.userId).maybeSingle(); if(error) throw error; return data?{value:JSON.stringify(data.data)}:null; }
+    if(this.backend==='cowork'){ return await window.storage.get(k,false); } const v=localStorage.getItem(k); return v!=null?{value:v}:null; },
+  async set(k,val){ if(this.backend==='supabase'){ const {error}=await this.supa.from('app_state').upsert({ user_id:this.userId, data:JSON.parse(val), updated_at:new Date().toISOString() }); return !error; }
+    if(this.backend==='cowork'){ return await window.storage.set(k,val,false); } try{ localStorage.setItem(k,val); return true; }catch(e){ return false; } },
+  async signInPassword(email,password){ const {error}=await this.supa.auth.signInWithPassword({email,password}); if(error) throw error; },
+  async signUpPassword(email,password){ const {data,error}=await this.supa.auth.signUp({email,password}); if(error) throw error; return data; },
+  async signInMagic(email){ const {error}=await this.supa.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href.split('#')[0] } }); if(error) throw error; },
+  async signOut(){ if(this.supa) await this.supa.auth.signOut(); location.reload(); }
 };
 function showAuthGate(){ $('authGate').style.display='flex'; $('agEmail').focus(); }
 function hideAuthGate(){ $('authGate').style.display='none'; }
-function updateBackendBadge(){ const b=$('backendBadge'); if(b) b.textContent='· '+Store.label(); $('signOutBtn').style.display = Store.backend==='supabase' ? 'inline-flex' : 'none'; }
+function updateBackend(){ $('backend').textContent='· '+Store.label(); $('signOutBtn').style.display = Store.backend==='supabase'?'inline-flex':'none'; }
 
-/* ---------- Load / save / migrate ---------- */
 async function loadState(){
-  try{
-    const res = await Store.get('games-data');
-    if(res && res.value){ state = JSON.parse(res.value); if(typeof state.preloadVersion!=='number') state.preloadVersion=0;
-      if(state.games && state.games.length){ const ch=applyPreload(); if(ch) await saveState(); return; } }
-  }catch(e){}
-  state.games = SEED_GAMES.map((g,i)=>{ const r=uid(); return { id:uid(), name:g.name, color:SPINE_COLORS[i%SPINE_COLORS.length], nodes:[{ id:r, parentId:null, title:'Concepto base', mejora:'', problema:g.seedProblema, createdAt:Date.now()-(SEED_GAMES.length-i)*86400000, active:true }] }; });
-  state.currentGameId = state.games[0].id; state.preloadVersion=0; applyPreload(); await saveState();
+  try{ const res=await Store.get('games-data'); if(res&&res.value){ state=JSON.parse(res.value); if(typeof state.preloadVersion!=='number') state.preloadVersion=0; if(state.games&&state.games.length){ const ch=applyPreload(); if(ch) await saveState(); return; } } }catch(e){}
+  state.games = SEED_GAMES.map((g,i)=>({ id:uid(), name:g.name, color:SPINE_COLORS[i%SPINE_COLORS.length], rulebook:makeRulebook(), rulebookVersions:[], changes: g.seedProblema?[{ id:uid(), title:'Problema inicial', note:'', issue:g.seedProblema, state:'porprobar', section:'', sectionText:'', implemented:false, createdAt:Date.now() }]:[], pendingChanges:[], currentSummary:'', migrated:true, flattened:true }));
+  state.currentGameId=state.games[0].id; state.preloadVersion=0; applyPreload(); await saveState();
 }
 function applyPreload(){
-  if(state.preloadVersion >= PRELOAD_VERSION) return false;
+  if(state.preloadVersion>=PRELOAD_VERSION) return false;
   normalizeStructures();
-  const byName = n => state.games.find(g => (g.name||'').trim().toLowerCase() === n);
-  buildPreloadGames().forEach(g => { const ex=byName(g.name.trim().toLowerCase());
-    if(!ex){ g.color=SPINE_COLORS[state.games.length%SPINE_COLORS.length]; state.games.push(g); }
-    else if(ex.rulebook && ex.rulebook.sections.every(s=>!s.content.trim())){ ex.rulebook=g.rulebook; } });
-  const setsuna = byName('setsuna');
-  if(setsuna && setsuna.nodes && setsuna.nodes.length && (!Array.isArray(setsuna.rulebookVersions)||setsuna.rulebookVersions.length===0)) seedSetsunaHistory(setsuna);
+  const byName=n=>state.games.find(g=>(g.name||'').trim().toLowerCase()===n);
+  buildPreloadGames().forEach(g=>{ const ex=byName(g.name.trim().toLowerCase());
+    if(!ex){ g.color=SPINE_COLORS[state.games.length%SPINE_COLORS.length]; seedSetsunaHistory(g); g.pendingChanges=[]; g.currentSummary=''; g.migrated=true; g.flattened=true; state.games.push(g); }
+    else if((!ex.rulebookVersions||ex.rulebookVersions.length===0)){ seedSetsunaHistory(ex); }
+  });
   normalizeStructures();
-  state.preloadVersion = PRELOAD_VERSION;
-  if(!state.currentGameId && state.games.length) state.currentGameId = state.games[0].id;
+  state.preloadVersion=PRELOAD_VERSION;
+  if(!state.currentGameId&&state.games.length) state.currentGameId=state.games[0].id;
   return true;
 }
 function normalizeStructures(){
@@ -545,494 +390,233 @@ function normalizeStructures(){
     if(!g.rulebook||!Array.isArray(g.rulebook.sections)){ g.rulebook=makeRulebook(); ch=true; }
     else { const have=new Set(g.rulebook.sections.map(s=>s.key)); RB_SECTIONS.forEach(([k,t],i)=>{ if(!have.has(k)){ g.rulebook.sections.splice(i,0,{key:k,title:t,content:''}); ch=true; } }); }
     if(!Array.isArray(g.rulebookVersions)) { g.rulebookVersions=[]; ch=true; }
-    g.rulebookVersions.forEach(v=>{ if(!v.summary){ v.summary = v.activeTitle || (v.changes?String(v.changes).split('\n')[0]:'Versión '+v.n); ch=true; } if(!Array.isArray(v.problemsSnapshot)){ v.problemsSnapshot=[]; ch=true; } });
-    if(!Array.isArray(g.problems)) { g.problems=[]; ch=true; }
-    if(!Array.isArray(g.editorials)) { g.editorials=[]; ch=true; }
+    g.rulebookVersions.forEach(v=>{ if(!v.summary){ v.summary=v.activeTitle||(v.changes?String(v.changes).split('\n')[0]:'Versión '+v.n); ch=true; } });
     if(!Array.isArray(g.pendingChanges)) { g.pendingChanges=[]; ch=true; }
     if(typeof g.currentSummary!=='string') { g.currentSummary=''; ch=true; }
-    // migración nodes -> tests(soluciones)
-    if(!g.migrated && Array.isArray(g.nodes) && g.nodes.length){
-      const tests = g.nodes.map(n=>({ id:n.id, parentId:n.parentId, title:n.title, mejora:n.mejora||'', problema:n.problema||'', section:n.section||'', sectionText:n.sectionText||'', state:'porprobar', implemented:false, active:!!n.active, createdAt:n.createdAt }));
-      const at = tests.find(t=>t.active)||tests[tests.length-1];
-      const prob = { id:uid(), title:'Iteraciones iniciales', description:'Iteraciones migradas del mapa original. Reorganízalas en problemas cuando quieras.', status:'prueba', parentProblemId:null, originTestId:null, createdAt: g.nodes[0]?g.nodes[0].createdAt:Date.now(), tests };
-      g.problems.push(prob); if(at) g.lastActiveTest={problemId:prob.id, testId:at.id}; g.migrated=true; g.nodes=[]; ch=true;
-    } else if(!g.migrated){ g.migrated=true; ch=true; }
-    // normalizar estados de soluciones (outcome viejo -> state nuevo)
-    g.problems.forEach(p=>{ (p.tests||[]).forEach(t=>{ if(!t.state){ t.state = OUTCOME_MAP[t.outcome]||'porprobar'; ch=true; } if(t.implemented===undefined){ t.implemented=false; ch=true; } if('outcome' in t){ delete t.outcome; ch=true; } }); });
+    if(!Array.isArray(g.changes)) { g.changes=[]; ch=true; }
+    const vTitles=new Set(g.rulebookVersions.map(v=>(v.summary||'').trim()).filter(Boolean));
+    const pushChange=(o)=>{ const hist=vTitles.has((o.title||'').trim()); g.changes.push({ id:o.id||uid(), title:o.title||'(sin título)', note:o.note||'', issue:o.issue||'', state: hist?'funciona':(o.state||'porprobar'), section:o.section||'', sectionText:o.sectionText||'', implemented: hist?true:!!o.implemented, createdAt:o.createdAt||Date.now() }); };
+    // migrar nodes (semilla antigua) -> changes
+    if(!g.migrated && Array.isArray(g.nodes) && g.nodes.length){ g.nodes.forEach(n=>pushChange({ id:n.id, title:n.title, note:n.mejora, issue:n.problema, state:n.active?'porprobar':'porprobar', section:n.section, sectionText:n.sectionText, createdAt:n.createdAt })); ch=true; }
+    g.migrated=true; g.nodes=[];
+    // aplanar problems[].tests -> changes
+    if(!g.flattened && Array.isArray(g.problems) && g.problems.length){ g.problems.forEach(p=>{ (p.tests||[]).forEach(t=>pushChange({ id:t.id, title:t.title, note:t.mejora!==undefined?t.mejora:t.note, issue:t.problema!==undefined?t.problema:t.issue, state: OLD_OUTCOME[t.outcome]||t.state, section:t.section, sectionText:t.sectionText, implemented:t.implemented, createdAt:t.createdAt })); }); ch=true; }
+    g.flattened=true;
   });
   return ch;
 }
 let storageWarned=false;
-async function saveState(){ try{ const ok=await Store.set('games-data', JSON.stringify(state)); if(!ok&&!storageWarned){ storageWarned=true; toast('No se pudo guardar de forma persistente.','warn',6000); } }catch(e){ if(!storageWarned){ storageWarned=true; toast('No se pudo guardar de forma persistente: '+(e.message||e),'warn',6000); } } }
+async function saveState(){ try{ const ok=await Store.set('games-data', JSON.stringify(state)); if(!ok&&!storageWarned){ storageWarned=true; toast('No se pudo guardar de forma persistente.','warn',6000); } }catch(e){ if(!storageWarned){ storageWarned=true; toast('No se pudo guardar: '+(e.message||e),'warn',6000); } } }
 
-/* ---------- Exportar / Importar ---------- */
-function exportData(){
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type:'application/json' });
-  const url = URL.createObjectURL(blob); const a = document.createElement('a');
-  const d = new Date().toISOString().slice(0,10);
-  a.href = url; a.download = `bitacora-iteraciones-${d}.json`; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url), 1000); toast('Copia exportada.');
-}
-async function importData(file){
-  try{
-    const text = await file.text(); const parsed = JSON.parse(text);
-    if(!parsed || !Array.isArray(parsed.games)) throw new Error('El archivo no tiene el formato esperado (falta "games").');
-    const ok = await confirmDialog(`Importar reemplazará TODOS los datos actuales por los del archivo (${parsed.games.length} juego(s)). ¿Continuar?`);
-    if(!ok) return;
-    state = parsed; if(typeof state.preloadVersion!=='number') state.preloadVersion = PRELOAD_VERSION;
-    normalizeStructures();
-    if(!state.currentGameId && state.games[0]) state.currentGameId = state.games[0].id;
-    currentTab='diseno'; nav={view:'versions',problemId:null,versionId:null};
-    await saveState(); render(); toast('Datos importados.');
-  }catch(e){ toast('No se pudo importar: '+(e.message||e), 'warn', 6000); }
-}
+/* ---------- Export / Import ---------- */
+function exportData(){ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`bitacora-${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); toast('Copia exportada.'); }
+async function importData(file){ try{ const parsed=JSON.parse(await file.text()); if(!parsed||!Array.isArray(parsed.games)) throw new Error('Formato no válido (falta "games").'); const ok=await confirmDialog(`Importar reemplazará TODOS los datos actuales por los del archivo (${parsed.games.length} juego(s)). ¿Continuar?`); if(!ok) return; state=parsed; if(typeof state.preloadVersion!=='number') state.preloadVersion=PRELOAD_VERSION; normalizeStructures(); if(!state.currentGameId&&state.games[0]) state.currentGameId=state.games[0].id; currentTab='inicio'; await saveState(); render(); toast('Datos importados.'); }catch(e){ toast('No se pudo importar: '+(e.message||e),'warn',6000); } }
 
 /* ---------- Accessors ---------- */
-function currentGame(){ return state.games.find(g => g.id === state.currentGameId); }
-function nodeById(nodes, id){ return nodes.find(n => n.id === id); }
-function problemById(game, id){ return game.problems.find(p => p.id === id); }
-function childProblems(game, parentId){ return game.problems.filter(p => p.parentProblemId === parentId); }
-function activeTest(problem){ return problem.tests.find(t => t.active); }
-function generation(nodes, id){ let g=0,n=nodeById(nodes,id); while(n&&n.parentId){ g++; n=nodeById(nodes,n.parentId); } return g; }
-function ancestorChain(nodes, id){ const c=[]; let n=nodeById(nodes,id); while(n){ c.push(n.id); n=n.parentId?nodeById(nodes,n.parentId):null; } return c; }
-function descendantIds(nodes, id){ const o=new Set(); const w=i=>nodes.filter(n=>n.parentId===i).forEach(c=>{o.add(c.id);w(c.id);}); w(id); return o; }
-function ensureOneActive(nodes){ if(nodes.length && !nodes.some(n=>n.active)) nodes.slice().sort((a,b)=>b.createdAt-a.createdAt)[0].active=true; }
-function majorNext(game){ return game.rulebookVersions.reduce((m,x)=>Math.max(m,x.n),0) + 1; }
-function currentLabel(game){ return 'v'+majorNext(game)+'.'+game.pendingChanges.length; }
-function totalSolutions(game){ return game.problems.reduce((s,p)=>s+p.tests.length,0); }
-function statusColor(s){ return {detectado:'#d9634a', prueba:'#e8a33d', resuelto:'#4fa98b', descartado:'#7b839a'}[s]||'#7b839a'; }
+function currentGame(){ return state.games.find(g=>g.id===state.currentGameId); }
+function changeById(g,id){ return g.changes.find(c=>c.id===id); }
+function majorNext(g){ return g.rulebookVersions.reduce((m,x)=>Math.max(m,x.n),0)+1; }
+function currentLabel(g){ return 'v'+majorNext(g)+'.'+g.pendingChanges.length; }
 
 /* ---------- Render ---------- */
 function render(){ renderSidebar(); renderBoard(); }
 function renderSidebar(){
   const list=$('gameList'); list.innerHTML='';
-  state.games.forEach(g=>{ const item=document.createElement('div'); item.className='game-item'+(g.id===state.currentGameId?' active':''); item.setAttribute('role','button'); item.setAttribute('tabindex','0');
-    item.innerHTML=`<div class="spine" style="background:${g.color}"></div><div class="name">${escapeHtml(g.name)}</div><div class="count" title="versiones consolidadas">v${g.rulebookVersions?g.rulebookVersions.length:0}</div><button class="menu-btn" aria-label="Opciones de ${escapeHtml(g.name)}">⋯</button>`;
-    const sel=()=>{ state.currentGameId=g.id; currentTab='diseno'; nav={view:'versions',problemId:null,versionId:null}; selectedTestId=null; closeDetail(); render(); };
-    item.onclick=(e)=>{ if(e.target.closest('.menu-btn')) return; sel(); }; item.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); sel(); } };
-    item.querySelector('.menu-btn').onclick=(e)=>{ e.stopPropagation(); openGameMenu(e.currentTarget, g.id); }; list.appendChild(item); });
-  const m=$('mobileGameSelect'); m.innerHTML=state.games.map(g=>`<option value="${g.id}" ${g.id===state.currentGameId?'selected':''}>${escapeHtml(g.name)}</option>`).join('');
-  m.onchange=(e)=>{ state.currentGameId=e.target.value; currentTab='diseno'; nav={view:'versions',problemId:null,versionId:null}; closeDetail(); render(); };
+  state.games.forEach(g=>{ const pend=(g.changes||[]).filter(c=>c.state==='porprobar').length;
+    const it=document.createElement('div'); it.className='game-item'+(g.id===state.currentGameId?' active':''); it.setAttribute('role','button'); it.setAttribute('tabindex','0');
+    it.innerHTML=`<span class="nm">${escapeHtml(g.name)}</span>${pend?`<span class="ct">${pend}</span>`:''}<button class="mn" aria-label="Opciones de ${escapeHtml(g.name)}">⋯</button>`;
+    const sel=()=>{ state.currentGameId=g.id; currentTab='inicio'; rbView='draft'; rbVersionId=null; closePanel(); render(); };
+    it.onclick=(e)=>{ if(e.target.closest('.mn')) return; sel(); }; it.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); sel(); } };
+    it.querySelector('.mn').onclick=(e)=>{ e.stopPropagation(); openGameMenu(e.currentTarget,g.id); }; list.appendChild(it); });
+  const m=$('mgs'); m.innerHTML=state.games.map(g=>`<option value="${g.id}" ${g.id===state.currentGameId?'selected':''}>${escapeHtml(g.name)}</option>`).join(''); m.onchange=(e)=>{ state.currentGameId=e.target.value; currentTab='inicio'; closePanel(); render(); };
 }
 function renderBoard(){
-  const game=currentGame(); const bar=$('tabBar'), content=$('tabContent');
-  if(!game){ $('boardTitle').textContent='Sin juegos aún'; $('gameMenuBtn').style.display='none'; bar.innerHTML=''; content.innerHTML=`<div class="empty-state"><h3>Empieza tu bitácora</h3><p>Añade un juego para registrar sus versiones, problemas y editoriales.</p></div>`; return; }
-  $('boardTitle').textContent=game.name; $('gameMenuBtn').style.display='inline-flex';
-  const openProbs=game.problems.filter(p=>p.status!=='resuelto'&&p.status!=='descartado').length;
-  const tabs=[['diseno','🎲 Diseño', openProbs],['editoriales','📮 Editoriales', game.editorials.length]];
-  bar.innerHTML='';
-  tabs.forEach(([k,l,c])=>{ const b=document.createElement('button'); b.className='tab'+(currentTab===k?' active':''); b.innerHTML=`${l}${c?`<span class="cnt">${c}</span>`:''}`; b.onclick=()=>{ currentTab=k; if(k==='diseno'){ nav={view:'versions',problemId:null,versionId:null}; } closeDetail(); renderBoard(); }; bar.appendChild(b); });
-  content.innerHTML=''; const pad=document.createElement('div'); pad.className='pad'; content.appendChild(pad);
-  if(currentTab==='editoriales') renderEditoriales(game, pad);
-  else renderDiseno(game, pad);
+  const g=currentGame(); const tabs=$('tabs'), wrap=$('wrap');
+  if(!g){ $('title').textContent='Sin juegos'; $('gameMenuBtn').style.display='none'; tabs.innerHTML=''; wrap.innerHTML=`<div class="empty"><p>Añade un juego para empezar.</p></div>`; return; }
+  $('title').textContent=g.name; $('gameMenuBtn').style.display='inline-block';
+  tabs.innerHTML='';
+  [['inicio','Inicio'],['reglas','Reglas']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(currentTab===k?' on':''); b.textContent=l; b.onclick=()=>{ currentTab=k; if(k==='reglas'){ rbView='draft'; rbVersionId=null; } closePanel(); renderBoard(); }; tabs.appendChild(b); });
+  wrap.innerHTML='';
+  if(currentTab==='reglas') renderRules(g, wrap); else renderHome(g, wrap);
 }
 
-/* ---------- DISEÑO (hub de versiones) ---------- */
-function renderDiseno(game, host){
-  if(nav.view==='versiondoc' && game.rulebookVersions.find(v=>v.id===nav.versionId)) return renderVersionDoc(game, host);
-  if(nav.view==='draft') return renderDraft(game, host);
-  if(nav.view==='problem' && problemById(game, nav.problemId)) return renderProblemDetail(game, host, problemById(game, nav.problemId));
-  if(nav.view==='workspace') return renderWorkspace(game, host);
-  return renderVersionBoxes(game, host);
+function renderHome(g, host){
+  const vh=document.createElement('div'); vh.className='vhead';
+  vh.innerHTML=`<div class="vrow"><span class="vtag">${currentLabel(g)}</span><span class="vsub">versión en curso</span></div>`;
+  const sum=document.createElement('input'); sum.className='sum'; sum.placeholder='Resumen del cambio principal que estás probando…'; sum.value=g.currentSummary||'';
+  sum.addEventListener('input',()=>{ g.currentSummary=sum.value; }); sum.addEventListener('blur',()=>saveState());
+  vh.appendChild(sum);
+  const act=document.createElement('div'); act.className='vact';
+  const add=document.createElement('button'); add.className='btn'; add.textContent='＋ Añadir idea'; add.onclick=()=>openChangeModal(null);
+  const save=document.createElement('button'); save.className='btn-q'; save.textContent='Guardar versión v'+majorNext(g); save.onclick=()=>openSaveModal(g);
+  const rules=document.createElement('button'); rules.className='link'; rules.textContent='Ver reglas →'; rules.onclick=()=>{ currentTab='reglas'; rbView='draft'; renderBoard(); };
+  act.appendChild(add); act.appendChild(save); const sp=document.createElement('span'); sp.style.flex='1'; act.appendChild(sp); act.appendChild(rules);
+  vh.appendChild(act); host.appendChild(vh);
+
+  const todo=g.changes.filter(c=>c.state==='porprobar'||c.state==='aparcada');
+  const done=g.changes.filter(c=>c.state==='funciona'||c.state==='descartada');
+  if(!g.changes.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML=`<p>Aún no hay ideas en esta versión.<br>Añade lo primero que quieras probar.</p>`; host.appendChild(e); return; }
+  renderGroup(host, 'Por decidir', todo, g);
+  renderGroup(host, 'Resuelto / descartado', done, g);
+}
+function renderGroup(host, label, items, g){
+  if(!items.length) return;
+  const h=document.createElement('div'); h.className='grouph'; h.textContent=label+' ('+items.length+')'; host.appendChild(h);
+  items.slice().sort((a,b)=>a.createdAt-b.createdAt).forEach(c=>host.appendChild(changeRow(g,c)));
+}
+function changeRow(g,c){
+  const row=document.createElement('div'); row.className='chg'+(c.state==='funciona'?' done':'')+(c.state==='descartada'?' dropped':''); row.setAttribute('role','button'); row.setAttribute('tabindex','0');
+  const ico = c.state==='funciona'?'✓':(c.state==='descartada'?'✕':(c.state==='aparcada'?'❯':'○'));
+  row.innerHTML=`<span class="ico">${ico}</span><span class="t">${escapeHtml(c.title)}</span>${c.implemented?'<span class="impl-tag">✓ en reglas</span>':''}<span class="pill p-${c.state}">${STATE_TITLE[c.state]}</span>`;
+  const open=()=>openChangeDetail(g,c); row.onclick=open; row.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } };
+  return row;
 }
 
-function renderVersionBoxes(game, host){
-  const head=document.createElement('div'); head.className='section-head';
-  head.innerHTML=`<div><h2>Versiones</h2><div class="faint" style="font-size:12px;margin-top:3px;">La versión en curso es donde trabajas problemas y pruebas. Las consolidadas quedan como reglas fijas.</div></div>`;
-  host.appendChild(head);
-
-  // Caja versión en curso
-  const cur=document.createElement('div'); cur.className='ver-box current';
-  const pend=game.pendingChanges.length;
-  const openP=game.problems.filter(p=>!p.parentProblemId && p.status!=='resuelto' && p.status!=='descartado').length;
-  cur.innerHTML=`<div class="ver-tag">${currentLabel(game)}</div><div class="ver-main">
-    <div class="lbl">Versión en curso</div>
-    <input class="cur-summary-input" id="curSummary" placeholder="Resumen del cambio principal que estás testeando…" value="${escapeHtml(game.currentSummary)}">
-    <div class="stats"><span class="chip">${openP} problema(s) abiertos</span><span class="chip">${totalSolutions(game)} solución(es)</span><span class="chip">${pend} cambio(s) pendiente(s)</span></div>
-  </div><div class="ver-actions"></div>`;
-  const actions=cur.querySelector('.ver-actions');
-  const openBtn=document.createElement('button'); openBtn.className='btn-primary'; openBtn.textContent='Abrir versión'; openBtn.onclick=()=>{ nav={view:'workspace',problemId:null,versionId:null}; renderBoard(); };
-  const draftBtn=document.createElement('button'); draftBtn.className='btn-ghost'; draftBtn.textContent=pend?`Borrador (${pend})`:'Borrador vivo'; draftBtn.onclick=()=>{ nav={view:'draft',problemId:null,versionId:null}; renderBoard(); };
-  actions.appendChild(openBtn); actions.appendChild(draftBtn); host.appendChild(cur);
-  const ci=cur.querySelector('#curSummary'); ci.addEventListener('input',()=>{ game.currentSummary=ci.value; }); ci.addEventListener('blur',()=>saveState()); ci.addEventListener('click',e=>e.stopPropagation());
-
-  // Cajas consolidadas
-  if(!game.rulebookVersions.length){ const d=document.createElement('div'); d.className='faint'; d.style.cssText='max-width:860px;font-size:13px;margin-top:6px;'; d.textContent='Aún no hay versiones consolidadas. Trabaja problemas, implementa soluciones y pulsa «Guardar versión» en el Borrador.'; host.appendChild(d); }
-  game.rulebookVersions.slice().sort((a,b)=>b.n-a.n).forEach(v=>{
-    const box=document.createElement('div'); box.className='ver-box committed';
-    box.innerHTML=`<div class="ver-tag">v${v.n}</div><div class="ver-main"><div class="lbl">${fmtDate(v.createdAt)}</div><div class="sum ${v.summary?'':'empty'}">${v.summary?escapeHtml(v.summary):'(sin resumen)'}</div></div>`;
-    box.onclick=()=>{ nav={view:'versiondoc',problemId:null,versionId:v.id}; renderBoard(); }; host.appendChild(box);
-  });
-}
-
-function renderWorkspace(game, host){
-  const bc=document.createElement('div'); bc.className='breadcrumb';
-  const a=document.createElement('a'); a.textContent='Versiones'; a.onclick=()=>{ nav={view:'versions',problemId:null,versionId:null}; renderBoard(); };
-  bc.appendChild(a); const sep=document.createElement('span'); sep.className='sep'; sep.textContent='›'; bc.appendChild(sep);
-  const cur=document.createElement('span'); cur.className='cur'; cur.textContent=currentLabel(game)+' (en curso)'; bc.appendChild(cur); host.appendChild(bc);
-  renderKanban(game, host, null);
-  const bar=document.createElement('div'); bar.className='rb-bar'; bar.style.marginTop='20px';
-  const draftBtn=document.createElement('button'); draftBtn.className='btn-ghost'; draftBtn.textContent=game.pendingChanges.length?`Ir al Borrador (${game.pendingChanges.length} pendiente(s))`:'Ir al Borrador vivo'; draftBtn.onclick=()=>{ nav={view:'draft',problemId:null,versionId:null}; renderBoard(); };
-  bar.appendChild(draftBtn); host.appendChild(bar);
-}
-
-function renderKanban(game, host, parentId){
-  const head=document.createElement('div'); head.className='section-head';
-  head.innerHTML=`<div><h2>Problemas de la versión</h2><div class="faint" style="font-size:12px;margin-top:3px;">Arrastra entre columnas o abre un problema para trabajar sus soluciones.</div></div>`;
-  const add=document.createElement('button'); add.className='btn-primary'; add.textContent='＋ Nuevo problema'; add.onclick=()=>openProblemModal(null, parentId, null); head.appendChild(add); host.appendChild(head);
-  const problems=childProblems(game, parentId);
-  if(!problems.length){ const d=document.createElement('div'); d.className='empty-state'; d.innerHTML=`<h3>Sin problemas todavía</h3><p>Añade el primer problema. Al abrirlo registrarás las soluciones (ideas) que quieres probar.</p>`; host.appendChild(d); }
-  const board=document.createElement('div'); board.className='kanban';
-  PROBLEM_STATUSES.forEach(([sk,sl])=>{ const col=document.createElement('div'); col.className='kan-col'; col.dataset.status=sk;
-    const items=problems.filter(p=>p.status===sk);
-    col.innerHTML=`<div class="kan-col-head"><span class="dotc" style="background:${statusColor(sk)}"></span>${sl}<span class="n">${items.length}</span></div>`;
-    items.sort((a,b)=>a.createdAt-b.createdAt).forEach(p=>col.appendChild(kanCard(game,p)));
-    const ac=document.createElement('button'); ac.className='kan-add'; ac.textContent='+ problema'; ac.onclick=()=>openProblemModal(null, parentId, null, sk); col.appendChild(ac);
-    col.addEventListener('dragover',e=>{ e.preventDefault(); col.classList.add('drag-over'); });
-    col.addEventListener('dragleave',()=>col.classList.remove('drag-over'));
-    col.addEventListener('drop',e=>{ e.preventDefault(); col.classList.remove('drag-over'); if(dragProblemId){ const p=problemById(game,dragProblemId); if(p&&p.status!==sk){ p.status=sk; saveState(); renderBoard(); } dragProblemId=null; } });
-    board.appendChild(col); });
-  host.appendChild(board);
-}
-function kanCard(game,p){ const card=document.createElement('div'); card.className='kan-card'; card.setAttribute('draggable','true');
-  const subs=childProblems(game,p.id).length; const pend=p.tests.filter(t=>t.state==='porprobar').length;
-  card.innerHTML=`<div class="kt">${escapeHtml(p.title)}</div><div class="kmeta"><span class="chip">${p.tests.length} solución(es)</span>${pend?`<span class="chip">${pend} por probar</span>`:''}${subs?`<span class="chip sub">${subs} sub</span>`:''}</div>`;
-  card.onclick=()=>{ nav={view:'problem',problemId:p.id,versionId:null}; selectedTestId=null; closeDetail(); renderBoard(); };
-  card.addEventListener('dragstart',()=>{ dragProblemId=p.id; card.classList.add('dragging'); }); card.addEventListener('dragend',()=>card.classList.remove('dragging'));
-  return card;
-}
-function problemPath(game,p){ const path=[]; let c=p; while(c){ path.unshift(c); c=c.parentProblemId?problemById(game,c.parentProblemId):null; } return path; }
-
-function renderProblemDetail(game, host, problem){
-  const bc=document.createElement('div'); bc.className='breadcrumb';
-  const rootV=document.createElement('a'); rootV.textContent='Versiones'; rootV.onclick=()=>{ nav={view:'versions',problemId:null,versionId:null}; closeDetail(); renderBoard(); }; bc.appendChild(rootV);
-  const s0=document.createElement('span'); s0.className='sep'; s0.textContent='›'; bc.appendChild(s0);
-  const ws=document.createElement('a'); ws.textContent=currentLabel(game); ws.onclick=()=>{ nav={view:'workspace',problemId:null,versionId:null}; closeDetail(); renderBoard(); }; bc.appendChild(ws);
-  problemPath(game,problem).forEach((p,i,arr)=>{ const sep=document.createElement('span'); sep.className='sep'; sep.textContent='›'; bc.appendChild(sep);
-    if(i===arr.length-1){ const c=document.createElement('span'); c.className='cur'; c.textContent=p.title; bc.appendChild(c); } else { const a=document.createElement('a'); a.textContent=p.title; a.onclick=()=>{ nav={view:'problem',problemId:p.id,versionId:null}; closeDetail(); renderBoard(); }; bc.appendChild(a); } });
-  host.appendChild(bc);
-
-  const meta=document.createElement('div'); meta.className='prob-meta';
-  meta.innerHTML=`<h2>${escapeHtml(problem.title)}</h2><div class="desc ${problem.description?'':'empty'}">${problem.description?escapeHtml(problem.description):'— sin descripción —'}</div>`;
-  const controls=document.createElement('div'); controls.className='prob-controls'; const pick=document.createElement('div'); pick.className='status-pick';
-  PROBLEM_STATUSES.forEach(([sk,sl])=>{ const b=document.createElement('button'); b.className='status-pill st-'+sk+(problem.status===sk?' on':''); b.textContent=sl; b.onclick=()=>{ problem.status=sk; saveState(); renderBoard(); }; pick.appendChild(b); });
-  controls.appendChild(pick); const spc=document.createElement('div'); spc.style.flex='1'; controls.appendChild(spc);
-  const ed=document.createElement('button'); ed.className='btn-ghost btn-sm'; ed.textContent='Editar'; ed.onclick=()=>openProblemModal(problem.id); controls.appendChild(ed);
-  const dl=document.createElement('button'); dl.className='btn-danger btn-sm'; dl.textContent='Eliminar'; dl.onclick=()=>deleteProblem(game,problem); controls.appendChild(dl);
-  meta.appendChild(controls); host.appendChild(meta);
-
-  const th=document.createElement('div'); th.className='section-head';
-  th.innerHTML=`<div><h2 style="font-size:16px;">Soluciones a probar</h2><div class="faint" style="font-size:12px;margin-top:2px;">Ideas que pruebas contra este problema. Valídalas e impleméntalas al reglamento.</div></div>`;
-  const addT=document.createElement('button'); addT.className='btn-primary btn-sm'; addT.textContent='＋ Nueva solución'; addT.onclick=()=>{ const a=activeTest(problem); openTestModal(problem, a?a.id:null); }; th.appendChild(addT); host.appendChild(th);
-  if(!problem.tests.length){ const d=document.createElement('div'); d.className='empty-state'; d.innerHTML=`<h3>Sin soluciones aún</h3><p>Registra la primera idea que quieres probar contra este problema.</p>`; host.appendChild(d); }
-  else { const wrap=document.createElement('div'); wrap.className='canvas-wrap'; const canvas=document.createElement('div'); canvas.className='canvas'; canvas.id='testCanvas'; wrap.appendChild(canvas); host.appendChild(wrap); renderTestMap(problem, canvas); }
-
-  const subs=childProblems(game, problem.id); const sub=document.createElement('div'); sub.className='subprob';
-  const sh=document.createElement('div'); sh.className='section-head';
-  sh.innerHTML=`<div><h2 style="font-size:16px;">Problemas derivados</h2><div class="faint" style="font-size:12px;margin-top:2px;">Problemas nuevos surgidos de estas pruebas. Cada uno con su propio tracking.</div></div>`;
-  const addS=document.createElement('button'); addS.className='btn-ghost btn-sm'; addS.textContent='＋ Sub-problema'; addS.onclick=()=>openProblemModal(null, problem.id, null); sh.appendChild(addS); sub.appendChild(sh);
-  if(!subs.length){ const p=document.createElement('div'); p.className='faint'; p.style.fontSize='13px'; p.textContent='Ninguno todavía.'; sub.appendChild(p); }
-  subs.sort((a,b)=>a.createdAt-b.createdAt).forEach(spb=>{ const it=document.createElement('div'); it.className='sp-item';
-    it.innerHTML=`<span class="sp-dot" style="background:${statusColor(spb.status)}"></span><span class="sp-t">${escapeHtml(spb.title)}</span><span class="sp-st">${PS_TITLE[spb.status]} · ${spb.tests.length} sol.</span>`;
-    it.onclick=()=>{ nav={view:'problem',problemId:spb.id,versionId:null}; closeDetail(); renderBoard(); }; sub.appendChild(it); });
-  host.appendChild(sub);
-}
-
-function renderTestMap(problem, canvas){
-  canvas.innerHTML=''; const tests=problem.tests; const active=activeTest(problem);
-  const maxGen=Math.max(0,...tests.map(n=>generation(tests,n.id))); const cols=[]; for(let i=0;i<=maxGen;i++) cols.push([]);
-  tests.forEach(n=>cols[generation(tests,n.id)].push(n)); cols.forEach(c=>c.sort((a,b)=>a.createdAt-b.createdAt));
-  const lineage=active?new Set(ancestorChain(tests, active.id)):new Set();
-  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('class','traces'); canvas.appendChild(svg);
-  cols.forEach((cn,gi)=>{ const col=document.createElement('div'); col.className='gen-col'; const lab=document.createElement('div'); lab.className='gen-label'; lab.textContent=gi===0?'Punto de partida':'Derivada '+gi; col.appendChild(lab); cn.forEach(n=>col.appendChild(renderTestCard(problem,n))); canvas.appendChild(col); });
-  requestAnimationFrame(()=>drawConnectors(tests, svg, canvas, lineage));
-}
-function renderTestCard(problem, n){
-  const card=document.createElement('div'); card.className='node'+(n.active?' active-node':'')+(n.id===selectedTestId?' selected':''); card.dataset.testId=n.id; card.setAttribute('role','button'); card.setAttribute('tabindex','0');
-  let tags=''; if(n.mejora) tags+=`<div class="tag mejora"><span class="icon">+</span><span class="clamp">${escapeHtml(n.mejora)}</span></div>`;
-  if(n.problema) tags+=`<div class="tag problema"><span class="icon">!</span><span class="clamp">${escapeHtml(n.problema)}</span></div>`;
-  if(!n.mejora&&!n.problema) tags=`<div class="no-issue">Sin notas todavía</div>`;
-  let chips=`<span class="mini-chip mc-s-${n.state}">${SOL_TITLE[n.state]}</span>`;
-  if(n.implemented) chips+=`<span class="mini-chip mc-impl">✓ implementada</span>`;
-  if(n.section && RB_TITLE[n.section]) chips+=`<span class="mini-chip mc-sec">§ ${escapeHtml(RB_TITLE[n.section])}</span>`;
-  card.innerHTML=`<div class="node-top"><div class="node-title">${escapeHtml(n.title)}</div>${n.active?'<div class="active-badge">ACTIVA</div>':''}</div><div class="node-date">${fmtDate(n.createdAt)}</div><div class="tag-row">${tags}</div><div class="chips">${chips}</div>`;
-  const open=()=>{ selectedTestId=n.id; renderBoard(); openTestDetail(problem,n); };
-  card.onclick=open; card.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } };
-  return card;
-}
-function drawConnectors(tests, svg, canvas, lineage){
-  const c0=canvas.getBoundingClientRect(); svg.innerHTML=''; svg.setAttribute('width',canvas.scrollWidth); svg.setAttribute('height',canvas.scrollHeight);
-  tests.forEach(n=>{ if(!n.parentId) return; const pe=canvas.querySelector(`[data-test-id="${n.parentId}"]`), ce=canvas.querySelector(`[data-test-id="${n.id}"]`); if(!pe||!ce) return;
-    const pr=pe.getBoundingClientRect(), cr=ce.getBoundingClientRect(); const x1=pr.right-c0.left,y1=pr.top-c0.top+pr.height/2,x2=cr.left-c0.left,y2=cr.top-c0.top+cr.height/2,mid=x1+(x2-x1)/2;
-    const path=document.createElementNS('http://www.w3.org/2000/svg','path'); path.setAttribute('d',`M ${x1} ${y1} L ${mid} ${y1} L ${mid} ${y2} L ${x2} ${y2}`); const l=lineage.has(n.id)&&lineage.has(n.parentId); path.setAttribute('class','trace-line'+(l?' lineage':'')); svg.appendChild(path); });
-}
-
-function openTestDetail(problem, n){
-  const panel=$('detailPanel'), content=$('detailContent'); const gen=generation(problem.tests,n.id);
-  const statePills='<div class="state-pick">'+SOL_STATES.map(([k,l])=>`<button class="st-pill s-${k} ${n.state===k?'on':''}" data-st="${k}">${l}</button>`).join('')+'</div>';
-  const canImpl = n.state==='funciona';
-  content.innerHTML=`
-    <h3>${escapeHtml(n.title)}</h3>
-    <div class="node-date" style="margin-bottom:14px;">Derivada ${gen} · ${fmtDate(n.createdAt)}${n.active?' · <span style="color:var(--amber)">activa</span>':''}</div>
-    <div class="detail-section"><div class="lbl">Qué aporta / hipótesis</div><div class="body-text">${n.mejora?escapeHtml(n.mejora):'<span style="color:var(--text-faint)">— nada —</span>'}</div></div>
-    <div class="detail-section"><div class="lbl">Efecto secundario</div><div class="body-text">${n.problema?escapeHtml(n.problema):'<span style="color:var(--text-faint)">— nada —</span>'}</div></div>
-    ${n.section&&RB_TITLE[n.section]?`<div class="detail-section"><div class="lbl">Apartado · ${escapeHtml(RB_TITLE[n.section])}</div><div class="body-text">${n.sectionText?escapeHtml(n.sectionText):'<span style="color:var(--text-faint)">— sin texto —</span>'}</div></div>`:''}
-    <div class="detail-section"><div class="lbl">Estado de la solución</div>${statePills}</div>
-    ${n.implemented?`<div class="detail-section"><div class="lbl">Reglamento</div><div class="body-text" style="color:#f3d59a;">✓ Implementada${n.implementedSection?' en '+escapeHtml(RB_TITLE[n.implementedSection]||n.implementedSection):''}</div></div>`:''}
-    <div class="detail-actions">
-      ${canImpl?`<button class="btn-activate" id="dImpl">${n.implemented?'Volver a implementar':'Implementar en el reglamento'}</button>`:''}
-      ${!n.active?'<button class="btn-secondary" id="dActivate">Marcar como solución activa</button>':''}
-      <button class="btn-secondary" id="dBranch">Nueva solución desde aquí</button>
-      <button class="btn-secondary" id="dSpawn">Generar problema desde esta prueba</button>
-      <div class="detail-row2"><button class="btn-secondary" id="dEdit">Editar</button><button class="btn-danger" id="dDelete">Eliminar</button></div>
+function openChangeDetail(g,c){
+  const p=$('panel'), b=$('panelBody');
+  const stateBtns='<div class="states">'+STATES.map(([k,l])=>`<button class="st s-${k} ${c.state===k?'on':''}" data-s="${k}">${l}</button>`).join('')+'</div>';
+  b.innerHTML=`<h3>${escapeHtml(c.title)}</h3>
+    <div class="field"><label>Estado</label>${stateBtns}</div>
+    ${c.note?`<div class="field"><label>Qué aporta</label><div style="font-size:13.5px;white-space:pre-wrap;">${escapeHtml(c.note)}</div></div>`:''}
+    ${c.issue?`<div class="field"><label>Efecto secundario</label><div style="font-size:13.5px;white-space:pre-wrap;">${escapeHtml(c.issue)}</div></div>`:''}
+    ${c.section&&RB_TITLE[c.section]?`<div class="field"><label>Apartado · ${escapeHtml(RB_TITLE[c.section])}</label><div style="font-size:13px;color:var(--muted);white-space:pre-wrap;">${c.sectionText?escapeHtml(c.sectionText):'—'}</div></div>`:''}
+    ${c.implemented?`<div class="field"><label>Reglamento</label><div style="font-size:13px;color:#f0cf92;">✓ Llevado al borrador${c.implementedSection?' · '+escapeHtml(RB_TITLE[c.implementedSection]||c.implementedSection):''}</div></div>`:''}
+    <div class="pactions">
+      ${c.state==='funciona'?`<button class="btn" id="pImpl">${c.implemented?'Volver a llevar al reglamento':'Llevar al reglamento'}</button>`:''}
+      <button class="btn-q" id="pEdit">Editar</button>
+      <button class="btn-danger" id="pDel">Eliminar</button>
     </div>`;
-  panel.classList.add('open');
-  content.querySelectorAll('.st-pill').forEach(b=>b.onclick=()=>{ n.state=b.dataset.st; saveState(); renderBoard(); openTestDetail(problem,n); });
-  if(canImpl) $('dImpl').onclick=()=>openImplModal(problem,n);
-  if(!n.active) $('dActivate').onclick=()=>{ problem.tests.forEach(x=>x.active=(x.id===n.id)); currentGame().lastActiveTest={problemId:problem.id,testId:n.id}; saveState(); closeDetail(); renderBoard(); toast('Solución activa actualizada.'); };
-  $('dBranch').onclick=()=>openTestModal(problem,n.id);
-  $('dSpawn').onclick=()=>openProblemModal(null, problem.id, n.id);
-  $('dEdit').onclick=()=>openTestModal(problem,n.id,true);
-  $('dDelete').onclick=()=>deleteTest(problem,n);
+  p.classList.add('open');
+  b.querySelectorAll('.st').forEach(x=>x.onclick=()=>{ c.state=x.dataset.s; saveState(); renderBoard(); openChangeDetail(g,c); });
+  if(c.state==='funciona') $('pImpl').onclick=()=>openImplModal(g,c);
+  $('pEdit').onclick=()=>openChangeModal(c.id);
+  $('pDel').onclick=async()=>{ const ok=await confirmDialog(`¿Eliminar "${c.title}"?`); if(!ok) return; g.changes=g.changes.filter(x=>x.id!==c.id); await saveState(); closePanel(); renderBoard(); toast('Idea eliminada.'); };
 }
-async function deleteTest(problem,n){
-  const kids=problem.tests.filter(x=>x.parentId===n.id).length; let msg=`¿Eliminar la solución "${n.title}"?`; if(kids) msg+=` Sus ${kids} derivada(s) colgarán de su antecesora.`;
-  const ok=await confirmDialog(msg); if(!ok) return;
-  problem.tests.forEach(x=>{ if(x.parentId===n.id) x.parentId=n.parentId; }); problem.tests=problem.tests.filter(x=>x.id!==n.id); ensureOneActive(problem.tests);
-  const g=currentGame(); if(g.lastActiveTest&&g.lastActiveTest.testId===n.id){ const a=activeTest(problem); g.lastActiveTest=a?{problemId:problem.id,testId:a.id}:null; }
-  await saveState(); closeDetail(); renderBoard(); toast('Solución eliminada.');
-}
+function closePanel(){ $('panel').classList.remove('open'); }
 
-/* Implement modal */
-function openImplModal(problem, test){
-  implRef={problem,test}; lastFocused=document.activeElement;
-  $('imSection').innerHTML=RB_SECTIONS.map(([k,t])=>`<option value="${k}" ${(test.section===k||test.implementedSection===k)?'selected':''}>${escapeHtml(t)}</option>`).join('');
-  $('imText').value = test.sectionText && test.sectionText.trim() ? test.sectionText : (test.mejora||'');
-  $('implModal').style.display='flex'; $('imText').focus();
+/* change modal */
+function cmSectionOptions(sel){ return `<option value="">— ninguno —</option>`+RB_SECTIONS.map(([k,t])=>`<option value="${k}" ${k===sel?'selected':''}>${escapeHtml(t)}</option>`).join(''); }
+function cmSync(g,fromUser){ const key=$('cmSection').value, f=$('cmSecTextF'), ta=$('cmSecText'); if(!key){ f.style.display='none'; return; } f.style.display=''; $('cmSecTextL').textContent='Texto propuesto para "'+RB_TITLE[key]+'"'; ta.placeholder=RB_PLACEHOLDER[key]||''; if(fromUser){ const s=g.rulebook.sections.find(x=>x.key===key); ta.value=s?s.content:''; } }
+function openChangeModal(id){
+  const g=currentGame(); lastFocused=document.activeElement; editingChangeId=id||null;
+  const fSec=$('cmSection'); fSec.onchange=()=>cmSync(g,true);
+  if(id){ const c=changeById(g,id); $('cmTitle').textContent='Editar idea'; $('cmHint').textContent='Ajusta esta idea.'; $('cmName').value=c.title; $('cmNote').value=c.note||''; $('cmIssue').value=c.issue||''; fSec.innerHTML=cmSectionOptions(c.section||''); $('cmSecText').value=c.sectionText||''; cmSync(g,false); }
+  else { $('cmTitle').textContent='Nueva idea'; $('cmHint').textContent='Algo que quieres probar en esta versión.'; $('cmName').value=''; $('cmNote').value=''; $('cmIssue').value=''; fSec.innerHTML=cmSectionOptions(''); $('cmSecText').value=''; cmSync(g,false); }
+  $('chgModal').style.display='flex'; $('cmName').focus();
 }
-async function saveImpl(){
-  const game=currentGame(); const {problem,test}=implRef||{}; if(!test) return;
-  const sectionKey=$('imSection').value; const text=$('imText').value.replace(/\s+$/,''); if(!text){ $('imText').focus(); return; }
-  const sec=game.rulebook.sections.find(s=>s.key===sectionKey); if(sec){ sec.content = sec.content.trim() ? (sec.content.replace(/\s+$/,'') + '\n\n' + text) : text; }
-  test.implemented=true; test.implementedSection=sectionKey; if(test.state!=='funciona') test.state='funciona';
-  game.pendingChanges.push({ id:uid(), sectionKey, solutionId:test.id, solutionTitle:test.title, problemId:problem.id, problemTitle:problem.title });
-  await saveState(); $('implModal').style.display='none'; implRef=null; restoreFocus(); renderBoard(); toast(`Implementada en "${RB_TITLE[sectionKey]}" (pendiente de consolidar).`);
+async function saveChange(){
+  const g=currentGame(); const title=$('cmName').value.trim(); if(!title){ $('cmName').focus(); return; }
+  const note=$('cmNote').value.trim(), issue=$('cmIssue').value.trim(), section=$('cmSection').value||'', sectionText=section?$('cmSecText').value.replace(/\s+$/,''):'';
+  if(editingChangeId){ const c=changeById(g,editingChangeId); c.title=title; c.note=note; c.issue=issue; c.section=section; c.sectionText=sectionText; toast('Idea actualizada.'); }
+  else { g.changes.push({ id:uid(), title, note, issue, state:'porprobar', section, sectionText, implemented:false, createdAt:Date.now() }); toast('Idea añadida.'); }
+  await saveState(); closeChangeModal(); renderBoard();
+}
+function closeChangeModal(){ $('chgModal').style.display='none'; editingChangeId=null; restoreFocus(); }
+
+/* implement */
+function openImplModal(g,c){ implRef={g,c}; lastFocused=document.activeElement;
+  $('imSection').innerHTML=RB_SECTIONS.map(([k,t])=>`<option value="${k}" ${(c.section===k||c.implementedSection===k)?'selected':''}>${escapeHtml(t)}</option>`).join('');
+  $('imText').value = c.sectionText&&c.sectionText.trim()?c.sectionText:(c.note||''); $('implModal').style.display='flex'; $('imText').focus();
+}
+async function saveImpl(){ const {g,c}=implRef||{}; if(!c) return; const key=$('imSection').value; const text=$('imText').value.replace(/\s+$/,''); if(!text){ $('imText').focus(); return; }
+  const sec=g.rulebook.sections.find(s=>s.key===key); if(sec){ sec.content = sec.content.trim()?(sec.content.replace(/\s+$/,'')+'\n\n'+text):text; }
+  c.implemented=true; c.implementedSection=key;
+  g.pendingChanges.push({ id:uid(), sectionKey:key, changeId:c.id, changeTitle:c.title });
+  await saveState(); $('implModal').style.display='none'; implRef=null; restoreFocus(); renderBoard(); toast(`Llevado a "${RB_TITLE[key]}" (pendiente de consolidar).`);
 }
 function closeImplModal(){ $('implModal').style.display='none'; implRef=null; restoreFocus(); }
 
-/* ---------- BORRADOR + consolidar ---------- */
-function renderDraft(game, host){
-  const bc=document.createElement('div'); bc.className='breadcrumb';
-  const a=document.createElement('a'); a.textContent='Versiones'; a.onclick=()=>{ nav={view:'versions',problemId:null,versionId:null}; renderBoard(); }; bc.appendChild(a);
-  const s=document.createElement('span'); s.className='sep'; s.textContent='›'; bc.appendChild(s);
-  const c=document.createElement('span'); c.className='cur'; c.textContent='Borrador vivo — '+currentLabel(game); bc.appendChild(c); host.appendChild(bc);
+/* ---------- Reglas ---------- */
+function renderRules(g, host){
+  const bc=document.createElement('div'); bc.style.cssText='display:flex;gap:18px;margin-bottom:8px;';
+  [['draft','Borrador'],['versions','Versiones ('+g.rulebookVersions.length+')']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+((rbView===k||(rbView==='doc'&&k==='versions'))?' on':''); b.style.padding='4px 0 8px'; b.textContent=l; b.onclick=()=>{ rbView=k; rbVersionId=null; renderBoard(); }; bc.appendChild(b); });
+  host.appendChild(bc);
+  if(rbView==='doc'&&rbVersionId) return renderVersionDoc(g,host);
+  if(rbView==='versions') return renderVersionList(g,host);
+  renderDraft(g,host);
+}
+function renderDraft(g, host){
+  const pend={}; g.pendingChanges.forEach(p=>{ (pend[p.sectionKey]=pend[p.sectionKey]||[]).push(p); });
+  if(g.pendingChanges.length){ const ban=document.createElement('div'); ban.className='pend'; ban.innerHTML=`<h4>Pendiente de consolidar (${g.pendingChanges.length})</h4>`;
+    g.pendingChanges.forEach(p=>{ const it=document.createElement('div'); it.className='pi'; it.innerHTML=`<span>${escapeHtml(p.changeTitle)}</span><span class="ar">→</span><span class="sc">${escapeHtml(RB_TITLE[p.sectionKey]||p.sectionKey)}</span>`; const rm=document.createElement('button'); rm.textContent='✕'; rm.title='Quitar'; rm.onclick=async()=>{ g.pendingChanges=g.pendingChanges.filter(x=>x.id!==p.id); const c=changeById(g,p.changeId); if(c) c.implemented=false; await saveState(); renderBoard(); }; it.appendChild(rm); ban.appendChild(it); }); host.appendChild(ban); }
+  g.rulebook.sections.forEach(sec=>{ const w=document.createElement('div'); w.className='sec'+(pend[sec.key]?' pending':''); const l=document.createElement('label'); l.textContent=sec.title; const ta=document.createElement('textarea'); ta.value=sec.content; ta.placeholder=RB_PLACEHOLDER[sec.key]||''; ta.addEventListener('input',()=>{ sec.content=ta.value; }); ta.addEventListener('blur',()=>saveState()); w.appendChild(l); w.appendChild(ta); host.appendChild(w); });
+  const bar=document.createElement('div'); bar.className='rbbar'; const save=document.createElement('button'); save.className='btn'; save.textContent='✓ Guardar versión v'+majorNext(g); save.onclick=()=>openSaveModal(g); const note=document.createElement('span'); note.style.cssText='font-size:11.5px;color:var(--faint);'; note.textContent='Congela el reglamento como v'+majorNext(g)+'.'; bar.appendChild(save); bar.appendChild(note); host.appendChild(bar);
+}
+function renderVersionList(g, host){
+  if(!g.rulebookVersions.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML=`<p>Aún no hay versiones. Ajusta el borrador y pulsa «Guardar versión».</p>`; host.appendChild(e); return; }
+  g.rulebookVersions.slice().sort((a,b)=>b.n-a.n).forEach(v=>{ const it=document.createElement('div'); it.className='verline'; it.setAttribute('role','button'); it.setAttribute('tabindex','0'); it.innerHTML=`<span class="vn">v${v.n}</span><span class="vt">${escapeHtml(v.summary||'Versión '+v.n)}</span><span class="vd">${fmtDate(v.createdAt)}</span>`; const open=()=>{ rbView='doc'; rbVersionId=v.id; renderBoard(); }; it.onclick=open; it.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } }; host.appendChild(it); });
+}
+function versionDocHtml(g,v){ let h=`<h1>${escapeHtml(g.name)} — Reglamento v${v.n}</h1><div class="dm">${fmtDate(v.createdAt)}${v.summary?' · '+escapeHtml(v.summary):''}</div>`;
+  if(v.changes) h+=`<h2>Cambios de esta versión</h2><div class="cb">${escapeHtml(v.changes)}</div>`;
+  v.sections.forEach(s=>{ h+=`<h2>${escapeHtml(s.title)}</h2>`+(s.content.trim()?`<div class="b">${escapeHtml(s.content)}</div>`:`<div class="b e">— por definir —</div>`); }); return h; }
+function renderVersionDoc(g, host){ const v=g.rulebookVersions.find(x=>x.id===rbVersionId); if(!v){ rbView='versions'; renderBoard(); return; }
+  const back=document.createElement('button'); back.className='link'; back.style.marginBottom='12px'; back.textContent='← Versiones'; back.onclick=()=>{ rbView='versions'; rbVersionId=null; renderBoard(); }; host.appendChild(back);
+  const doc=document.createElement('div'); doc.className='doc'; doc.innerHTML=versionDocHtml(g,v); host.appendChild(doc);
+  const bar=document.createElement('div'); bar.className='rbbar'; bar.style.marginTop='16px';
+  const pr=document.createElement('button'); pr.className='btn-q'; pr.textContent='🖨 Imprimir'; pr.onclick=()=>printVersion(g,v);
+  const rs=document.createElement('button'); rs.className='btn-q'; rs.textContent='Restaurar al borrador'; rs.onclick=()=>restoreVersion(g,v);
+  const dl=document.createElement('button'); dl.className='btn-danger'; dl.textContent='Eliminar'; dl.onclick=()=>deleteVersion(g,v);
+  bar.appendChild(pr); const sp=document.createElement('span'); sp.style.flex='1'; bar.appendChild(sp); bar.appendChild(rs); bar.appendChild(dl); host.appendChild(bar);
+}
+function openSaveModal(g){ lastFocused=document.activeElement; $('svHint').textContent=`Se guardará como v${majorNext(g)} con el reglamento actual y ${g.pendingChanges.length} cambio(s) incorporado(s).`; $('svSum').value=g.currentSummary||''; $('svModal').style.display='flex'; $('svSum').focus(); }
+async function consolidateVersion(){ const g=currentGame(); const summary=$('svSum').value.trim(); const n=majorNext(g);
+  const sections=g.rulebook.sections.map(s=>({key:s.key,title:s.title,content:s.content}));
+  const changesTxt=g.pendingChanges.length?g.pendingChanges.map(p=>`• ${p.changeTitle} → ${RB_TITLE[p.sectionKey]||p.sectionKey}`).join('\n'):'Consolidación manual del borrador.';
+  g.rulebookVersions.push({ id:uid(), n, createdAt:Date.now(), summary:summary||('Versión '+n), changes:changesTxt, sections });
+  g.pendingChanges=[]; g.changes.forEach(c=>{ if(c.implemented) c.implemented=false; }); g.currentSummary='';
+  await saveState(); $('svModal').style.display='none'; restoreFocus(); currentTab='reglas'; rbView='doc'; rbVersionId=g.rulebookVersions[g.rulebookVersions.length-1].id; renderBoard(); toast(`Versión v${n} consolidada.`);
+}
+function closeSaveModal(){ $('svModal').style.display='none'; restoreFocus(); }
+async function restoreVersion(g,v){ const ok=await confirmDialog(`¿Restaurar la v${v.n} al borrador? Sobrescribe el borrador actual.`); if(!ok) return; g.rulebook.sections=v.sections.map(s=>({key:s.key,title:s.title,content:s.content})); await saveState(); rbView='draft'; rbVersionId=null; renderBoard(); toast(`Borrador restaurado desde v${v.n}.`); }
+async function deleteVersion(g,v){ const ok=await confirmDialog(`¿Eliminar la versión v${v.n}?`); if(!ok) return; g.rulebookVersions=g.rulebookVersions.filter(x=>x.id!==v.id); await saveState(); rbView='versions'; rbVersionId=null; renderBoard(); toast(`Versión v${v.n} eliminada.`); }
+function printVersion(g,v){ const a=$('printArea'); a.innerHTML=versionDocHtml(g,v); const cl=()=>{ a.innerHTML=''; window.removeEventListener('afterprint',cl); }; window.addEventListener('afterprint',cl); window.print(); }
 
-  const pendingBySection={}; game.pendingChanges.forEach(pc=>{ (pendingBySection[pc.sectionKey]=pendingBySection[pc.sectionKey]||[]).push(pc); });
-  if(game.pendingChanges.length){ const ban=document.createElement('div'); ban.className='pending-banner';
-    ban.innerHTML=`<h4>Cambios pendientes de consolidar (${game.pendingChanges.length})</h4>`;
-    game.pendingChanges.forEach(pc=>{ const it=document.createElement('div'); it.className='pending-item';
-      it.innerHTML=`<span>${escapeHtml(pc.solutionTitle)}</span><span class="arrow">→</span><span class="sec">${escapeHtml(RB_TITLE[pc.sectionKey]||pc.sectionKey)}</span>`;
-      const rm=document.createElement('button'); rm.title='Quitar de pendientes'; rm.textContent='✕'; rm.onclick=async()=>{ game.pendingChanges=game.pendingChanges.filter(x=>x.id!==pc.id); const t=findTestGlobal(game, pc.solutionId); if(t) t.implemented=false; await saveState(); renderBoard(); };
-      it.appendChild(rm); ban.appendChild(it); });
-    host.appendChild(ban);
-  } else { const n=document.createElement('div'); n.className='rb-note'; n.style.cssText='max-width:860px;margin-bottom:14px;'; n.textContent='No hay cambios pendientes. Puedes editar el reglamento a mano y consolidar igualmente, o implementar soluciones desde un problema.'; host.appendChild(n); }
-
-  game.rulebook.sections.forEach(sec=>{ const wrap=document.createElement('div'); wrap.className='rb-section'+(pendingBySection[sec.key]?' has-pending':'');
-    const lbl=document.createElement('label'); lbl.textContent=sec.title; const ta=document.createElement('textarea'); ta.value=sec.content; ta.placeholder=RB_PLACEHOLDER[sec.key]||''; ta.setAttribute('aria-label',sec.title);
-    ta.addEventListener('input',()=>{ sec.content=ta.value; }); ta.addEventListener('blur',()=>saveState());
-    wrap.appendChild(lbl); wrap.appendChild(ta); host.appendChild(wrap); });
-
-  const bar=document.createElement('div'); bar.className='rb-bar';
-  const save=document.createElement('button'); save.className='btn-primary'; save.textContent='✓ Guardar versión v'+majorNext(game); save.onclick=()=>openSaveVerModal(game);
-  const note=document.createElement('div'); note.className='rb-note'; note.textContent='Consolidar congela el reglamento como v'+majorNext(game)+' y arranca la siguiente.';
-  bar.appendChild(save); bar.appendChild(note); host.appendChild(bar);
-}
-function findTestGlobal(game, testId){ for(const p of game.problems){ const t=p.tests.find(x=>x.id===testId); if(t) return t; } return null; }
-
-function openSaveVerModal(game){ lastFocused=document.activeElement; $('svHint').textContent=`Se guardará como v${majorNext(game)} con el reglamento actual y ${game.pendingChanges.length} cambio(s) incorporado(s).`; $('svSummary').value=game.currentSummary||''; $('saveVerModal').style.display='flex'; $('svSummary').focus(); }
-async function consolidateVersion(){
-  const game=currentGame(); const summary=$('svSummary').value.trim();
-  const n=majorNext(game);
-  const sections=game.rulebook.sections.map(s=>({key:s.key,title:s.title,content:s.content}));
-  let changes = game.pendingChanges.length ? game.pendingChanges.map(pc=>`• ${pc.solutionTitle} → ${RB_TITLE[pc.sectionKey]||pc.sectionKey} (problema: ${pc.problemTitle})`).join('\n') : 'Consolidación manual del borrador.';
-  const problemsSnapshot=game.problems.map(p=>({ title:p.title, status:p.status, solutions:p.tests.map(t=>({title:t.title, state:t.state, implemented:!!t.implemented})) }));
-  game.rulebookVersions.push({ id:uid(), n, createdAt:Date.now(), summary: summary||('Versión '+n), changes, sections, problemsSnapshot, evolNotes:'' });
-  // reset ciclo
-  game.pendingChanges=[]; game.problems.forEach(p=>p.tests.forEach(t=>{ if(t.implemented) t.implemented=false; }));
-  game.currentSummary='';
-  await saveState(); $('saveVerModal').style.display='none'; restoreFocus(); nav={view:'versiondoc',problemId:null,versionId:game.rulebookVersions[game.rulebookVersions.length-1].id}; renderBoard(); toast(`Versión v${n} consolidada.`);
-}
-function closeSaveVerModal(){ $('saveVerModal').style.display='none'; restoreFocus(); }
-
-function versionDocHtml(game, v){
-  let html=`<h1>${escapeHtml(game.name)} — Reglamento v${v.n}</h1>`;
-  html+=`<div class="docmeta">${fmtDate(v.createdAt)}${v.summary?' · '+escapeHtml(v.summary):''}</div>`;
-  if(v.changes) html+=`<h2>Cambios de esta versión</h2><div class="changes-box">${escapeHtml(v.changes)}</div>`;
-  v.sections.forEach(s=>{ html+=`<h2>${escapeHtml(s.title)}</h2>`; html+=s.content.trim()?`<div class="sec-body">${escapeHtml(s.content)}</div>`:`<div class="sec-body empty">— por definir —</div>`; });
-  if(v.evolNotes) html+=`<h2>Notas de diseño (evolución)</h2><div class="sec-body">${escapeHtml(v.evolNotes)}</div>`;
-  if(v.problemsSnapshot && v.problemsSnapshot.length){ html+=`<h2>Problemas trabajados</h2><div class="sec-body">`+v.problemsSnapshot.map(p=>`— ${escapeHtml(p.title)} [${PS_TITLE[p.status]||p.status}]`+(p.solutions.length?': '+p.solutions.map(s=>escapeHtml(s.title)+' ('+(SOL_TITLE[s.state]||s.state)+')').join('; '):'')).join('\n')+`</div>`; }
-  return html;
-}
-function renderVersionDoc(game, host){
-  const v=game.rulebookVersions.find(x=>x.id===nav.versionId); if(!v){ nav={view:'versions',problemId:null,versionId:null}; renderBoard(); return; }
-  const bc=document.createElement('div'); bc.className='breadcrumb'; const a=document.createElement('a'); a.textContent='Versiones'; a.onclick=()=>{ nav={view:'versions',problemId:null,versionId:null}; renderBoard(); }; bc.appendChild(a);
-  const s=document.createElement('span'); s.className='sep'; s.textContent='›'; bc.appendChild(s); const c=document.createElement('span'); c.className='cur'; c.textContent='v'+v.n; bc.appendChild(c); host.appendChild(bc);
-  const doc=document.createElement('div'); doc.className='ver-doc'; doc.innerHTML=versionDocHtml(game,v); host.appendChild(doc);
-  const bar=document.createElement('div'); bar.className='rb-bar'; bar.style.marginTop='14px';
-  const pr=document.createElement('button'); pr.className='btn-ghost'; pr.textContent='🖨 Imprimir'; pr.onclick=()=>printVersion(game,v);
-  const rs=document.createElement('button'); rs.className='btn-ghost'; rs.textContent='Restaurar al borrador'; rs.onclick=()=>restoreVersion(game,v);
-  const dl=document.createElement('button'); dl.className='btn-danger'; dl.textContent='Eliminar'; dl.onclick=()=>deleteVersion(game,v);
-  bar.appendChild(pr); const sp=document.createElement('div'); sp.style.flex='1'; bar.appendChild(sp); bar.appendChild(rs); bar.appendChild(dl); host.appendChild(bar);
-}
-async function restoreVersion(game,v){ const ok=await confirmDialog(`¿Restaurar la v${v.n} al borrador vivo? Sobrescribe el borrador actual (las versiones no se tocan).`); if(!ok) return; game.rulebook.sections=v.sections.map(s=>({key:s.key,title:s.title,content:s.content})); normalizeStructures(); await saveState(); nav={view:'draft',problemId:null,versionId:null}; renderBoard(); toast(`Borrador restaurado desde v${v.n}.`); }
-async function deleteVersion(game,v){ const ok=await confirmDialog(`¿Eliminar la versión v${v.n}?`); if(!ok) return; game.rulebookVersions=game.rulebookVersions.filter(x=>x.id!==v.id); await saveState(); nav={view:'versions',problemId:null,versionId:null}; renderBoard(); toast(`Versión v${v.n} eliminada.`); }
-function printVersion(game,v){ const a=$('printArea'); a.innerHTML=versionDocHtml(game,v); const cl=()=>{ a.innerHTML=''; window.removeEventListener('afterprint',cl); }; window.addEventListener('afterprint',cl); window.print(); }
-
-/* Test modal */
-function tmBuildSectionOptions(sel){ return `<option value="">— ninguno —</option>`+RB_SECTIONS.map(([k,t])=>`<option value="${k}" ${k===sel?'selected':''}>${escapeHtml(t)}</option>`).join(''); }
-function tmSyncSection(game, fromUser){ const key=$('tmSection').value, wrap=$('tmSectionTextField'), ta=$('tmSectionText'); if(!key){ wrap.style.display='none'; return; } wrap.style.display=''; $('tmSectionTextLabel').textContent='Texto propuesto para "'+RB_TITLE[key]+'"'; ta.placeholder=RB_PLACEHOLDER[key]||''; if(fromUser){ const sec=game.rulebook.sections.find(s=>s.key===key); ta.value=sec?sec.content:''; } }
-function openTestModal(problem, parentId, edit=false){
-  const game=currentGame(); if(!game) return; lastFocused=document.activeElement; tmProblemRef=problem; editingTestId=edit?parentId:null;
-  const sel=$('tmParent'), fSec=$('tmSection'); fSec.onchange=()=>tmSyncSection(game,true);
-  if(edit){ const n=nodeById(problem.tests, parentId);
-    $('tmTitle').textContent='Editar solución'; $('tmHint').textContent='Edita esta solución. Puedes reubicar de qué solución deriva.';
-    $('tmName').value=n.title; $('tmMejora').value=n.mejora||''; $('tmProblema').value=n.problema||'';
-    const forb=descendantIds(problem.tests,n.id); forb.add(n.id);
-    const opts=problem.tests.slice().sort((a,b)=>a.createdAt-b.createdAt).filter(x=>!forb.has(x.id)).map(x=>`<option value="${x.id}" ${x.id===n.parentId?'selected':''}>${escapeHtml(x.title)}${x.active?' (activa)':''}</option>`).join('');
-    sel.innerHTML=`<option value="">— sin antecesora —</option>`+opts; $('tmParentField').style.display=''; $('tmParentField').querySelector('label').textContent='Deriva de';
-    fSec.innerHTML=tmBuildSectionOptions(n.section||''); $('tmSectionText').value=n.sectionText||''; tmSyncSection(game,false);
-  } else { testParentDefault=parentId; $('tmTitle').textContent='Nueva solución'; $('tmHint').textContent='La nueva solución pasará a ser la solución activa de este problema.';
-    sel.innerHTML=problem.tests.slice().sort((a,b)=>a.createdAt-b.createdAt).map(n=>`<option value="${n.id}" ${n.id===parentId?'selected':''}>${escapeHtml(n.title)}${n.active?' (activa)':''}</option>`).join('');
-    $('tmParentField').style.display=problem.tests.length?'':'none'; $('tmParentField').querySelector('label').textContent='Ramifica desde';
-    $('tmName').value=''; $('tmMejora').value=''; $('tmProblema').value=''; fSec.innerHTML=tmBuildSectionOptions(''); $('tmSectionText').value=''; tmSyncSection(game,false); }
-  $('testModal').style.display='flex'; $('tmName').focus();
-}
-async function saveTest(){ const game=currentGame(); const problem=tmProblemRef; if(!problem) return; const title=$('tmName').value.trim(); if(!title){ $('tmName').focus(); return; }
-  const mejora=$('tmMejora').value.trim(), problema=$('tmProblema').value.trim(), parentId=$('tmParent').value||null, section=$('tmSection').value||'', sectionText=section?$('tmSectionText').value.replace(/\s+$/,''):'';
-  if(editingTestId){ const n=nodeById(problem.tests,editingTestId); n.title=title; n.mejora=mejora; n.problema=problema; n.parentId=parentId; n.section=section; n.sectionText=sectionText; toast('Solución actualizada.'); }
-  else { problem.tests.forEach(x=>x.active=false); const id=uid(); problem.tests.push({ id, parentId, title, mejora, problema, section, sectionText, state:'porprobar', implemented:false, active:true, createdAt:Date.now() }); game.lastActiveTest={problemId:problem.id,testId:id}; toast('Solución registrada.'); }
-  await saveState(); closeTestModal(); renderBoard();
-}
-function closeTestModal(){ $('testModal').style.display='none'; editingTestId=null; tmProblemRef=null; restoreFocus(); }
-
-/* Problem modal */
-function openProblemModal(problemId, parentId=null, originTestId=null, presetStatus=null){
-  const game=currentGame(); if(!game) return; lastFocused=document.activeElement; editingProblemId=problemId||null;
-  $('pmStatus').innerHTML=PROBLEM_STATUSES.map(([k,t])=>`<option value="${k}">${t}</option>`).join('');
-  if(problemId){ const p=problemById(game,problemId); $('pmTitle').textContent='Editar problema'; $('pmHint').textContent=''; $('pmName').value=p.title; $('pmDesc').value=p.description||''; $('pmStatus').value=p.status; pendingProblemParent=p.parentProblemId; pendingProblemOrigin=p.originTestId||null; }
-  else { pendingProblemParent=parentId; pendingProblemOrigin=originTestId; $('pmTitle').textContent=parentId?'Nuevo sub-problema':'Nuevo problema'; $('pmHint').textContent=originTestId?'Se creará como problema derivado de la prueba seleccionada.':(parentId?'Se anida dentro del problema actual.':'Se añade a la versión en curso.'); $('pmName').value=''; $('pmDesc').value=''; $('pmStatus').value=presetStatus||'detectado'; }
-  $('probModal').style.display='flex'; $('pmName').focus();
-}
-async function saveProblem(){ const game=currentGame(); const title=$('pmName').value.trim(); if(!title){ $('pmName').focus(); return; } const desc=$('pmDesc').value.trim(), status=$('pmStatus').value;
-  if(editingProblemId){ const p=problemById(game,editingProblemId); p.title=title; p.description=desc; p.status=status; toast('Problema actualizado.'); }
-  else { const p={ id:uid(), title, description:desc, status, parentProblemId:pendingProblemParent||null, originTestId:pendingProblemOrigin||null, createdAt:Date.now(), tests:[] }; game.problems.push(p);
-    if(pendingProblemOrigin){ const par=problemById(game,pendingProblemParent); if(par){ const t=par.tests.find(x=>x.id===pendingProblemOrigin); if(t) t.state='aparcada'; } }
-    toast(pendingProblemParent?'Sub-problema creado.':'Problema creado.'); }
-  await saveState(); closeProblemModal(); renderBoard();
-}
-function closeProblemModal(){ $('probModal').style.display='none'; editingProblemId=null; pendingProblemParent=null; pendingProblemOrigin=null; restoreFocus(); }
-async function deleteProblem(game,p){ const subs=childProblems(game,p.id).length; let msg=`¿Eliminar el problema "${p.title}" y sus ${p.tests.length} solución(es)?`; if(subs) msg+=` También sus ${subs} sub-problema(s).`; const ok=await confirmDialog(msg); if(!ok) return;
-  const rm=new Set(); const col=id=>{ rm.add(id); childProblems(game,id).forEach(c=>col(c.id)); }; col(p.id);
-  game.problems=game.problems.filter(x=>!rm.has(x.id)); if(game.lastActiveTest&&rm.has(game.lastActiveTest.problemId)) game.lastActiveTest=null;
-  nav={view: p.parentProblemId?'problem':'workspace', problemId:p.parentProblemId||null, versionId:null};
-  await saveState(); closeDetail(); renderBoard(); toast('Problema eliminado.');
-}
-
-/* Editoriales */
-function renderEditoriales(game, host){
-  const head=document.createElement('div'); head.className='section-head'; head.innerHTML=`<div><h2>Editoriales</h2><div class="faint" style="font-size:12px;margin-top:3px;">Seguimiento de a quién presentas el juego y en qué estado está.</div></div>`;
-  const add=document.createElement('button'); add.className='btn-primary'; add.textContent='＋ Nueva editorial'; add.onclick=()=>openEdModal(null); head.appendChild(add); host.appendChild(head);
-  if(!game.editorials.length){ const d=document.createElement('div'); d.className='empty-state'; d.innerHTML=`<h3>Sin editoriales todavía</h3><p>Añade una para registrar contacto, estado y feedback.</p>`; host.appendChild(d); return; }
-  const table=document.createElement('table'); table.className='ed-table'; table.innerHTML=`<thead><tr><th>Editorial</th><th>Estado</th><th>Fecha</th><th>Contacto</th><th>Feedback</th><th></th></tr></thead>`; const tb=document.createElement('tbody');
-  game.editorials.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).forEach(ed=>{ const tr=document.createElement('tr');
-    tr.innerHTML=`<td class="ed-name">${escapeHtml(ed.name)}</td><td><span class="ed-badge ed-${ed.status}">${ES_TITLE[ed.status]||ed.status}</span></td><td class="faint">${ed.date?escapeHtml(ed.date):'—'}</td><td>${ed.contact?escapeHtml(ed.contact):'<span class="faint">—</span>'}</td><td style="max-width:280px;">${ed.notes?escapeHtml(ed.notes):'<span class="faint">—</span>'}</td><td><div class="ed-actions"><button title="Editar" data-a="edit">✎</button><button title="Eliminar" data-a="del">✕</button></div></td>`;
-    tr.querySelector('[data-a=edit]').onclick=()=>openEdModal(ed.id); tr.querySelector('[data-a=del]').onclick=()=>deleteEd(game,ed); tb.appendChild(tr); });
-  table.appendChild(tb); host.appendChild(table);
-}
-function openEdModal(edId){ const game=currentGame(); lastFocused=document.activeElement; editingEdId=edId||null; $('emStatus').innerHTML=ED_STATUSES.map(([k,t])=>`<option value="${k}">${t}</option>`).join('');
-  if(edId){ const ed=game.editorials.find(x=>x.id===edId); $('emTitle').textContent='Editar editorial'; $('emName').value=ed.name; $('emStatus').value=ed.status; $('emDate').value=ed.date||''; $('emContact').value=ed.contact||''; $('emNotes').value=ed.notes||''; }
-  else { $('emTitle').textContent='Nueva editorial'; $('emName').value=''; $('emStatus').value='contactar'; $('emDate').value=''; $('emContact').value=''; $('emNotes').value=''; }
-  $('edModal').style.display='flex'; $('emName').focus();
-}
-async function saveEd(){ const game=currentGame(); const name=$('emName').value.trim(); if(!name){ $('emName').focus(); return; } const data={ name, status:$('emStatus').value, date:$('emDate').value, contact:$('emContact').value.trim(), notes:$('emNotes').value.trim() };
-  if(editingEdId){ Object.assign(game.editorials.find(x=>x.id===editingEdId), data); toast('Editorial actualizada.'); } else { game.editorials.push({ id:uid(), ...data, createdAt:Date.now() }); toast('Editorial añadida.'); }
-  await saveState(); closeEdModal(); renderBoard();
-}
-function closeEdModal(){ $('edModal').style.display='none'; editingEdId=null; restoreFocus(); }
-async function deleteEd(game,ed){ const ok=await confirmDialog(`¿Eliminar la editorial "${ed.name}"?`); if(!ok) return; game.editorials=game.editorials.filter(x=>x.id!==ed.id); await saveState(); renderBoard(); toast('Editorial eliminada.'); }
-
-/* Game */
-function openGameModal(edit=false, gameId=null){ lastFocused=document.activeElement; editingGameId=edit?gameId:null;
-  if(edit){ const g=state.games.find(x=>x.id===gameId); $('gmTitle').textContent='Renombrar juego'; $('gmHint').textContent='Cambia el nombre del juego.'; $('gmSave').textContent='Guardar'; $('gmName').value=g?g.name:''; }
-  else { $('gmTitle').textContent='Añadir juego'; $('gmHint').textContent='Se creará vacío: define su reglamento y añade problemas cuando quieras.'; $('gmSave').textContent='Crear'; $('gmName').value=''; }
-  $('gameModal').style.display='flex'; $('gmName').focus();
-}
-async function saveGame(){ const name=$('gmName').value.trim(); if(!name){ $('gmName').focus(); return; }
-  if(editingGameId){ const g=state.games.find(x=>x.id===editingGameId); if(g) g.name=name; toast('Juego renombrado.'); }
-  else { const ng={ id:uid(), name, color:SPINE_COLORS[state.games.length%SPINE_COLORS.length], nodes:[], migrated:true, rulebook:makeRulebook(), rulebookVersions:[], problems:[], editorials:[], pendingChanges:[], currentSummary:'' }; state.games.push(ng); state.currentGameId=ng.id; currentTab='diseno'; nav={view:'versions',problemId:null,versionId:null}; toast('Juego creado.'); }
-  await saveState(); closeGameModal(); render();
-}
+/* ---------- Game create/rename/delete ---------- */
+function openGameModal(edit=false,id=null){ lastFocused=document.activeElement; editingGameId=edit?id:null; if(edit){ const g=state.games.find(x=>x.id===id); $('gmTitle').textContent='Renombrar juego'; $('gmHint').textContent='Cambia el nombre.'; $('gmSave').textContent='Guardar'; $('gmName').value=g?g.name:''; } else { $('gmTitle').textContent='Añadir juego'; $('gmHint').textContent='Se crea vacío.'; $('gmSave').textContent='Crear'; $('gmName').value=''; } $('gameModal').style.display='flex'; $('gmName').focus(); }
+async function saveGame(){ const name=$('gmName').value.trim(); if(!name){ $('gmName').focus(); return; } if(editingGameId){ const g=state.games.find(x=>x.id===editingGameId); if(g) g.name=name; toast('Juego renombrado.'); } else { const ng={ id:uid(), name, color:SPINE_COLORS[state.games.length%SPINE_COLORS.length], rulebook:makeRulebook(), rulebookVersions:[], changes:[], pendingChanges:[], currentSummary:'', migrated:true, flattened:true }; state.games.push(ng); state.currentGameId=ng.id; currentTab='inicio'; toast('Juego creado.'); } await saveState(); closeGameModal(); render(); }
 function closeGameModal(){ $('gameModal').style.display='none'; editingGameId=null; restoreFocus(); }
-async function deleteGame(gameId){ const g=state.games.find(x=>x.id===gameId); if(!g) return; const ok=await confirmDialog(`¿Eliminar el juego "${g.name}" con todo su contenido? No se puede deshacer.`); if(!ok) return; state.games=state.games.filter(x=>x.id!==gameId); if(state.currentGameId===gameId){ state.currentGameId=state.games[0]?state.games[0].id:null; currentTab='diseno'; nav={view:'versions',problemId:null,versionId:null}; } await saveState(); closeDetail(); render(); toast('Juego eliminado.'); }
+async function deleteGame(id){ const g=state.games.find(x=>x.id===id); if(!g) return; const ok=await confirmDialog(`¿Eliminar el juego "${g.name}" con todo su contenido?`); if(!ok) return; state.games=state.games.filter(x=>x.id!==id); if(state.currentGameId===id){ state.currentGameId=state.games[0]?state.games[0].id:null; currentTab='inicio'; } await saveState(); closePanel(); render(); toast('Juego eliminado.'); }
 
-/* Context menu */
-let openMenuEl=null; function closeMenu(){ if(openMenuEl){ openMenuEl.remove(); openMenuEl=null; } }
-function openGameMenu(anchor, gameId){ closeMenu(); const menu=document.createElement('div'); menu.className='ctx-menu'; menu.setAttribute('role','menu');
-  menu.innerHTML=`<button data-act="rename"><span class="ico">✎</span> Renombrar</button><div class="sep"></div><button class="danger" data-act="delete"><span class="ico">✕</span> Eliminar juego</button>`;
-  document.body.appendChild(menu); const r=anchor.getBoundingClientRect(); menu.style.top=(r.bottom+6)+'px'; menu.style.left=Math.max(8,Math.min(r.left,window.innerWidth-184))+'px'; openMenuEl=menu;
-  menu.querySelectorAll('button').forEach(b=>b.onclick=()=>{ const a=b.dataset.act; closeMenu(); if(a==='rename') openGameModal(true,gameId); else if(a==='delete') deleteGame(gameId); }); menu.querySelector('button').focus();
-}
+/* context menu */
+let menuEl=null; function closeMenu(){ if(menuEl){ menuEl.remove(); menuEl=null; } }
+function openGameMenu(anchor,id){ closeMenu(); const m=document.createElement('div'); m.className='menu'; m.setAttribute('role','menu'); m.innerHTML=`<button data-a="rename">✎ Renombrar</button><button class="dg" data-a="del">✕ Eliminar juego</button>`; document.body.appendChild(m); const r=anchor.getBoundingClientRect(); m.style.top=(r.bottom+6)+'px'; m.style.left=Math.max(8,Math.min(r.left,window.innerWidth-180))+'px'; menuEl=m; m.querySelectorAll('button').forEach(b=>b.onclick=()=>{ const a=b.dataset.a; closeMenu(); if(a==='rename') openGameModal(true,id); else deleteGame(id); }); m.querySelector('button').focus(); }
 
-/* Confirm / toast / focus */
+/* confirm / toast / focus */
 let confirmResolver=null;
-function confirmDialog(msg){ $('cfMsg').textContent=msg; lastFocused=document.activeElement; $('confirmModal').style.display='flex'; $('cfOk').focus(); return new Promise(res=>{ confirmResolver=res; }); }
-function resolveConfirm(v){ $('confirmModal').style.display='none'; if(confirmResolver){ confirmResolver(v); confirmResolver=null; } restoreFocus(); }
-function toast(msg, kind='', ms=2600){ const w=$('toastWrap'); const t=document.createElement('div'); t.className='toast'+(kind?' '+kind:''); t.textContent=msg; w.appendChild(t); requestAnimationFrame(()=>t.classList.add('show')); setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(),220); }, ms); }
-function restoreFocus(){ if(lastFocused && lastFocused.focus){ try{ lastFocused.focus(); }catch(e){} } lastFocused=null; }
-function closeDetail(){ $('detailPanel').classList.remove('open'); selectedTestId=null; }
+function confirmDialog(msg){ $('cfMsg').textContent=msg; lastFocused=document.activeElement; $('cfModal').style.display='flex'; $('cfOk').focus(); return new Promise(res=>{ confirmResolver=res; }); }
+function resolveConfirm(v){ $('cfModal').style.display='none'; if(confirmResolver){ confirmResolver(v); confirmResolver=null; } restoreFocus(); }
+function toast(msg,kind='',ms=2600){ const w=$('toasts'); const t=document.createElement('div'); t.className='toast'+(kind?' '+kind:''); t.textContent=msg; w.appendChild(t); requestAnimationFrame(()=>t.classList.add('show')); setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(),220); },ms); }
+function restoreFocus(){ if(lastFocused&&lastFocused.focus){ try{ lastFocused.focus(); }catch(e){} } lastFocused=null; }
 
-/* Wiring */
+/* wiring */
 $('addGameBtn').onclick=()=>openGameModal(false);
 $('gmCancel').onclick=closeGameModal; $('gmSave').onclick=saveGame;
 $('gameMenuBtn').onclick=(e)=>{ const g=currentGame(); if(g) openGameMenu(e.currentTarget,g.id); };
-$('detailClose').onclick=()=>{ closeDetail(); renderBoard(); };
-$('tmCancel').onclick=closeTestModal; $('tmSave').onclick=saveTest;
-$('pmCancel').onclick=closeProblemModal; $('pmSave').onclick=saveProblem;
+$('panelClose').onclick=closePanel;
+$('cmCancel').onclick=closeChangeModal; $('cmSave').onclick=saveChange;
 $('imCancel').onclick=closeImplModal; $('imSave').onclick=saveImpl;
-$('svCancel').onclick=closeSaveVerModal; $('svSave').onclick=consolidateVersion;
-$('emCancel').onclick=closeEdModal; $('emSave').onclick=saveEd;
+$('svCancel').onclick=closeSaveModal; $('svSave').onclick=consolidateVersion;
 $('cfCancel').onclick=()=>resolveConfirm(false); $('cfOk').onclick=()=>resolveConfirm(true);
-$('tmName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveTest(); } });
-$('pmName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveProblem(); } });
-$('emName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveEd(); } });
+$('exportBtn').onclick=exportData; $('importBtn').onclick=()=>$('importFile').click(); $('importFile').onchange=(e)=>{ const f=e.target.files[0]; if(f) importData(f); e.target.value=''; };
+$('signOutBtn').onclick=()=>Store.signOut();
+$('cmName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveChange(); } });
 $('gmName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveGame(); } });
-$('svSummary').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); consolidateVersion(); } });
-['tmMejora','tmProblema','tmSectionText','imText'].forEach(id=>$(id).addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){ e.preventDefault(); (id==='imText'?saveImpl:saveTest)(); } }));
-document.addEventListener('click',e=>{ if(openMenuEl && !openMenuEl.contains(e.target) && !e.target.closest('.menu-btn') && e.target.id!=='gameMenuBtn') closeMenu(); }, true);
-window.addEventListener('scroll', closeMenu, true);
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'){
-  if(openMenuEl){ closeMenu(); return; }
-  if($('confirmModal').style.display==='flex'){ resolveConfirm(false); return; }
-  if($('implModal').style.display==='flex'){ closeImplModal(); return; }
-  if($('saveVerModal').style.display==='flex'){ closeSaveVerModal(); return; }
-  if($('testModal').style.display==='flex'){ closeTestModal(); return; }
-  if($('probModal').style.display==='flex'){ closeProblemModal(); return; }
-  if($('edModal').style.display==='flex'){ closeEdModal(); return; }
-  if($('gameModal').style.display==='flex'){ closeGameModal(); return; }
-  if($('detailPanel').classList.contains('open')){ closeDetail(); renderBoard(); return; }
-} });
-[['testModal',closeTestModal],['probModal',closeProblemModal],['implModal',closeImplModal],['saveVerModal',closeSaveVerModal],['edModal',closeEdModal],['gameModal',closeGameModal],['confirmModal',()=>resolveConfirm(false)]].forEach(([id,fn])=>{ $(id).addEventListener('mousedown',e=>{ if(e.target.id===id) fn(); }); });
-window.addEventListener('resize',()=>{ const canvas=$('testCanvas'); if(!canvas) return; const game=currentGame(); if(!game||nav.view!=='problem') return; const problem=problemById(game,nav.problemId); if(!problem) return; const a=activeTest(problem); const lin=a?new Set(ancestorChain(problem.tests,a.id)):new Set(); const svg=canvas.querySelector('svg.traces'); if(svg) drawConnectors(problem.tests, svg, canvas, lin); });
+$('svSum').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); consolidateVersion(); } });
+async function agLogin(){ const em=$('agEmail').value.trim(), pw=$('agPass').value; if(!em||!pw){ $('agMsg').textContent='Escribe correo y contraseña.'; return; } $('agMsg').textContent='Entrando…'; try{ await Store.signInPassword(em,pw); }catch(e){ $('agMsg').textContent='Error: '+(e.message||e); } }
+async function agSignup(){ const em=$('agEmail').value.trim(), pw=$('agPass').value; if(!em||!pw){ $('agMsg').textContent='Escribe correo y una contraseña (mín. 6).'; return; } $('agMsg').textContent='Creando cuenta…'; try{ const d=await Store.signUpPassword(em,pw); if(!(d&&d.session)) $('agMsg').textContent='Cuenta creada. Si pide confirmar el correo, revísalo; si no, pulsa Entrar.'; }catch(e){ $('agMsg').textContent='Error: '+(e.message||e); } }
+async function agMagic(){ const em=$('agEmail').value.trim(); if(!em){ $('agMsg').textContent='Escribe tu correo.'; return; } $('agMsg').textContent='Enviando enlace…'; try{ await Store.signInMagic(em); $('agMsg').textContent='Enlace enviado. Revisa tu correo (y spam).'; }catch(e){ $('agMsg').textContent='Error: '+(e.message||e); } }
+$('agLogin').onclick=agLogin; $('agSignup').onclick=agSignup; $('agMagic').onclick=(e)=>{ e.preventDefault(); agMagic(); };
+$('agPass').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); agLogin(); } });
 
-$('exportBtn').onclick = exportData;
-$('importBtn').onclick = () => $('importFile').click();
-$('importFile').onchange = (e) => { const f=e.target.files[0]; if(f) importData(f); e.target.value=''; };
-$('signOutBtn').onclick = () => Store.signOut();
-$('agSend').onclick = async () => { const email=$('agEmail').value.trim(); if(!email){ $('agEmail').focus(); return; } try{ await Store.signIn(email); $('agMsg').textContent='Enlace enviado. Revisa tu correo y vuelve aquí.'; }catch(e){ $('agMsg').textContent='Error: '+(e.message||e); } };
-$('agEmail').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); $('agSend').click(); } });
+document.addEventListener('click',e=>{ if(menuEl&&!menuEl.contains(e.target)&&!e.target.closest('.mn')&&e.target.id!=='gameMenuBtn') closeMenu(); },true);
+window.addEventListener('scroll',closeMenu,true);
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(menuEl){ closeMenu(); return; }
+  for(const id of ['cfModal','chgModal','implModal','svModal','gameModal']){ if($(id).style.display==='flex'){ if(id==='cfModal') resolveConfirm(false); else $(id).style.display='none'; restoreFocus(); return; } }
+  if($('panel').classList.contains('open')){ closePanel(); return; } } });
+[['chgModal',closeChangeModal],['implModal',closeImplModal],['svModal',closeSaveModal],['gameModal',closeGameModal],['cfModal',()=>resolveConfirm(false)]].forEach(([id,fn])=>{ $(id).addEventListener('mousedown',e=>{ if(e.target.id===id) fn(); }); });
 
-async function bootApp(){ await loadState(); if(normalizeStructures()) await saveState(); render(); updateBackendBadge(); }
-(async function init(){ await Store.init(); if(Store.ready()){ bootApp(); } else { updateBackendBadge(); showAuthGate(); } })();
+async function bootApp(){ await loadState(); if(normalizeStructures()) await saveState(); render(); updateBackend(); }
+(async function init(){ await Store.init(); if(Store.ready()){ bootApp(); } else { updateBackend(); showAuthGate(); } })();
 </script>
 </body>
 </html>
