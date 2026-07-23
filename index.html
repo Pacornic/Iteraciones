@@ -194,10 +194,10 @@
     <h3 id="cmTitle">Nueva idea</h3>
     <div class="hint" id="cmHint">Algo que quieres probar en esta versión.</div>
     <div class="field"><label for="cmName">Nombre</label><input type="text" id="cmName" placeholder="p. ej. Bajar el coste de vía"></div>
-    <div class="field"><label for="cmNote">Qué esperas que mejore <span style="text-transform:none;letter-spacing:0;color:var(--faint)">(opcional)</span></label><textarea id="cmNote"></textarea></div>
-    <div class="field"><label for="cmIssue">Efecto secundario observado <span style="text-transform:none;letter-spacing:0;color:var(--faint)">(opcional)</span></label><textarea id="cmIssue"></textarea></div>
     <div class="field"><label for="cmSection">Apartado del reglamento al que apunta <span style="text-transform:none;letter-spacing:0;color:var(--faint)">(opcional)</span></label><select id="cmSection"></select></div>
-    <div class="field" id="cmSecTextF" style="display:none;"><label for="cmSecText" id="cmSecTextL">Texto propuesto</label><textarea id="cmSecText"></textarea></div>
+    <div class="field" id="cmSecTextF" style="display:none;"><label for="cmSecText" id="cmSecTextL">Desarrolla la idea</label><textarea id="cmSecText" style="min-height:130px;"></textarea></div>
+    <div class="field"><label for="cmIssue">Efecto secundario observado <span style="text-transform:none;letter-spacing:0;color:var(--faint)">(opcional)</span></label><textarea id="cmIssue"></textarea></div>
+    <div class="field"><label for="cmNote">Qué esperas que mejore <span style="text-transform:none;letter-spacing:0;color:var(--faint)">(opcional)</span></label><textarea id="cmNote"></textarea></div>
     <div class="macts"><button class="btn-q" id="cmCancel">Cancelar</button><button class="btn" id="cmSave">Guardar</button></div>
   </div>
 </div>
@@ -501,7 +501,7 @@ function closePanel(){ $('panel').classList.remove('open'); }
 
 /* change modal */
 function cmSectionOptions(sel){ return `<option value="">— ninguno —</option>`+RB_SECTIONS.map(([k,t])=>`<option value="${k}" ${k===sel?'selected':''}>${escapeHtml(t)}</option>`).join(''); }
-function cmSync(g,fromUser){ const key=$('cmSection').value, f=$('cmSecTextF'), ta=$('cmSecText'); if(!key){ f.style.display='none'; return; } f.style.display=''; $('cmSecTextL').textContent='Texto propuesto para "'+RB_TITLE[key]+'"'; ta.placeholder=RB_PLACEHOLDER[key]||''; if(fromUser){ const s=g.rulebook.sections.find(x=>x.key===key); ta.value=s?s.content:''; } }
+function cmSync(g,fromUser){ const key=$('cmSection').value, f=$('cmSecTextF'), ta=$('cmSecText'); if(!key){ f.style.display='none'; return; } f.style.display=''; $('cmSecTextL').textContent='Desarrolla la idea → irá a «'+RB_TITLE[key]+'»'; ta.placeholder=RB_PLACEHOLDER[key]||''; if(fromUser){ ta.value=''; } }
 function openChangeModal(id){
   const g=currentGame(); lastFocused=document.activeElement; editingChangeId=id||null;
   const fSec=$('cmSection'); fSec.onchange=()=>cmSync(g,true);
