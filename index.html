@@ -352,9 +352,9 @@ const Store = {
   },
   ready(){ return this.backend!=='supabase-anon'; },
   label(){ return { local:'localStorage', cowork:'Cowork', supabase:'Supabase · '+(this.email||''), 'supabase-anon':'Supabase (sin sesión)' }[this.backend]||this.backend; },
-  async get(k){ if(this.backend==='supabase'){ const {data,error}=await this.supa.from('app_state').select('data').eq('user_id',this.userId).maybeSingle(); if(error) throw error; return data?{value:JSON.stringify(data.data)}:null; }
+  async get(k){ if(this.backend==='supabase'){ const {data,error}=await this.supa.from('app_shared').select('data').eq('id','main').maybeSingle(); if(error) throw error; return data?{value:JSON.stringify(data.data)}:null; }
     if(this.backend==='cowork'){ return await window.storage.get(k,false); } const v=localStorage.getItem(k); return v!=null?{value:v}:null; },
-  async set(k,val){ if(this.backend==='supabase'){ const {error}=await this.supa.from('app_state').upsert({ user_id:this.userId, data:JSON.parse(val), updated_at:new Date().toISOString() }); return !error; }
+  async set(k,val){ if(this.backend==='supabase'){ const {error}=await this.supa.from('app_shared').upsert({ id:'main', data:JSON.parse(val), updated_at:new Date().toISOString() }); return !error; }
     if(this.backend==='cowork'){ return await window.storage.set(k,val,false); } try{ localStorage.setItem(k,val); return true; }catch(e){ return false; } },
   async signInPassword(email,password){ const {error}=await this.supa.auth.signInWithPassword({email,password}); if(error) throw error; },
   async signUpPassword(email,password){ const {data,error}=await this.supa.auth.signUp({email,password}); if(error) throw error; return data; },
