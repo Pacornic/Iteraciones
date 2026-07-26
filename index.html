@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bitácora de Iteraciones</title>
+<title>Kaizen — Iteration Design Manager</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -26,6 +26,7 @@
   .topbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 18px; border-bottom:1px solid var(--line); }
   .brand{ font-family:'Fraunces',serif; font-size:18px; font-weight:600; display:flex; align-items:center; gap:9px; }
   .brand .dot{ width:8px;height:8px;border-radius:50%;background:var(--amber); }
+  .brand .tag{ font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:400; color:var(--faint); letter-spacing:0.4px; }
   .topbar .tools{ display:flex; align-items:center; gap:8px; }
   .ibtn{ width:32px;height:32px; display:inline-flex; align-items:center; justify-content:center; background:none; border:1px solid transparent; border-radius:7px; color:var(--muted); cursor:pointer; font-size:15px; }
   .ibtn:hover{ background:var(--surface-2); color:var(--text); }
@@ -160,7 +161,7 @@
   }
   ::-webkit-scrollbar{ width:9px;height:9px; } ::-webkit-scrollbar-thumb{ background:#2a3340; border-radius:6px; }
   .sr-only{ position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0); }
-  @media (max-width:720px){ .sidebar{ display:none; } .backend{ display:none; } .game-select-mobile{ display:flex; align-items:center; gap:6px; } .game-select-mobile select{ background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 9px; font-size:13px; max-width:130px; } }
+  @media (max-width:720px){ .sidebar{ display:none; } .backend{ display:none; } .brand .tag{ display:none; } .game-select-mobile{ display:flex; align-items:center; gap:6px; } .game-select-mobile select{ background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 9px; font-size:13px; max-width:130px; } }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
@@ -168,7 +169,7 @@
 <body>
 
 <div class="topbar">
-  <div class="brand"><span class="dot"></span> Bitácora</div>
+  <div class="brand"><span class="dot"></span> Kaizen <span class="tag">Iteration Design Manager</span></div>
   <div class="tools">
     <span class="backend" id="backend"></span>
     <button class="ibtn" id="exportBtn" title="Exportar copia (.json)" aria-label="Exportar">⤓</button>
@@ -360,9 +361,9 @@ const Store = {
   },
   ready(){ return this.backend!=='supabase-anon'; },
   label(){ return { local:'localStorage', cowork:'Cowork', supabase:'Supabase · '+(this.email||''), 'supabase-anon':'Supabase (sin sesión)' }[this.backend]||this.backend; },
-  async get(k){ if(this.backend==='supabase'){ const {data,error}=await this.supa.from('app_shared').select('data').eq('id','main').maybeSingle(); if(error) throw error; return data?{value:JSON.stringify(data.data)}:null; }
+  async get(k){ if(this.backend==='supabase'){ const {data,error}=await this.supa.from('app_state').select('data').eq('user_id',this.userId).maybeSingle(); if(error) throw error; return data?{value:JSON.stringify(data.data)}:null; }
     if(this.backend==='cowork'){ return await window.storage.get(k,false); } const v=localStorage.getItem(k); return v!=null?{value:v}:null; },
-  async set(k,val){ if(this.backend==='supabase'){ const {error}=await this.supa.from('app_shared').upsert({ id:'main', data:JSON.parse(val), updated_at:new Date().toISOString() }); return !error; }
+  async set(k,val){ if(this.backend==='supabase'){ const {error}=await this.supa.from('app_state').upsert({ user_id:this.userId, data:JSON.parse(val), updated_at:new Date().toISOString() }); return !error; }
     if(this.backend==='cowork'){ return await window.storage.set(k,val,false); } try{ localStorage.setItem(k,val); return true; }catch(e){ return false; } },
   async signInPassword(email,password){ const {error}=await this.supa.auth.signInWithPassword({email,password}); if(error) throw error; },
   async signUpPassword(email,password){ const {data,error}=await this.supa.auth.signUp({email,password}); if(error) throw error; return data; },
@@ -374,9 +375,10 @@ function hideAuthGate(){ $('authGate').style.display='none'; }
 function updateBackend(){ $('backend').textContent='· '+Store.label(); $('signOutBtn').style.display = Store.backend==='supabase'?'inline-flex':'none'; }
 
 async function loadState(){
-  try{ const res=await Store.get('games-data'); if(res&&res.value){ state=JSON.parse(res.value); if(typeof state.preloadVersion!=='number') state.preloadVersion=0; if(state.games&&state.games.length){ const ch=applyPreload(); if(ch) await saveState(); return; } } }catch(e){}
-  state.games = SEED_GAMES.map((g,i)=>({ id:uid(), name:g.name, color:SPINE_COLORS[i%SPINE_COLORS.length], rulebook:makeRulebook(), rulebookVersions:[], changes: g.seedProblema?[{ id:uid(), title:'Problema inicial', idea:g.seedProblema, note:'', state:'porprobar', section:'', implemented:false, createdAt:Date.now() }]:[], pendingChanges:[], currentSummary:'', migrated:true, flattened:true }));
-  state.currentGameId=state.games[0].id; state.preloadVersion=0; applyPreload(); await saveState();
+  try{ const res=await Store.get('games-data'); if(res&&res.value){ state=JSON.parse(res.value); if(typeof state.preloadVersion!=='number') state.preloadVersion=PRELOAD_VERSION; if(normalizeStructures()) await saveState(); return; } }catch(e){}
+  // Cuenta nueva/vacía: arranca SIN juegos de ejemplo. Cada usuario crea los suyos.
+  state={ games:[], currentGameId:null, preloadVersion:PRELOAD_VERSION };
+  await saveState();
 }
 function applyPreload(){
   if(state.preloadVersion>=PRELOAD_VERSION) return false;
@@ -421,8 +423,8 @@ let storageWarned=false;
 async function saveState(){ try{ const ok=await Store.set('games-data', JSON.stringify(state)); if(!ok&&!storageWarned){ storageWarned=true; toast('No se pudo guardar de forma persistente.','warn',6000); } }catch(e){ if(!storageWarned){ storageWarned=true; toast('No se pudo guardar: '+(e.message||e),'warn',6000); } } }
 
 /* ---------- Export / Import ---------- */
-function exportData(){ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`bitacora-${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); toast('Copia exportada.'); }
-async function importData(file){ try{ const parsed=JSON.parse(await file.text()); if(!parsed||!Array.isArray(parsed.games)) throw new Error('Formato no válido (falta "games").'); const ok=await confirmDialog(`Importar reemplazará TODOS los datos actuales por los del archivo (${parsed.games.length} juego(s)). ¿Continuar?`); if(!ok) return; state=parsed; if(typeof state.preloadVersion!=='number') state.preloadVersion=PRELOAD_VERSION; normalizeStructures(); if(!state.currentGameId&&state.games[0]) state.currentGameId=state.games[0].id; currentTab='inicio'; await saveState(); render(); toast('Datos importados.'); }catch(e){ toast('No se pudo importar: '+(e.message||e),'warn',6000); } }
+function exportData(){ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`kaizen-${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); toast('Copia exportada.'); }
+async function importData(file){ try{ const parsed=JSON.parse(await file.text()); if(!parsed||!Array.isArray(parsed.games)) throw new Error('Formato no válido (falta "games").'); const ok=await confirmDialog(`Importar reemplazará TODOS los datos actuales por los del archivo (${parsed.games.length} juego(s)). ¿Continuar?`, { okLabel:'Aceptar', danger:false }); if(!ok) return; state=parsed; if(typeof state.preloadVersion!=='number') state.preloadVersion=PRELOAD_VERSION; normalizeStructures(); if(!state.currentGameId&&state.games[0]) state.currentGameId=state.games[0].id; currentTab='inicio'; await saveState(); render(); toast('Datos importados.'); }catch(e){ toast('No se pudo importar: '+(e.message||e),'warn',6000); } }
 
 /* ---------- Accessors ---------- */
 function currentGame(){ return state.games.find(g=>g.id===state.currentGameId); }
@@ -463,10 +465,9 @@ function renderHome(g, host){
   const act=document.createElement('div'); act.className='vact';
   const add=document.createElement('button'); add.className='btn'; add.textContent='＋ Añadir idea'; add.onclick=()=>openChangeModal(null);
   act.appendChild(add);
-  if(unsaved){ const save=document.createElement('button'); save.className='btn-q'; save.textContent='Guardar versión v'+majorNext(g); save.onclick=()=>startSaveVersion(g); act.appendChild(save);
-    const info=document.createElement('span'); info.style.cssText='font-size:11.5px;color:var(--faint);'; info.textContent=g.pendingChanges.length?`${g.pendingChanges.length} cambio(s) por consolidar`:'cambios sin guardar'; act.appendChild(info); }
+  if(unsaved){ const info=document.createElement('span'); info.style.cssText='font-size:11.5px;color:var(--faint);'; info.textContent=g.pendingChanges.length?`${g.pendingChanges.length} cambio(s) sin guardar`:'cambios sin guardar'; act.appendChild(info); }
   const sp=document.createElement('span'); sp.style.flex='1'; act.appendChild(sp);
-  const rules=document.createElement('button'); rules.className='link'; rules.textContent='Ver reglas →'; rules.onclick=()=>{ currentTab='reglas'; rbView='draft'; renderBoard(); };
+  const rules=document.createElement('button'); rules.className='link'; rules.textContent=unsaved?'Guardar en Reglas →':'Ver reglas →'; rules.onclick=()=>{ currentTab='reglas'; rbView='draft'; renderBoard(); };
   act.appendChild(rules);
   vh.appendChild(act); host.appendChild(vh);
 
@@ -585,7 +586,12 @@ function renderDraft(g, host){
     g.pendingChanges.forEach(p=>{ const it=document.createElement('div'); it.className='pi'; it.innerHTML=`<span>${escapeHtml(p.changeTitle)}</span><span class="ar">→</span><span class="sc">${escapeHtml(RB_TITLE[p.sectionKey]||p.sectionKey)}</span>`; const rm=document.createElement('button'); rm.textContent='✕'; rm.title='Quitar'; rm.onclick=async()=>{ g.pendingChanges=g.pendingChanges.filter(x=>x.id!==p.id); const c=changeById(g,p.changeId); if(c){ const sec=g.rulebook.sections.find(s=>s.key===(c.implementedSection||p.sectionKey)); if(sec) sec.content=removeBlock(sec.content,c.implementedText); c.implemented=false; c.implementedText=''; } await saveState(); renderBoard(); }; it.appendChild(rm); ban.appendChild(it); }); host.appendChild(ban); }
   const bar=document.createElement('div'); bar.className='rbbar';
   function refreshBar(){ bar.innerHTML='';
-    if(hasUnsaved(g)){ const save=document.createElement('button'); save.className='btn'; save.textContent='✓ Guardar versión v'+majorNext(g); save.onclick=()=>startSaveVersion(g); const note=document.createElement('span'); note.style.cssText='font-size:11.5px;color:var(--faint);'; note.textContent='Congela los cambios como v'+majorNext(g)+'.'; bar.appendChild(save); bar.appendChild(note); }
+    if(hasUnsaved(g)){ const lv=lastVersion(g);
+      if(lv){ const upd=document.createElement('button'); upd.className='btn'; upd.textContent='✓ Guardar cambios en v'+lv.n; upd.onclick=()=>doUpdateVersion(g);
+        const nw=document.createElement('button'); nw.className='btn-q'; nw.textContent='＋ Crear versión v'+majorNext(g); nw.onclick=()=>startSaveVersion(g);
+        const note=document.createElement('span'); note.style.cssText='font-size:11.5px;color:var(--faint);'; note.textContent='Actualiza la actual, o congela una nueva.';
+        bar.appendChild(upd); bar.appendChild(nw); bar.appendChild(note); }
+      else { const save=document.createElement('button'); save.className='btn'; save.textContent='✓ Guardar versión v1'; save.onclick=()=>startSaveVersion(g); const note=document.createElement('span'); note.style.cssText='font-size:11.5px;color:var(--faint);'; note.textContent='Congela la primera versión.'; bar.appendChild(save); bar.appendChild(note); } }
     else { const note=document.createElement('span'); note.style.cssText='font-size:12.5px;color:var(--faint);'; note.textContent=g.rulebookVersions.length?'Todo guardado en la última versión.':'Escribe el reglamento y podrás guardar la primera versión.'; bar.appendChild(note); } }
   g.rulebook.sections.forEach(sec=>{ const w=document.createElement('div'); w.className='sec'+(pend[sec.key]?' pending':''); const l=document.createElement('label'); l.textContent=sec.title; const ta=document.createElement('textarea'); ta.value=sec.content; ta.placeholder=RB_PLACEHOLDER[sec.key]||''; ta.addEventListener('input',()=>{ sec.content=ta.value; refreshBar(); }); ta.addEventListener('blur',()=>saveState()); w.appendChild(l); w.appendChild(ta); host.appendChild(w); });
   host.appendChild(bar); refreshBar();
@@ -614,6 +620,11 @@ async function startSaveVersion(g){
   const ok=await confirmDialog(`Se guardará el reglamento actual como v${majorNext(g)} «${title}».`, { okLabel:'Guardar versión', danger:false });
   if(ok) await doConsolidate(g, title);
 }
+async function doUpdateVersion(g){ const lv=lastVersion(g); if(!lv){ startSaveVersion(g); return; }
+  lv.sections=g.rulebook.sections.map(s=>({key:s.key,title:s.title,content:s.content})); lv.updatedAt=Date.now();
+  g.pendingChanges=[]; g.changes.forEach(c=>{ if(c.implemented){ c.implemented=false; c.implementedText=''; } });
+  await saveState(); renderBoard(); toast(`Cambios guardados en v${lv.n}.`);
+}
 async function doConsolidate(g, summary){
   const n=majorNext(g);
   const sections=g.rulebook.sections.map(s=>({key:s.key,title:s.title,content:s.content}));
@@ -626,7 +637,7 @@ async function consolidateVersion(){ const g=currentGame(); if(!hasUnsaved(g) &&
 function closeSaveModal(){ $('svModal').style.display='none'; restoreFocus(); }
 async function restoreVersion(g,v){ const ok=await confirmDialog(`¿Restaurar la v${v.n} al borrador? Sobrescribe el borrador actual.`); if(!ok) return; g.rulebook.sections=v.sections.map(s=>({key:s.key,title:s.title,content:s.content})); await saveState(); rbView='draft'; rbVersionId=null; renderBoard(); toast(`Borrador restaurado desde v${v.n}.`); }
 async function deleteVersion(g,v){ const ok=await confirmDialog(`¿Eliminar la versión v${v.n}?`); if(!ok) return; g.rulebookVersions=g.rulebookVersions.filter(x=>x.id!==v.id); await saveState(); rbView='versions'; rbVersionId=null; renderBoard(); toast(`Versión v${v.n} eliminada.`); }
-function printVersion(g,v){ const a=$('printArea'); a.innerHTML=versionDocHtml(g,v); const cl=()=>{ a.innerHTML=''; window.removeEventListener('afterprint',cl); }; window.addEventListener('afterprint',cl); window.print(); }
+function printVersion(g,v){ const a=$('printArea'); a.innerHTML=versionDocHtml(g,v); const prevTitle=document.title; document.title=`Kaizen - ${g.name} - v${v.n}`; const cl=()=>{ a.innerHTML=''; document.title=prevTitle; window.removeEventListener('afterprint',cl); }; window.addEventListener('afterprint',cl); window.print(); }
 
 /* ---------- Game create/rename/delete ---------- */
 function openGameModal(edit=false,id=null){ lastFocused=document.activeElement; editingGameId=edit?id:null; if(edit){ const g=state.games.find(x=>x.id===id); $('gmTitle').textContent='Renombrar juego'; $('gmHint').textContent='Cambia el nombre.'; $('gmSave').textContent='Guardar'; $('gmName').value=g?g.name:''; } else { $('gmTitle').textContent='Añadir juego'; $('gmHint').textContent='Se crea vacío.'; $('gmSave').textContent='Crear'; $('gmName').value=''; } $('gameModal').style.display='flex'; $('gmName').focus(); }
