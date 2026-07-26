@@ -196,7 +196,7 @@
     <div class="field"><label for="cmName">Nombre</label><input type="text" id="cmName" placeholder="p. ej. Bajar el coste de vía"></div>
     <div class="field"><label for="cmIdea">Idea</label><textarea id="cmIdea" style="min-height:150px;" placeholder="Desarrolla aquí la idea que quieres probar…"></textarea></div>
     <div class="field"><label for="cmSection">Apartado del reglamento al que apunta <span style="text-transform:none;letter-spacing:0;color:var(--faint)">(opcional)</span></label><select id="cmSection"></select></div>
-    <div class="field"><label for="cmNote">Qué esperas que mejore <span style="text-transform:none;letter-spacing:0;color:var(--faint)">(opcional)</span></label><textarea id="cmNote"></textarea></div>
+    <div class="field"><label for="cmNote">Notas <span style="text-transform:none;letter-spacing:0;color:var(--faint)">(opcional)</span></label><textarea id="cmNote" placeholder="Qué esperas que mejore, por qué la descartas, observaciones…"></textarea></div>
     <div class="macts"><button class="btn-q" id="cmCancel">Cancelar</button><button class="btn" id="cmSave">Guardar</button></div>
   </div>
 </div>
@@ -272,8 +272,8 @@ const RB_SECTIONS = [
   ['setup','Preparación (setup)','Cómo se prepara la mesa antes de empezar.'],
   ['flujo','Flujo del juego','Estructura de la partida: rondas o fases y cuándo termina.'],
   ['turno','Turno de acción','Qué hace un jugador en su turno, en orden.'],
-  ['acciones','Acciones disponibles','Lista de acciones y su efecto.'],
-  ['final','Final de partida y puntuación','Cuándo acaba y cómo se cuentan los puntos.'],
+  ['final','Final de partida','Cuándo y cómo acaba la partida (condición de fin, última ronda…).'],
+  ['puntuacion','Puntuación','Cómo se cuentan los puntos y quién gana.'],
 ];
 const RB_TITLE = Object.fromEntries(RB_SECTIONS.map(([k,t])=>[k,t]));
 const RB_PLACEHOLDER = Object.fromEntries(RB_SECTIONS.map(([k,,p])=>[k,p]));
@@ -387,7 +387,10 @@ function normalizeStructures(){
   let ch=false;
   state.games.forEach(g=>{
     if(!g.rulebook||!Array.isArray(g.rulebook.sections)){ g.rulebook=makeRulebook(); ch=true; }
-    else { const have=new Set(g.rulebook.sections.map(s=>s.key)); RB_SECTIONS.forEach(([k,t],i)=>{ if(!have.has(k)){ g.rulebook.sections.splice(i,0,{key:k,title:t,content:''}); ch=true; } }); }
+    else { const have=new Set(g.rulebook.sections.map(s=>s.key)); RB_SECTIONS.forEach(([k,t],i)=>{ if(!have.has(k)){ g.rulebook.sections.splice(i,0,{key:k,title:t,content:''}); ch=true; } });
+      const before=g.rulebook.sections.length; g.rulebook.sections=g.rulebook.sections.filter(s=>RB_TITLE[s.key]); if(g.rulebook.sections.length!==before) ch=true;
+      g.rulebook.sections.forEach(s=>{ if(s.title!==RB_TITLE[s.key]){ s.title=RB_TITLE[s.key]; ch=true; } });
+      g.rulebook.sections.sort((a,b)=>RB_SECTIONS.findIndex(x=>x[0]===a.key)-RB_SECTIONS.findIndex(x=>x[0]===b.key)); }
     if(!Array.isArray(g.rulebookVersions)) { g.rulebookVersions=[]; ch=true; }
     g.rulebookVersions.forEach(v=>{ if(!v.summary){ v.summary=v.activeTitle||(v.changes?String(v.changes).split('\n')[0]:'Versión '+v.n); ch=true; } });
     if(!Array.isArray(g.pendingChanges)) { g.pendingChanges=[]; ch=true; }
@@ -459,11 +462,10 @@ function renderHome(g, host){
   act.appendChild(rules);
   vh.appendChild(act); host.appendChild(vh);
 
-  const todo=g.changes.filter(c=>c.state==='porprobar'||c.state==='aparcada');
-  const done=g.changes.filter(c=>c.state==='funciona'||c.state==='descartada');
   if(!g.changes.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML=`<p>Aún no hay ideas en esta versión.<br>Añade lo primero que quieras probar.</p>`; host.appendChild(e); return; }
-  renderGroup(host, 'Por decidir', todo, g);
-  renderGroup(host, 'Resuelto / descartado', done, g);
+  renderGroup(host, 'Por decidir', g.changes.filter(c=>c.state==='porprobar'||c.state==='aparcada'), g);
+  renderGroup(host, 'Resuelto', g.changes.filter(c=>c.state==='funciona'), g);
+  renderGroup(host, 'Descartado', g.changes.filter(c=>c.state==='descartada'), g);
 }
 function renderGroup(host, label, items, g){
   if(!items.length) return;
@@ -485,7 +487,7 @@ function openChangeDetail(g,c){
     <div class="field"><label>Estado</label>${stateBtns}</div>
     ${c.idea?`<div class="field"><label>Idea</label><div style="font-size:13.5px;white-space:pre-wrap;">${escapeHtml(c.idea)}</div></div>`:''}
     ${c.section&&RB_TITLE[c.section]?`<div class="field"><label>Apunta a · ${escapeHtml(RB_TITLE[c.section])}</label></div>`:''}
-    ${c.note?`<div class="field"><label>Qué esperas que mejore</label><div style="font-size:13.5px;white-space:pre-wrap;">${escapeHtml(c.note)}</div></div>`:''}
+    ${c.note?`<div class="field"><label>Notas</label><div style="font-size:13.5px;white-space:pre-wrap;">${escapeHtml(c.note)}</div></div>`:''}
     ${c.implemented?`<div class="field"><label>Reglamento</label><div style="font-size:13px;color:#f0cf92;">✓ Llevado al borrador${c.implementedSection?' · '+escapeHtml(RB_TITLE[c.implementedSection]||c.implementedSection):''}</div></div>`:''}
     <div class="pactions">
       ${c.state==='funciona'?`<button class="btn" id="pImpl">${c.implemented?'Volver a llevar al reglamento':'Llevar al reglamento'}</button>`:''}
@@ -519,14 +521,19 @@ function closeChangeModal(){ $('chgModal').style.display='none'; editingChangeId
 
 /* implement */
 function openImplModal(g,c){ implRef={g,c}; lastFocused=document.activeElement;
-  $('imSection').innerHTML=RB_SECTIONS.map(([k,t])=>`<option value="${k}" ${(c.section===k||c.implementedSection===k)?'selected':''}>${escapeHtml(t)}</option>`).join('');
-  $('imText').value = c.idea&&c.idea.trim()?c.idea:(c.note||''); $('implModal').style.display='flex'; $('imText').focus();
+  $('imSection').innerHTML=RB_SECTIONS.map(([k,t])=>`<option value="${k}" ${(c.implementedSection===k||c.section===k)?'selected':''}>${escapeHtml(t)}</option>`).join('');
+  $('imText').value = c.idea&&c.idea.trim()?c.idea:(c.note||'');
+  $('imTitle').textContent = c.implemented?'Actualizar en el reglamento':'Llevar al reglamento';
+  $('imSave').textContent = c.implemented?'Actualizar':'Añadir al borrador';
+  $('implModal').style.display='flex'; $('imText').focus();
 }
+function removeBlock(content, block){ if(!block) return content; return content.replace('\n\n'+block,'').replace(block,'').replace(/\s+$/,''); }
 async function saveImpl(){ const {g,c}=implRef||{}; if(!c) return; const key=$('imSection').value; const text=$('imText').value.replace(/\s+$/,''); if(!text){ $('imText').focus(); return; }
+  if(c.implemented && c.implementedSection){ const prev=g.rulebook.sections.find(s=>s.key===c.implementedSection); if(prev) prev.content=removeBlock(prev.content, c.implementedText); g.pendingChanges=g.pendingChanges.filter(p=>p.changeId!==c.id); }
   const sec=g.rulebook.sections.find(s=>s.key===key); if(sec){ sec.content = sec.content.trim()?(sec.content.replace(/\s+$/,'')+'\n\n'+text):text; }
-  c.implemented=true; c.implementedSection=key;
+  c.implemented=true; c.implementedSection=key; c.implementedText=text; c.section=key; if(c.state!=='funciona') c.state='funciona';
   g.pendingChanges.push({ id:uid(), sectionKey:key, changeId:c.id, changeTitle:c.title });
-  await saveState(); $('implModal').style.display='none'; implRef=null; restoreFocus(); renderBoard(); toast(`Llevado a "${RB_TITLE[key]}" (pendiente de consolidar).`);
+  await saveState(); $('implModal').style.display='none'; implRef=null; restoreFocus(); renderBoard(); toast(`Llevado a «${RB_TITLE[key]}» (pendiente de consolidar).`);
 }
 function closeImplModal(){ $('implModal').style.display='none'; implRef=null; restoreFocus(); }
 
@@ -542,12 +549,13 @@ function renderRules(g, host){
 function renderDraft(g, host){
   const pend={}; g.pendingChanges.forEach(p=>{ (pend[p.sectionKey]=pend[p.sectionKey]||[]).push(p); });
   if(g.pendingChanges.length){ const ban=document.createElement('div'); ban.className='pend'; ban.innerHTML=`<h4>Pendiente de consolidar (${g.pendingChanges.length})</h4>`;
-    g.pendingChanges.forEach(p=>{ const it=document.createElement('div'); it.className='pi'; it.innerHTML=`<span>${escapeHtml(p.changeTitle)}</span><span class="ar">→</span><span class="sc">${escapeHtml(RB_TITLE[p.sectionKey]||p.sectionKey)}</span>`; const rm=document.createElement('button'); rm.textContent='✕'; rm.title='Quitar'; rm.onclick=async()=>{ g.pendingChanges=g.pendingChanges.filter(x=>x.id!==p.id); const c=changeById(g,p.changeId); if(c) c.implemented=false; await saveState(); renderBoard(); }; it.appendChild(rm); ban.appendChild(it); }); host.appendChild(ban); }
-  g.rulebook.sections.forEach(sec=>{ const w=document.createElement('div'); w.className='sec'+(pend[sec.key]?' pending':''); const l=document.createElement('label'); l.textContent=sec.title; const ta=document.createElement('textarea'); ta.value=sec.content; ta.placeholder=RB_PLACEHOLDER[sec.key]||''; ta.addEventListener('input',()=>{ sec.content=ta.value; }); ta.addEventListener('blur',()=>saveState()); w.appendChild(l); w.appendChild(ta); host.appendChild(w); });
+    g.pendingChanges.forEach(p=>{ const it=document.createElement('div'); it.className='pi'; it.innerHTML=`<span>${escapeHtml(p.changeTitle)}</span><span class="ar">→</span><span class="sc">${escapeHtml(RB_TITLE[p.sectionKey]||p.sectionKey)}</span>`; const rm=document.createElement('button'); rm.textContent='✕'; rm.title='Quitar'; rm.onclick=async()=>{ g.pendingChanges=g.pendingChanges.filter(x=>x.id!==p.id); const c=changeById(g,p.changeId); if(c){ const sec=g.rulebook.sections.find(s=>s.key===(c.implementedSection||p.sectionKey)); if(sec) sec.content=removeBlock(sec.content,c.implementedText); c.implemented=false; c.implementedText=''; } await saveState(); renderBoard(); }; it.appendChild(rm); ban.appendChild(it); }); host.appendChild(ban); }
   const bar=document.createElement('div'); bar.className='rbbar';
-  if(hasUnsaved(g)){ const save=document.createElement('button'); save.className='btn'; save.textContent='✓ Guardar versión v'+majorNext(g); save.onclick=()=>startSaveVersion(g); const note=document.createElement('span'); note.style.cssText='font-size:11.5px;color:var(--faint);'; note.textContent='Congela los cambios como v'+majorNext(g)+'.'; bar.appendChild(save); bar.appendChild(note); }
-  else { const note=document.createElement('span'); note.style.cssText='font-size:12.5px;color:var(--faint);'; note.textContent=g.rulebookVersions.length?'Todo guardado en la última versión.':'Escribe el reglamento y podrás guardar la primera versión.'; bar.appendChild(note); }
-  host.appendChild(bar);
+  function refreshBar(){ bar.innerHTML='';
+    if(hasUnsaved(g)){ const save=document.createElement('button'); save.className='btn'; save.textContent='✓ Guardar versión v'+majorNext(g); save.onclick=()=>startSaveVersion(g); const note=document.createElement('span'); note.style.cssText='font-size:11.5px;color:var(--faint);'; note.textContent='Congela los cambios como v'+majorNext(g)+'.'; bar.appendChild(save); bar.appendChild(note); }
+    else { const note=document.createElement('span'); note.style.cssText='font-size:12.5px;color:var(--faint);'; note.textContent=g.rulebookVersions.length?'Todo guardado en la última versión.':'Escribe el reglamento y podrás guardar la primera versión.'; bar.appendChild(note); } }
+  g.rulebook.sections.forEach(sec=>{ const w=document.createElement('div'); w.className='sec'+(pend[sec.key]?' pending':''); const l=document.createElement('label'); l.textContent=sec.title; const ta=document.createElement('textarea'); ta.value=sec.content; ta.placeholder=RB_PLACEHOLDER[sec.key]||''; ta.addEventListener('input',()=>{ sec.content=ta.value; refreshBar(); }); ta.addEventListener('blur',()=>saveState()); w.appendChild(l); w.appendChild(ta); host.appendChild(w); });
+  host.appendChild(bar); refreshBar();
 }
 function renderVersionList(g, host){
   if(!g.rulebookVersions.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML=`<p>Aún no hay versiones. Ajusta el borrador y pulsa «Guardar versión».</p>`; host.appendChild(e); return; }
@@ -578,7 +586,7 @@ async function doConsolidate(g, summary){
   const sections=g.rulebook.sections.map(s=>({key:s.key,title:s.title,content:s.content}));
   const changesTxt=g.pendingChanges.length?g.pendingChanges.map(p=>`• ${p.changeTitle} → ${RB_TITLE[p.sectionKey]||p.sectionKey}`).join('\n'):'Consolidación manual del borrador.';
   g.rulebookVersions.push({ id:uid(), n, createdAt:Date.now(), summary:summary||('Versión '+n), changes:changesTxt, sections });
-  g.pendingChanges=[]; g.changes.forEach(c=>{ if(c.implemented) c.implemented=false; }); g.currentSummary='';
+  g.pendingChanges=[]; g.changes.forEach(c=>{ if(c.implemented){ c.implemented=false; c.implementedText=''; } }); g.currentSummary='';
   await saveState(); currentTab='reglas'; rbView='doc'; rbVersionId=g.rulebookVersions[g.rulebookVersions.length-1].id; renderBoard(); toast(`Versión v${n} consolidada.`);
 }
 async function consolidateVersion(){ const g=currentGame(); if(!hasUnsaved(g) && g.rulebookVersions.length){ $('svModal').style.display='none'; restoreFocus(); toast('No hay cambios que guardar.'); return; } const summary=$('svSum').value.trim(); $('svModal').style.display='none'; restoreFocus(); await doConsolidate(g, summary); }
