@@ -146,6 +146,11 @@
   .toast{ background:var(--surface-3); border:1px solid var(--border); color:var(--text); font-size:12.5px; padding:10px 16px; border-radius:8px; box-shadow:var(--shadow); opacity:0; transform:translateY(8px); transition:.18s; }
   .toast.show{ opacity:1; transform:translateY(0); } .toast.warn{ background:#3a2a1a; border-color:rgba(232,163,61,0.4); color:#f3c98a; }
 
+  .proto-tools{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+  .proto-tools .nm{ font-size:13.5px; font-weight:500; } .proto-tools .dt{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint); }
+  .proto-wrap{ width:100%; }
+  .proto-wrap.mobile{ max-width:390px; margin:0 auto; }
+  .proto-frame{ width:100%; height:72vh; min-height:420px; border:1px solid var(--border); border-radius:10px; background:#fff; display:block; }
   #printArea{ display:none; }
   @media print{ body{ background:#fff; } .topbar,.layout,.panel,.ov,.toasts{ display:none !important; }
     #printArea{ display:block !important; padding:24px 28px; color:#111; font-family:'IBM Plex Sans',sans-serif; }
@@ -254,6 +259,7 @@
   </div>
 </div>
 
+<input type="file" id="protoFile" accept=".html,.htm,text/html" style="display:none;">
 <div id="printArea"></div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
@@ -322,9 +328,10 @@ function seedSetsunaHistory(game){
 const PRELOAD_VERSION = 4;
 
 let state = { games:[], currentGameId:null, preloadVersion:0 };
-let currentTab = 'inicio';                 // inicio | reglas
+let currentTab = 'inicio';                 // inicio | reglas | proto
 let rbView = 'draft';                      // draft | versions | doc
 let rbVersionId = null;
+let protoMobile = false;
 let editingChangeId = null; let implRef = null; let editingGameId = null;
 let lastFocused = null;
 
@@ -440,9 +447,9 @@ function renderBoard(){
   if(!g){ $('title').textContent='Sin juegos'; $('gameMenuBtn').style.display='none'; tabs.innerHTML=''; wrap.innerHTML=`<div class="empty"><p>Añade un juego para empezar.</p></div>`; return; }
   $('title').textContent=g.name; $('gameMenuBtn').style.display='inline-block';
   tabs.innerHTML='';
-  [['inicio','Inicio'],['reglas','Reglas']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(currentTab===k?' on':''); b.textContent=l; b.onclick=()=>{ currentTab=k; if(k==='reglas'){ rbView='draft'; rbVersionId=null; } closePanel(); renderBoard(); }; tabs.appendChild(b); });
+  [['inicio','Inicio'],['reglas','Reglas'],['proto','Proto']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(currentTab===k?' on':''); b.textContent=l; b.onclick=()=>{ currentTab=k; if(k==='reglas'){ rbView='draft'; rbVersionId=null; } closePanel(); renderBoard(); }; tabs.appendChild(b); });
   wrap.innerHTML='';
-  if(currentTab==='reglas') renderRules(g, wrap); else renderHome(g, wrap);
+  if(currentTab==='reglas') renderRules(g, wrap); else if(currentTab==='proto') renderProto(g, wrap); else renderHome(g, wrap);
 }
 
 function renderHome(g, host){
@@ -537,6 +544,31 @@ async function saveImpl(){ const {g,c}=implRef||{}; if(!c) return; const key=$('
 }
 function closeImplModal(){ $('implModal').style.display='none'; implRef=null; restoreFocus(); }
 
+/* ---------- Proto (prototipo jugable) ---------- */
+function openProtoNewTab(g){ if(!g.proto||!g.proto.html) return; const blob=new Blob([g.proto.html],{type:'text/html'}); const url=URL.createObjectURL(blob); window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),60000); }
+function renderProto(g, host){
+  const head=document.createElement('div'); head.className='section-head';
+  head.innerHTML=`<div><h2 style="font-family:'Fraunces',serif;font-size:18px;margin:0;">Prototipo</h2><div class="faint" style="font-size:12px;margin-top:3px;">Sube el HTML del juego para probarlo aquí mismo.</div></div>`;
+  host.appendChild(head);
+  if(!g.proto || !g.proto.html){
+    const e=document.createElement('div'); e.className='empty'; e.innerHTML=`<p>Aún no has subido ningún prototipo.<br>Sube el archivo <b>.html</b> de tu juego y podrás jugarlo desde aquí, en el móvil o en el ordenador.</p>`;
+    const b=document.createElement('button'); b.className='btn'; b.style.marginTop='12px'; b.textContent='Subir HTML del juego'; b.onclick=()=>$('protoFile').click();
+    e.appendChild(b); host.appendChild(e); return;
+  }
+  const tools=document.createElement('div'); tools.className='proto-tools';
+  const info=document.createElement('div'); info.innerHTML=`<div class="nm">${escapeHtml(g.proto.name||'prototipo.html')}</div><div class="dt">actualizado ${fmtDate(g.proto.updatedAt||Date.now())}</div>`; tools.appendChild(info);
+  const sp=document.createElement('span'); sp.style.flex='1'; tools.appendChild(sp);
+  const openBtn=document.createElement('button'); openBtn.className='btn'; openBtn.textContent='⤢ Pantalla completa'; openBtn.onclick=()=>openProtoNewTab(g); tools.appendChild(openBtn);
+  const mob=document.createElement('button'); mob.className='btn-q'; mob.textContent=protoMobile?'Vista completa':'Vista móvil'; mob.onclick=()=>{ protoMobile=!protoMobile; renderBoard(); }; tools.appendChild(mob);
+  const rep=document.createElement('button'); rep.className='btn-q'; rep.textContent='Reemplazar'; rep.onclick=()=>$('protoFile').click(); tools.appendChild(rep);
+  const del=document.createElement('button'); del.className='btn-danger'; del.textContent='Quitar'; del.onclick=async()=>{ const ok=await confirmDialog('¿Quitar el prototipo de este juego?'); if(!ok) return; delete g.proto; await saveState(); renderBoard(); toast('Prototipo quitado.'); }; tools.appendChild(del);
+  host.appendChild(tools);
+  const note=document.createElement('div'); note.className='rb-note'; note.style.marginBottom='10px'; note.textContent='Vista rápida embebida. Para jugar cómodo (sobre todo en móvil) usa «Pantalla completa».'; host.appendChild(note);
+  const wrap=document.createElement('div'); wrap.className='proto-wrap'+(protoMobile?' mobile':'');
+  const frame=document.createElement('iframe'); frame.className='proto-frame'; frame.setAttribute('sandbox','allow-scripts allow-same-origin allow-modals allow-popups allow-forms allow-downloads'); frame.setAttribute('title','Prototipo'); frame.srcdoc=g.proto.html;
+  wrap.appendChild(frame); host.appendChild(wrap);
+}
+
 /* ---------- Reglas ---------- */
 function renderRules(g, host){
   const bc=document.createElement('div'); bc.style.cssText='display:flex;gap:18px;margin-bottom:8px;';
@@ -624,6 +656,7 @@ $('svCancel').onclick=closeSaveModal; $('svSave').onclick=consolidateVersion;
 $('cfCancel').onclick=()=>resolveConfirm(false); $('cfOk').onclick=()=>resolveConfirm(true);
 $('exportBtn').onclick=exportData; $('importBtn').onclick=()=>$('importFile').click(); $('importFile').onchange=(e)=>{ const f=e.target.files[0]; if(f) importData(f); e.target.value=''; };
 $('signOutBtn').onclick=()=>Store.signOut();
+$('protoFile').onchange=async(e)=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return; const g=currentGame(); if(!g) return; const html=await f.text(); if(html.length>2000000){ toast('Archivo muy grande; puede ralentizar el guardado.','warn',5000); } g.proto={ name:f.name, html, updatedAt:Date.now() }; await saveState(); currentTab='proto'; renderBoard(); toast('Prototipo cargado.'); };
 $('cmName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveChange(); } });
 $('gmName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveGame(); } });
 $('svSum').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); consolidateVersion(); } });
