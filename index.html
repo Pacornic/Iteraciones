@@ -55,6 +55,7 @@
   .tab.on{ color:var(--text); border-bottom-color:var(--amber); }
   .content{ flex:1; overflow:auto; }
   .wrap{ max-width:680px; margin:0 auto; padding:22px 26px 60px; }
+  .wrap.wide{ max-width:none; }
 
   .btn{ background:var(--amber); border:none; color:#1a1206; font-weight:600; padding:9px 15px; border-radius:8px; cursor:pointer; font-size:13px; }
   .btn:disabled{ opacity:0.4; cursor:not-allowed; }
@@ -448,7 +449,7 @@ function renderBoard(){
   $('title').textContent=g.name; $('gameMenuBtn').style.display='inline-block';
   tabs.innerHTML='';
   [['inicio','Inicio'],['reglas','Reglas'],['proto','Proto']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(currentTab===k?' on':''); b.textContent=l; b.onclick=()=>{ currentTab=k; if(k==='reglas'){ rbView='draft'; rbVersionId=null; } closePanel(); renderBoard(); }; tabs.appendChild(b); });
-  wrap.innerHTML='';
+  wrap.innerHTML=''; wrap.className='wrap'+(currentTab==='proto'?' wide':'');
   if(currentTab==='reglas') renderRules(g, wrap); else if(currentTab==='proto') renderProto(g, wrap); else renderHome(g, wrap);
 }
 
