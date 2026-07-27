@@ -153,6 +153,12 @@
   .proto-wrap{ width:100%; }
   .proto-wrap.mobile{ max-width:390px; margin:0 auto; }
   .proto-frame{ width:100%; height:72vh; min-height:420px; border:1px solid var(--border); border-radius:10px; background:#fff; display:block; }
+  #home{ position:fixed; inset:0; z-index:500; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:20px; }
+  .home-card{ width:100%; max-width:420px; background:var(--surface-2); border:1px solid var(--border); border-radius:14px; padding:26px; box-shadow:var(--shadow); }
+  .home-brand{ font-family:'Fraunces',serif; font-size:26px; font-weight:600; display:flex; align-items:center; gap:9px; }
+  .home-brand .dot{ width:9px;height:9px;border-radius:50%;background:var(--amber); }
+  .home-tag{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--faint); letter-spacing:0.5px; margin:2px 0 12px; }
+  .home-desc{ font-size:13.5px; color:var(--muted); margin:0 0 18px; line-height:1.5; }
   #printArea{ display:none; }
   @media print{ body{ background:#fff; } .topbar,.layout,.panel,.ov,.toasts{ display:none !important; }
     #printArea{ display:block !important; padding:24px 28px; color:#111; font-family:'IBM Plex Sans',sans-serif; }
@@ -248,15 +254,17 @@
   </div>
 </div>
 
-<!-- Auth gate -->
-<div class="ov" id="authGate" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="agTitle">
-  <div class="modal" style="max-width:420px;">
-    <h3 id="agTitle">Entrar</h3>
-    <div class="hint">Tus datos se guardan en tu cuenta de Supabase y se sincronizan. Entra con tu correo y contraseña.</div>
+<!-- Home / acceso (cubre toda la app hasta iniciar sesión) -->
+<div id="home" style="display:none;" role="dialog" aria-modal="true" aria-label="Acceso">
+  <div class="home-card">
+    <div class="home-brand"><span class="dot"></span> Kaizen</div>
+    <div class="home-tag">Iteration Design Manager</div>
+    <p class="home-desc">Diseña, versiona y prueba tus juegos de mesa en un mismo sitio. Entra para acceder a tu espacio.</p>
+    <div class="row2"><div class="field"><label for="agNombre">Nombre</label><input id="agNombre" autocomplete="given-name"></div><div class="field"><label for="agApellido">Apellido</label><input id="agApellido" autocomplete="family-name"></div></div>
     <div class="field"><label for="agEmail">Correo</label><input type="email" id="agEmail" placeholder="tucorreo@ejemplo.com" autocomplete="username"></div>
     <div class="field"><label for="agPass">Contraseña</label><input type="password" id="agPass" placeholder="tu contraseña" autocomplete="current-password"></div>
     <div class="macts"><button class="btn-q" id="agSignup">Crear cuenta</button><div class="sp"></div><button class="btn" id="agLogin">Entrar</button></div>
-    <div class="hint" style="margin-top:12px;">¿Sin contraseña? <a href="#" id="agMagic" style="color:var(--blue);text-decoration:none;">Enviarme un enlace por correo</a></div>
+    <div class="hint" style="margin-top:12px;">Nombre y apellido solo hacen falta para crear cuenta. ¿Sin contraseña? <a href="#" id="agMagic" style="color:var(--blue);text-decoration:none;">enlace por correo</a></div>
     <div class="hint" id="agMsg" style="margin-top:8px;"></div>
   </div>
 </div>
@@ -344,15 +352,16 @@ function $(id){ return document.getElementById(id); }
 
 /* ---------- Storage (Cowork / Supabase / localStorage) ---------- */
 const Store = {
-  backend:'local', supa:null, userId:null, email:null,
+  backend:'local', supa:null, userId:null, email:null, name:'',
+  _fillUser(u){ this.userId=u.id; this.email=u.email; const m=u.user_metadata||{}; this.name=(m.nombre||m.full_name||'').trim(); },
   async init(){
     if(window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.url && window.supabase){
       try{
         this.supa = window.supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
         const { data } = await this.supa.auth.getSession();
-        if(data && data.session){ this.backend='supabase'; this.userId=data.session.user.id; this.email=data.session.user.email; }
+        if(data && data.session){ this.backend='supabase'; this._fillUser(data.session.user); }
         else { this.backend='supabase-anon'; }
-        this.supa.auth.onAuthStateChange((_e,session)=>{ if(session && this.backend!=='supabase'){ this.backend='supabase'; this.userId=session.user.id; this.email=session.user.email; hideAuthGate(); bootApp(); } });
+        this.supa.auth.onAuthStateChange((_e,session)=>{ if(session && this.backend!=='supabase'){ this.backend='supabase'; this._fillUser(session.user); hideAuthGate(); bootApp(); } });
         return;
       }catch(e){ console.warn('Supabase init falló:', e); }
     }
@@ -360,18 +369,18 @@ const Store = {
     this.backend='local';
   },
   ready(){ return this.backend!=='supabase-anon'; },
-  label(){ return { local:'localStorage', cowork:'Cowork', supabase:'Supabase · '+(this.email||''), 'supabase-anon':'Supabase (sin sesión)' }[this.backend]||this.backend; },
+  label(){ return { local:'localStorage', cowork:'Cowork', supabase:'Supabase · '+(this.name||this.email||''), 'supabase-anon':'Supabase (sin sesión)' }[this.backend]||this.backend; },
   async get(k){ if(this.backend==='supabase'){ const {data,error}=await this.supa.from('app_state').select('data').eq('user_id',this.userId).maybeSingle(); if(error) throw error; return data?{value:JSON.stringify(data.data)}:null; }
     if(this.backend==='cowork'){ return await window.storage.get(k,false); } const v=localStorage.getItem(k); return v!=null?{value:v}:null; },
   async set(k,val){ if(this.backend==='supabase'){ const {error}=await this.supa.from('app_state').upsert({ user_id:this.userId, data:JSON.parse(val), updated_at:new Date().toISOString() }); return !error; }
     if(this.backend==='cowork'){ return await window.storage.set(k,val,false); } try{ localStorage.setItem(k,val); return true; }catch(e){ return false; } },
   async signInPassword(email,password){ const {error}=await this.supa.auth.signInWithPassword({email,password}); if(error) throw error; },
-  async signUpPassword(email,password){ const {data,error}=await this.supa.auth.signUp({email,password}); if(error) throw error; return data; },
+  async signUpPassword(email,password,meta){ const {data,error}=await this.supa.auth.signUp({email,password,options:{data:meta||{}}}); if(error) throw error; return data; },
   async signInMagic(email){ const {error}=await this.supa.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href.split('#')[0] } }); if(error) throw error; },
   async signOut(){ if(this.supa) await this.supa.auth.signOut(); location.reload(); }
 };
-function showAuthGate(){ $('authGate').style.display='flex'; $('agEmail').focus(); }
-function hideAuthGate(){ $('authGate').style.display='none'; }
+function showAuthGate(){ $('home').style.display='flex'; $('agEmail').focus(); }
+function hideAuthGate(){ $('home').style.display='none'; }
 function updateBackend(){ $('backend').textContent='· '+Store.label(); $('signOutBtn').style.display = Store.backend==='supabase'?'inline-flex':'none'; }
 
 async function loadState(){
@@ -593,7 +602,7 @@ function renderDraft(g, host){
         bar.appendChild(upd); bar.appendChild(nw); bar.appendChild(note); }
       else { const save=document.createElement('button'); save.className='btn'; save.textContent='✓ Guardar versión v1'; save.onclick=()=>startSaveVersion(g); const note=document.createElement('span'); note.style.cssText='font-size:11.5px;color:var(--faint);'; note.textContent='Congela la primera versión.'; bar.appendChild(save); bar.appendChild(note); } }
     else { const note=document.createElement('span'); note.style.cssText='font-size:12.5px;color:var(--faint);'; note.textContent=g.rulebookVersions.length?'Todo guardado en la última versión.':'Escribe el reglamento y podrás guardar la primera versión.'; bar.appendChild(note); } }
-  g.rulebook.sections.forEach(sec=>{ const w=document.createElement('div'); w.className='sec'+(pend[sec.key]?' pending':''); const l=document.createElement('label'); l.textContent=sec.title; const ta=document.createElement('textarea'); ta.value=sec.content; ta.placeholder=RB_PLACEHOLDER[sec.key]||''; ta.addEventListener('input',()=>{ sec.content=ta.value; refreshBar(); }); ta.addEventListener('blur',()=>saveState()); w.appendChild(l); w.appendChild(ta); host.appendChild(w); });
+  g.rulebook.sections.forEach(sec=>{ const w=document.createElement('div'); w.className='sec'+(pend[sec.key]?' pending':''); const l=document.createElement('label'); l.textContent=sec.title; const ta=document.createElement('textarea'); ta.value=sec.content; ta.addEventListener('input',()=>{ sec.content=ta.value; refreshBar(); }); ta.addEventListener('blur',()=>saveState()); w.appendChild(l); w.appendChild(ta); host.appendChild(w); });
   host.appendChild(bar); refreshBar();
 }
 function renderVersionList(g, host){
@@ -673,7 +682,7 @@ $('cmName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefaul
 $('gmName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveGame(); } });
 $('svSum').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); consolidateVersion(); } });
 async function agLogin(){ const em=$('agEmail').value.trim(), pw=$('agPass').value; if(!em||!pw){ $('agMsg').textContent='Escribe correo y contraseña.'; return; } $('agMsg').textContent='Entrando…'; try{ await Store.signInPassword(em,pw); }catch(e){ $('agMsg').textContent='Error: '+(e.message||e); } }
-async function agSignup(){ const em=$('agEmail').value.trim(), pw=$('agPass').value; if(!em||!pw){ $('agMsg').textContent='Escribe correo y una contraseña (mín. 6).'; return; } $('agMsg').textContent='Creando cuenta…'; try{ const d=await Store.signUpPassword(em,pw); if(!(d&&d.session)) $('agMsg').textContent='Cuenta creada. Si pide confirmar el correo, revísalo; si no, pulsa Entrar.'; }catch(e){ $('agMsg').textContent='Error: '+(e.message||e); } }
+async function agSignup(){ const em=$('agEmail').value.trim(), pw=$('agPass').value, nom=$('agNombre').value.trim(), ape=$('agApellido').value.trim(); if(!nom){ $('agMsg').textContent='Pon tu nombre para crear la cuenta.'; return; } if(!em||!pw){ $('agMsg').textContent='Escribe correo y una contraseña (mín. 6).'; return; } $('agMsg').textContent='Creando cuenta…'; try{ const d=await Store.signUpPassword(em,pw,{ nombre:nom, apellido:ape, full_name:(nom+' '+ape).trim() }); if(!(d&&d.session)) $('agMsg').textContent='Cuenta creada. Si pide confirmar el correo, revísalo; si no, pulsa Entrar.'; }catch(e){ $('agMsg').textContent='Error: '+(e.message||e); } }
 async function agMagic(){ const em=$('agEmail').value.trim(); if(!em){ $('agMsg').textContent='Escribe tu correo.'; return; } $('agMsg').textContent='Enviando enlace…'; try{ await Store.signInMagic(em); $('agMsg').textContent='Enlace enviado. Revisa tu correo (y spam).'; }catch(e){ $('agMsg').textContent='Error: '+(e.message||e); } }
 $('agLogin').onclick=agLogin; $('agSignup').onclick=agSignup; $('agMagic').onclick=(e)=>{ e.preventDefault(); agMagic(); };
 $('agPass').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); agLogin(); } });
