@@ -511,6 +511,7 @@ function openChangeDetail(g,c){
   const p=$('panel'), b=$('panelBody');
   const stateBtns='<div class="states">'+STATES.map(([k,l])=>`<button class="st s-${k} ${c.state===k?'on':''}" data-s="${k}">${l}</button>`).join('')+'</div>';
   b.innerHTML=`<h3>${escapeHtml(c.title)}</h3>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--faint);margin:-6px 0 12px;">Última edición: ${fmtWhen(c.updatedAt||c.createdAt||Date.now())}</div>
     <div class="field"><label>Estado</label>${stateBtns}</div>
     ${c.idea?`<div class="field"><label>Idea</label><div style="font-size:13.5px;white-space:pre-wrap;">${escapeHtml(c.idea)}</div></div>`:''}
     <div class="field"><label>Notas</label><textarea id="cdNote" style="min-height:84px;border-color:${STATE_COLOR[c.state]||'var(--border)'};" placeholder="Por qué funciona, por qué la descartas, observaciones…"></textarea></div>
@@ -522,8 +523,8 @@ function openChangeDetail(g,c){
       <button class="btn-danger" id="pDel">Eliminar</button>
     </div>`;
   p.classList.add('open');
-  const nt=b.querySelector('#cdNote'); if(nt){ nt.value=c.note||''; nt.addEventListener('input',()=>{ c.note=nt.value; }); nt.addEventListener('blur',()=>saveState()); }
-  b.querySelectorAll('.st').forEach(x=>x.onclick=()=>{ c.state=x.dataset.s; saveState(); renderBoard(); openChangeDetail(g,c); });
+  const nt=b.querySelector('#cdNote'); if(nt){ nt.value=c.note||''; nt.addEventListener('input',()=>{ c.note=nt.value; c.updatedAt=Date.now(); }); nt.addEventListener('blur',()=>saveState()); }
+  b.querySelectorAll('.st').forEach(x=>x.onclick=()=>{ c.state=x.dataset.s; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); });
   if(c.state==='funciona') $('pImpl').onclick=()=>openImplModal(g,c);
   $('pEdit').onclick=()=>openChangeModal(c.id);
   $('pDel').onclick=async()=>{ const ok=await confirmDialog(`¿Eliminar "${c.title}"?`); if(!ok) return; g.changes=g.changes.filter(x=>x.id!==c.id); await saveState(); closePanel(); renderBoard(); toast('Idea eliminada.'); };
@@ -541,8 +542,8 @@ function openChangeModal(id){
 async function saveChange(){
   const g=currentGame(); const title=$('cmName').value.trim(); if(!title){ $('cmName').focus(); return; }
   const idea=$('cmIdea').value.replace(/\s+$/,''), note=$('cmNote').value.trim(), section=$('cmSection').value||'';
-  if(editingChangeId){ const c=changeById(g,editingChangeId); c.title=title; c.idea=idea; c.note=note; c.section=section; toast('Idea actualizada.'); }
-  else { g.changes.push({ id:uid(), title, idea, note, state:'porprobar', section, implemented:false, createdAt:Date.now() }); toast('Idea añadida.'); }
+  if(editingChangeId){ const c=changeById(g,editingChangeId); c.title=title; c.idea=idea; c.note=note; c.section=section; c.updatedAt=Date.now(); toast('Idea actualizada.'); }
+  else { const now=Date.now(); g.changes.push({ id:uid(), title, idea, note, state:'porprobar', section, implemented:false, createdAt:now, updatedAt:now }); toast('Idea añadida.'); }
   await saveState(); closeChangeModal(); renderBoard();
 }
 function closeChangeModal(){ $('chgModal').style.display='none'; editingChangeId=null; restoreFocus(); }
@@ -559,7 +560,7 @@ function removeBlock(content, block){ if(!block) return content; return content.
 async function saveImpl(){ const {g,c}=implRef||{}; if(!c) return; const key=$('imSection').value; const text=$('imText').value.replace(/\s+$/,''); if(!text){ $('imText').focus(); return; }
   if(c.implemented && c.implementedSection){ const prev=g.rulebook.sections.find(s=>s.key===c.implementedSection); if(prev) prev.content=removeBlock(prev.content, c.implementedText); g.pendingChanges=g.pendingChanges.filter(p=>p.changeId!==c.id); }
   const sec=g.rulebook.sections.find(s=>s.key===key); if(sec){ sec.content = sec.content.trim()?(sec.content.replace(/\s+$/,'')+'\n\n'+text):text; }
-  c.implemented=true; c.implementedSection=key; c.implementedText=text; c.section=key; if(c.state!=='funciona') c.state='funciona';
+  c.implemented=true; c.implementedSection=key; c.implementedText=text; c.section=key; c.updatedAt=Date.now(); if(c.state!=='funciona') c.state='funciona';
   g.pendingChanges.push({ id:uid(), sectionKey:key, changeId:c.id, changeTitle:c.title });
   await saveState(); $('implModal').style.display='none'; implRef=null; restoreFocus(); renderBoard(); toast(`Llevado a «${RB_TITLE[key]}» (pendiente de consolidar).`);
 }
