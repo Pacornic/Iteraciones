@@ -296,6 +296,7 @@ const RB_PLACEHOLDER = Object.fromEntries(RB_SECTIONS.map(([k,,p])=>[k,p]));
 function makeRulebook(c){ return { sections: RB_SECTIONS.map(([k,t])=>({ key:k, title:t, content:(c&&c[k])||'' })) }; }
 const STATES = [['porprobar','Por probar'],['funciona','Funciona'],['descartada','Descartada'],['aparcada','Aparcada']];
 const STATE_TITLE = Object.fromEntries(STATES.map(([k,t])=>[k,t]));
+const STATE_COLOR = { porprobar:'var(--violet)', funciona:'var(--teal)', descartada:'var(--brick)', aparcada:'var(--blue)' };
 const OLD_OUTCOME = { pendiente:'porprobar', funciona:'funciona', falla:'descartada', genera:'aparcada' };
 
 const SETSUNA_RB = {
@@ -504,8 +505,8 @@ function openChangeDetail(g,c){
   b.innerHTML=`<h3>${escapeHtml(c.title)}</h3>
     <div class="field"><label>Estado</label>${stateBtns}</div>
     ${c.idea?`<div class="field"><label>Idea</label><div style="font-size:13.5px;white-space:pre-wrap;">${escapeHtml(c.idea)}</div></div>`:''}
+    <div class="field"><label>Notas</label><textarea id="cdNote" style="min-height:84px;border-color:${STATE_COLOR[c.state]||'var(--border)'};" placeholder="Por qué funciona, por qué la descartas, observaciones…"></textarea></div>
     ${c.section&&RB_TITLE[c.section]?`<div class="field"><label>Apunta a · ${escapeHtml(RB_TITLE[c.section])}</label></div>`:''}
-    ${c.note?`<div class="field"><label>Notas</label><div style="font-size:13.5px;white-space:pre-wrap;">${escapeHtml(c.note)}</div></div>`:''}
     ${c.implemented?`<div class="field"><label>Reglamento</label><div style="font-size:13px;color:#f0cf92;">✓ Llevado al borrador${c.implementedSection?' · '+escapeHtml(RB_TITLE[c.implementedSection]||c.implementedSection):''}</div></div>`:''}
     <div class="pactions">
       ${c.state==='funciona'?`<button class="btn" id="pImpl">${c.implemented?'Volver a llevar al reglamento':'Llevar al reglamento'}</button>`:''}
@@ -513,6 +514,7 @@ function openChangeDetail(g,c){
       <button class="btn-danger" id="pDel">Eliminar</button>
     </div>`;
   p.classList.add('open');
+  const nt=b.querySelector('#cdNote'); if(nt){ nt.value=c.note||''; nt.addEventListener('input',()=>{ c.note=nt.value; }); nt.addEventListener('blur',()=>saveState()); }
   b.querySelectorAll('.st').forEach(x=>x.onclick=()=>{ c.state=x.dataset.s; saveState(); renderBoard(); openChangeDetail(g,c); });
   if(c.state==='funciona') $('pImpl').onclick=()=>openImplModal(g,c);
   $('pEdit').onclick=()=>openChangeModal(c.id);
