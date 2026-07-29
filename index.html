@@ -267,11 +267,13 @@
     <img id="homeLogo" class="home-logo" alt="Kaizen — Iteration Design Manager">
     <div class="home-fallback"><div class="home-brand"><span class="dot"></span> Kaizen</div><div class="home-tag">Iteration Design Manager</div></div>
     <p class="home-desc">Diseña, versiona y prueba tus juegos de mesa en un mismo sitio. Entra para acceder a tu espacio.</p>
-    <div class="row2"><div class="field"><label for="agNombre">Nombre</label><input id="agNombre" autocomplete="given-name"></div><div class="field"><label for="agApellido">Apellido</label><input id="agApellido" autocomplete="family-name"></div></div>
+    <div id="regFields" style="display:none;"><div class="row2"><div class="field"><label for="agNombre">Nombre</label><input id="agNombre" autocomplete="given-name"></div><div class="field"><label for="agApellido">Apellido</label><input id="agApellido" autocomplete="family-name"></div></div></div>
     <div class="field"><label for="agEmail">Correo</label><input type="email" id="agEmail" placeholder="tucorreo@ejemplo.com" autocomplete="username"></div>
     <div class="field"><label for="agPass">Contraseña</label><input type="password" id="agPass" placeholder="tu contraseña" autocomplete="current-password"></div>
-    <div class="macts"><button class="btn-q" id="agSignup">Crear cuenta</button><div class="sp"></div><button class="btn" id="agLogin">Entrar</button></div>
-    <div class="hint" style="margin-top:12px;">Nombre y apellido solo hacen falta para crear cuenta. ¿Sin contraseña? <a href="#" id="agMagic" style="color:var(--blue);text-decoration:none;">enlace por correo</a></div>
+    <div class="field" id="regPass2Field" style="display:none;"><label for="agPass2">Repite la contraseña</label><input type="password" id="agPass2" placeholder="repite la contraseña" autocomplete="new-password"></div>
+    <div class="macts"><button class="btn" id="agPrimary" style="width:100%;">Entrar</button></div>
+    <div class="hint" id="agToggleWrap" style="margin-top:12px;"></div>
+    <div class="hint" id="agMagicWrap" style="margin-top:6px;">¿Sin contraseña? <a href="#" id="agMagic" style="color:var(--blue);text-decoration:none;">enlace por correo</a></div>
     <div class="hint" id="agMsg" style="margin-top:8px;"></div>
   </div>
 </div>
@@ -697,10 +699,21 @@ $('cmName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefaul
 $('gmName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveGame(); } });
 $('svSum').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); consolidateVersion(); } });
 async function agLogin(){ const em=$('agEmail').value.trim(), pw=$('agPass').value; if(!em||!pw){ $('agMsg').textContent='Escribe correo y contraseña.'; return; } $('agMsg').textContent='Entrando…'; try{ await Store.signInPassword(em,pw); }catch(e){ $('agMsg').textContent='Error: '+(e.message||e); } }
-async function agSignup(){ const em=$('agEmail').value.trim(), pw=$('agPass').value, nom=$('agNombre').value.trim(), ape=$('agApellido').value.trim(); if(!nom){ $('agMsg').textContent='Pon tu nombre para crear la cuenta.'; return; } if(!em||!pw){ $('agMsg').textContent='Escribe correo y una contraseña (mín. 6).'; return; } $('agMsg').textContent='Creando cuenta…'; try{ const d=await Store.signUpPassword(em,pw,{ nombre:nom, apellido:ape, full_name:(nom+' '+ape).trim() }); if(!(d&&d.session)) $('agMsg').textContent='Cuenta creada. Si pide confirmar el correo, revísalo; si no, pulsa Entrar.'; }catch(e){ $('agMsg').textContent='Error: '+(e.message||e); } }
+async function agSignup(){ const em=$('agEmail').value.trim(), pw=$('agPass').value, pw2=$('agPass2').value, nom=$('agNombre').value.trim(), ape=$('agApellido').value.trim(); if(!nom){ $('agMsg').textContent='Pon tu nombre para crear la cuenta.'; return; } if(!em||!pw){ $('agMsg').textContent='Escribe correo y una contraseña (mín. 6).'; return; } if(pw!==pw2){ $('agMsg').textContent='Las contraseñas no coinciden.'; return; } $('agMsg').textContent='Creando cuenta…'; try{ const d=await Store.signUpPassword(em,pw,{ nombre:nom, apellido:ape, full_name:(nom+' '+ape).trim() }); if(!(d&&d.session)) $('agMsg').textContent='Cuenta creada. Si pide confirmar el correo, revísalo; si no, pulsa Entrar.'; }catch(e){ $('agMsg').textContent='Error: '+(e.message||e); } }
 async function agMagic(){ const em=$('agEmail').value.trim(); if(!em){ $('agMsg').textContent='Escribe tu correo.'; return; } $('agMsg').textContent='Enviando enlace…'; try{ await Store.signInMagic(em); $('agMsg').textContent='Enlace enviado. Revisa tu correo (y spam).'; }catch(e){ $('agMsg').textContent='Error: '+(e.message||e); } }
-$('agLogin').onclick=agLogin; $('agSignup').onclick=agSignup; $('agMagic').onclick=(e)=>{ e.preventDefault(); agMagic(); };
-$('agPass').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); agLogin(); } });
+let authMode='login';
+function setAuthMode(m){ authMode=m; const su=m==='signup';
+  $('regFields').style.display=su?'':'none'; $('regPass2Field').style.display=su?'':'none'; $('agMagicWrap').style.display=su?'none':'';
+  $('agPrimary').textContent=su?'Crear cuenta':'Entrar';
+  $('agToggleWrap').innerHTML=su?'¿Ya tienes cuenta? <a href="#" id="agToggle" style="color:var(--blue);text-decoration:none;">Entrar</a>':'¿No tienes cuenta? <a href="#" id="agToggle" style="color:var(--blue);text-decoration:none;">Crear cuenta</a>';
+  $('agToggle').onclick=(e)=>{ e.preventDefault(); setAuthMode(su?'login':'signup'); const f=$(su?'agEmail':'agNombre'); if(f) f.focus(); };
+  $('agMsg').textContent='';
+}
+$('agPrimary').onclick=()=>{ authMode==='signup'?agSignup():agLogin(); };
+$('agMagic').onclick=(e)=>{ e.preventDefault(); agMagic(); };
+$('agPass').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); authMode==='signup'?agSignup():agLogin(); } });
+$('agPass2').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); agSignup(); } });
+setAuthMode('login');
 
 document.addEventListener('click',e=>{ if(menuEl&&!menuEl.contains(e.target)&&!e.target.closest('.mn')&&e.target.id!=='gameMenuBtn') closeMenu(); },true);
 window.addEventListener('scroll',closeMenu,true);
