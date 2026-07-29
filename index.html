@@ -302,7 +302,7 @@ const RB_SECTIONS = [
 const RB_TITLE = Object.fromEntries(RB_SECTIONS.map(([k,t])=>[k,t]));
 const RB_PLACEHOLDER = Object.fromEntries(RB_SECTIONS.map(([k,,p])=>[k,p]));
 function makeRulebook(c){ return { sections: RB_SECTIONS.map(([k,t])=>({ key:k, title:t, content:(c&&c[k])||'' })) }; }
-const STATES = [['porprobar','Por probar'],['funciona','Funciona'],['descartada','Descartada'],['aparcada','Aparcada']];
+const STATES = [['porprobar','Por probar'],['funciona','Funciona'],['descartada','Descartada'],['aparcada','Sin resolver']];
 const STATE_TITLE = Object.fromEntries(STATES.map(([k,t])=>[k,t]));
 const STATE_COLOR = { porprobar:'var(--violet)', funciona:'var(--teal)', descartada:'var(--brick)', aparcada:'var(--blue)' };
 const OLD_OUTCOME = { pendiente:'porprobar', funciona:'funciona', falla:'descartada', genera:'aparcada' };
@@ -492,14 +492,15 @@ function renderHome(g, host){
   vh.appendChild(act); host.appendChild(vh);
 
   if(!g.changes.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML=`<p>Aún no hay ideas en esta versión.<br>Añade lo primero que quieras probar.</p>`; host.appendChild(e); return; }
-  renderGroup(host, 'Por decidir', g.changes.filter(c=>c.state==='porprobar'||c.state==='aparcada'), g);
-  renderGroup(host, 'Resuelto', g.changes.filter(c=>c.state==='funciona'), g);
-  renderGroup(host, 'Descartado', g.changes.filter(c=>c.state==='descartada'), g);
+  const byDate=(a,b)=>a.createdAt-b.createdAt; const byState=s=>g.changes.filter(c=>c.state===s).sort(byDate);
+  renderGroup(host, 'Pendiente', [...byState('porprobar'), ...byState('aparcada')], g);
+  renderGroup(host, 'Resuelto', byState('funciona'), g);
+  renderGroup(host, 'Descartado', byState('descartada'), g);
 }
 function renderGroup(host, label, items, g){
   if(!items.length) return;
   const h=document.createElement('div'); h.className='grouph'; h.textContent=label+' ('+items.length+')'; host.appendChild(h);
-  items.slice().sort((a,b)=>a.createdAt-b.createdAt).forEach(c=>host.appendChild(changeRow(g,c)));
+  items.forEach(c=>host.appendChild(changeRow(g,c)));
 }
 function changeRow(g,c){
   const row=document.createElement('div'); row.className='chg'+(c.state==='funciona'?' done':'')+(c.state==='descartada'?' dropped':''); row.setAttribute('role','button'); row.setAttribute('tabindex','0');
