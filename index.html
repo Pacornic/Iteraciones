@@ -530,13 +530,14 @@ function openChangeDetail(g,c){
     ${c.appImplemented?`<div class="field"><label>Implementado APP</label><div style="font-size:13px;color:#8fd3b6;">✓ Implementado en la app</div></div>`:''}
     <div class="pactions">
       ${c.state==='funciona'?`<button class="btn" id="pImpl">Llevar al reglamento</button>`:''}
-      ${c.state==='funciona'?`<button class="btn-app" id="pApp">${c.appImplemented?'✓ Implementado en la APP · quitar':'Marcar Implementado APP'}</button>`:''}
+      <button class="btn-app" id="pApp">${c.appImplemented?'✓ Implementado en la APP · quitar':'Marcar Implementado APP'}</button>
       <button class="btn-q" id="pEdit">Editar</button>
       <button class="btn-danger" id="pDel">Eliminar</button>
     </div>`;
   p.classList.add('open');
   b.querySelectorAll('.st').forEach(x=>x.onclick=()=>{ c.state=x.dataset.s; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); });
-  if(c.state==='funciona'){ $('pImpl').onclick=()=>openImplModal(g,c); const pa=$('pApp'); if(pa) pa.onclick=()=>{ c.appImplemented=!c.appImplemented; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); }; }
+  if(c.state==='funciona') $('pImpl').onclick=()=>openImplModal(g,c);
+  { const pa=$('pApp'); if(pa) pa.onclick=()=>{ c.appImplemented=!c.appImplemented; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); }; }
   $('pEdit').onclick=()=>openChangeModal(c.id);
   $('pDel').onclick=async()=>{ const ok=await confirmDialog(`¿Eliminar "${c.title}"?`); if(!ok) return; g.changes=g.changes.filter(x=>x.id!==c.id); await saveState(); closePanel(); renderBoard(); toast('Idea eliminada.'); };
 }
