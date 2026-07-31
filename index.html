@@ -134,6 +134,8 @@
   .st.on.s-porprobar{ background:var(--violet); } .st.on.s-funciona{ background:var(--teal); } .st.on.s-descartada{ background:var(--brick); } .st.on.s-aparcada{ background:var(--blue); }
   .pactions{ display:flex; flex-direction:column; gap:8px; margin-top:16px; }
   .pactions button{ padding:9px; border-radius:7px; font-size:13px; cursor:pointer; }
+  .btn-app{ background:var(--teal); border:none; color:#0d241d; font-weight:600; }
+  .btn-app:hover{ filter:brightness(1.06); }
 
   /* modal */
   .ov{ position:fixed; inset:0; background:rgba(8,11,15,0.62); display:flex; align-items:center; justify-content:center; z-index:100; padding:16px; }
@@ -528,7 +530,7 @@ function openChangeDetail(g,c){
     ${c.appImplemented?`<div class="field"><label>Implementado APP</label><div style="font-size:13px;color:#8fd3b6;">✓ Implementado en la app</div></div>`:''}
     <div class="pactions">
       ${c.state==='funciona'?`<button class="btn" id="pImpl">${c.implemented?'Volver a llevar al reglamento':'Llevar al reglamento'}</button>`:''}
-      ${c.state==='funciona'?`<button class="btn-q" id="pApp">${c.appImplemented?'✓ Implementado APP (quitar)':'Marcar Implementado APP'}</button>`:''}
+      ${c.state==='funciona'?`<button class="btn-app" id="pApp">${c.appImplemented?'✓ Implementado en la APP · quitar':'Marcar Implementado APP'}</button>`:''}
       <button class="btn-q" id="pEdit">Editar</button>
       <button class="btn-danger" id="pDel">Eliminar</button>
     </div>`;
