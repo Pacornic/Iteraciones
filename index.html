@@ -190,7 +190,7 @@
   }
   ::-webkit-scrollbar{ width:9px;height:9px; } ::-webkit-scrollbar-thumb{ background:#2a3340; border-radius:6px; }
   .sr-only{ position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0); }
-  @media (max-width:720px){ .sidebar{ display:none; } .backend{ display:none; } .brand .tag{ display:none; } .chg .t{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .chg .chg-date{ font-size:9px; } .has-logo .top-logo{ display:inline-block; } .has-logo .brand .dot{ display:none; } .game-select-mobile{ display:flex; align-items:center; gap:6px; } .game-select-mobile select{ background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 9px; font-size:13px; max-width:130px; } }
+  @media (max-width:720px){ .sidebar{ display:none; } .backend{ display:none; } .brand .tag{ display:none; } .chg{ overflow-x:auto; scrollbar-width:none; } .chg::-webkit-scrollbar{ display:none; } .chg>*{ flex-shrink:0; } .chg .t{ flex:1 0 auto; min-width:96px; max-width:56vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .chg .chg-date{ font-size:9px; padding-right:6px; } .has-logo .top-logo{ display:inline-block; } .has-logo .brand .dot{ display:none; } .game-select-mobile{ display:flex; align-items:center; gap:6px; } .game-select-mobile select{ background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 9px; font-size:13px; max-width:130px; } }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
