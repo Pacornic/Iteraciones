@@ -322,7 +322,7 @@ const RB_SECTIONS = [
 const RB_TITLE = Object.fromEntries(RB_SECTIONS.map(([k,t])=>[k,t]));
 const RB_PLACEHOLDER = Object.fromEntries(RB_SECTIONS.map(([k,,p])=>[k,p]));
 function makeRulebook(c){ return { sections: RB_SECTIONS.map(([k,t])=>({ key:k, title:t, content:(c&&c[k])||'' })) }; }
-const STATES = [['porprobar','Por probar'],['funciona','Funciona'],['descartada','Descartada'],['aparcada','Testing']];
+const STATES = [['porprobar','Por probar'],['funciona','OK'],['descartada','Descartada'],['aparcada','Testing']];
 const STATE_TITLE = Object.fromEntries(STATES.map(([k,t])=>[k,t]));
 const STATE_COLOR = { porprobar:'var(--violet)', funciona:'var(--teal)', descartada:'var(--brick)', aparcada:'var(--blue)' };
 const OLD_OUTCOME = { pendiente:'porprobar', funciona:'funciona', falla:'descartada', genera:'aparcada' };
@@ -544,15 +544,16 @@ function openChangeDetail(g,c){
     ${c.implemented?`<div class="field"><label>Reglamento</label><div style="font-size:13px;color:#f0cf92;">✓ Llevado al borrador${c.implementedSection?' · '+escapeHtml(RB_TITLE[c.implementedSection]||c.implementedSection):''}</div></div>`:''}
     <div class="pactions">
       <button class="btn" id="pSave">Guardar cambios</button>
-      ${c.state==='funciona'?`<button class="btn-q" id="pImpl">Llevar al reglamento</button>`:''}
+      ${c.state==='funciona'&&c.section!=='app_solo'?`<button class="btn-q" id="pImpl">Llevar al reglamento</button>`:''}
       ${c.appImpact&&!c.appImplemented?`<button class="btn-app" id="pApp">Marcar como implementada en la app</button>`:''}
       <button class="btn-danger" id="pDel">Eliminar</button>
     </div>`;
   p.classList.add('open');
   $('cdTitle').value=c.title||''; $('cdIdea').value=c.idea||''; $('cdNote').value=c.note||''; $('cdSection').innerHTML=cmSectionOptions(c.section||'');
   const commit=()=>{ const t=$('cdTitle').value.trim(); if(t) c.title=t; c.idea=$('cdIdea').value.replace(/\s+$/,''); c.note=$('cdNote').value.replace(/\s+$/,''); c.section=$('cdSection').value||''; };
+  $('cdSection').onchange=()=>{ commit(); openChangeDetail(g,c); };
   b.querySelectorAll('.st').forEach(x=>x.onclick=()=>{ commit(); c.state=x.dataset.s; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); });
-  if(c.state==='funciona') $('pImpl').onclick=()=>{ commit(); c.updatedAt=Date.now(); saveState(); openImplModal(g,c); };
+  { const pi=$('pImpl'); if(pi) pi.onclick=()=>{ commit(); c.updatedAt=Date.now(); saveState(); openImplModal(g,c); }; }
   { const at=$('pAppToggle'); if(at) at.onclick=()=>{ commit(); c.appImpact=!c.appImpact; if(!c.appImpact) c.appImplemented=false; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); }; }
   { const pa=$('pApp'); if(pa) pa.onclick=()=>{ commit(); c.appImplemented=true; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); }; }
   { const pu=$('pAppUndo'); if(pu) pu.onclick=()=>{ commit(); c.appImplemented=false; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); }; }
@@ -562,7 +563,7 @@ function openChangeDetail(g,c){
 function closePanel(){ $('panel').classList.remove('open'); }
 
 /* change modal */
-function cmSectionOptions(sel){ return `<option value="">— ninguno —</option>`+RB_SECTIONS.map(([k,t])=>`<option value="${k}" ${k===sel?'selected':''}>${escapeHtml(t)}</option>`).join(''); }
+function cmSectionOptions(sel){ return `<option value="">— ninguno —</option><option value="app_solo" ${sel==='app_solo'?'selected':''}>APP solo (no va al reglamento)</option>`+RB_SECTIONS.map(([k,t])=>`<option value="${k}" ${k===sel?'selected':''}>${escapeHtml(t)}</option>`).join(''); }
 function openChangeModal(id){
   const g=currentGame(); lastFocused=document.activeElement; editingChangeId=id||null;
   if(id){ const c=changeById(g,id); $('cmTitle').textContent='Editar idea'; $('cmHint').textContent='Ajusta esta idea.'; $('cmName').value=c.title; $('cmIdea').value=c.idea||''; $('cmNote').value=c.note||''; $('cmSection').innerHTML=cmSectionOptions(c.section||''); }
