@@ -91,7 +91,13 @@
   .p-aparcada{ background:rgba(102,182,223,0.13); color:#a6d6ee; }
   .impl-tag{ font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#f0cf92; }
   .impl-tag.app{ color:#8fd3b6; }
+  .impl-tag.pending{ color:var(--amber); }
   .note-box{ background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-size:13.5px; line-height:1.5; white-space:pre-wrap; min-height:42px; }
+  .chk{ display:flex; gap:8px; align-items:flex-start; font-size:13px; cursor:pointer; line-height:1.4; }
+  .chk input{ margin-top:3px; flex-shrink:0; accent-color:var(--teal); }
+  .app-tag{ font-size:12px; margin-top:8px; } .app-tag.pending{ color:var(--amber); } .app-tag.done{ color:#8fd3b6; }
+  .app-undo{ background:none; border:none; color:var(--amber); cursor:pointer; font-size:11.5px; padding:0 0 0 8px; text-decoration:underline; }
+  .app-undo:hover{ filter:brightness(1.1); }
 
   .empty{ text-align:center; color:var(--muted); padding:38px 10px; }
   .empty p{ font-size:13.5px; }
@@ -177,7 +183,7 @@
   }
   ::-webkit-scrollbar{ width:9px;height:9px; } ::-webkit-scrollbar-thumb{ background:#2a3340; border-radius:6px; }
   .sr-only{ position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0); }
-  @media (max-width:720px){ .sidebar{ display:none; } .backend{ display:none; } .brand .tag{ display:none; } .chg .chg-date{ display:none; } .has-logo .top-logo{ display:inline-block; } .has-logo .brand .dot{ display:none; } .game-select-mobile{ display:flex; align-items:center; gap:6px; } .game-select-mobile select{ background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 9px; font-size:13px; max-width:130px; } }
+  @media (max-width:720px){ .sidebar{ display:none; } .backend{ display:none; } .brand .tag{ display:none; } .chg .t{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .chg .chg-date{ font-size:9px; } .has-logo .top-logo{ display:inline-block; } .has-logo .brand .dot{ display:none; } .game-select-mobile{ display:flex; align-items:center; gap:6px; } .game-select-mobile select{ background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 9px; font-size:13px; max-width:130px; } }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
@@ -442,7 +448,7 @@ function normalizeStructures(){
     if(!g.flattened && Array.isArray(g.problems) && g.problems.length){ g.problems.forEach(p=>{ (p.tests||[]).forEach(t=>pushChange({ id:t.id, title:t.title, mejora:t.mejora, problema:t.problema, note:t.note, issue:t.issue, outcome:t.outcome, state:t.state, section:t.section, sectionText:t.sectionText, implemented:t.implemented, createdAt:t.createdAt })); }); ch=true; }
     g.flattened=true;
     // adaptar changes existentes al modelo nuevo (idea; sin issue/sectionText)
-    g.changes.forEach(c=>{ if(c.idea===undefined){ c.idea=c.sectionText||c.issue||c.note||''; ch=true; } if('issue' in c){ delete c.issue; ch=true; } if('sectionText' in c){ delete c.sectionText; ch=true; } });
+    g.changes.forEach(c=>{ if(c.idea===undefined){ c.idea=c.sectionText||c.issue||c.note||''; ch=true; } if('issue' in c){ delete c.issue; ch=true; } if('sectionText' in c){ delete c.sectionText; ch=true; } if(c.appImpact===undefined){ c.appImpact=!!c.appImplemented; ch=true; } });
   });
   return ch;
 }
@@ -512,7 +518,8 @@ function renderGroup(host, label, items, g){
 function changeRow(g,c){
   const row=document.createElement('div'); row.className='chg'+(c.state==='funciona'?' done':'')+(c.state==='descartada'?' dropped':''); row.setAttribute('role','button'); row.setAttribute('tabindex','0');
   const ico = c.state==='funciona'?'✓':(c.state==='descartada'?'✕':(c.state==='aparcada'?'❯':'○'));
-  row.innerHTML=`<span class="ico">${ico}</span><span class="t">${escapeHtml(c.title)}</span>${c.implemented?'<span class="impl-tag">✓ en reglas</span>':''}${c.appImplemented?'<span class="impl-tag app">✓ en app</span>':''}<span class="pill p-${c.state}">${STATE_TITLE[c.state]}</span><span class="chg-date">${fmtWhen(c.updatedAt||c.createdAt)}</span>`;
+  const appTag = c.appImpact ? (c.appImplemented?'<span class="impl-tag app">✓ en app</span>':'<span class="impl-tag pending" title="Pendiente de implementar en la app">⚙ app</span>') : '';
+  row.innerHTML=`<span class="ico">${ico}</span><span class="t">${escapeHtml(c.title)}</span>${c.implemented?'<span class="impl-tag">✓ en reglas</span>':''}${appTag}<span class="pill p-${c.state}">${STATE_TITLE[c.state]}</span><span class="chg-date">${fmtWhen(c.updatedAt||c.createdAt)}</span>`;
   const open=()=>openChangeDetail(g,c); row.onclick=open; row.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } };
   return row;
 }
@@ -527,17 +534,19 @@ function openChangeDetail(g,c){
     <div class="field"><label>Notas</label><div class="note-box">${c.note?escapeHtml(c.note):'<span style="color:var(--faint)">— sin notas —</span>'}</div></div>
     ${c.section&&RB_TITLE[c.section]?`<div class="field"><label>Apunta a · ${escapeHtml(RB_TITLE[c.section])}</label></div>`:''}
     ${c.implemented?`<div class="field"><label>Reglamento</label><div style="font-size:13px;color:#f0cf92;">✓ Llevado al borrador${c.implementedSection?' · '+escapeHtml(RB_TITLE[c.implementedSection]||c.implementedSection):''}</div></div>`:''}
-    ${c.appImplemented?`<div class="field"><label>Implementado APP</label><div style="font-size:13px;color:#8fd3b6;">✓ Implementado en la app</div></div>`:''}
+    <div class="field"><label>App</label><label class="chk"><input type="checkbox" id="cdAppImpact"${c.appImpact?' checked':''}> Esta idea impacta la app (hay que construirla para probarla)</label>${c.appImpact?(c.appImplemented?'<div class="app-tag done">✓ Implementada en la app<button class="app-undo" id="pAppUndo">quitar</button></div>':'<div class="app-tag pending">⚙ Pendiente de implementar en la app</div>'):''}</div>
     <div class="pactions">
       ${c.state==='funciona'?`<button class="btn" id="pImpl">Llevar al reglamento</button>`:''}
-      <button class="btn-app" id="pApp">${c.appImplemented?'✓ Implementado en la APP · quitar':'Marcar Implementado APP'}</button>
+      ${c.appImpact&&!c.appImplemented?`<button class="btn-app" id="pApp">Marcar como implementada en la app</button>`:''}
       <button class="btn-q" id="pEdit">Editar</button>
       <button class="btn-danger" id="pDel">Eliminar</button>
     </div>`;
   p.classList.add('open');
   b.querySelectorAll('.st').forEach(x=>x.onclick=()=>{ c.state=x.dataset.s; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); });
   if(c.state==='funciona') $('pImpl').onclick=()=>openImplModal(g,c);
-  { const pa=$('pApp'); if(pa) pa.onclick=()=>{ c.appImplemented=!c.appImplemented; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); }; }
+  { const ck=$('cdAppImpact'); if(ck) ck.onchange=()=>{ c.appImpact=ck.checked; if(!ck.checked) c.appImplemented=false; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); }; }
+  { const pa=$('pApp'); if(pa) pa.onclick=()=>{ c.appImplemented=true; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); }; }
+  { const pu=$('pAppUndo'); if(pu) pu.onclick=()=>{ c.appImplemented=false; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); }; }
   $('pEdit').onclick=()=>openChangeModal(c.id);
   $('pDel').onclick=async()=>{ const ok=await confirmDialog(`¿Eliminar "${c.title}"?`); if(!ok) return; g.changes=g.changes.filter(x=>x.id!==c.id); await saveState(); closePanel(); renderBoard(); toast('Idea eliminada.'); };
 }
@@ -580,6 +589,7 @@ function closeImplModal(){ $('implModal').style.display='none'; implRef=null; re
 
 /* ---------- Proto (prototipo jugable) ---------- */
 function openProtoNewTab(g){ if(!g.proto||!g.proto.html) return; const blob=new Blob([g.proto.html],{type:'text/html'}); const url=URL.createObjectURL(blob); window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),60000); }
+function autoSizeFrame(f){ try{ const d=f.contentDocument||(f.contentWindow&&f.contentWindow.document); if(!d||!d.body) return; const h=Math.max(d.body.scrollHeight||0, d.documentElement?d.documentElement.scrollHeight:0); if(h>80) f.style.height=Math.min(h+24,7000)+'px'; }catch(e){} }
 function renderProto(g, host){
   const head=document.createElement('div'); head.className='section-head';
   head.innerHTML=`<div><h2 style="font-family:'Fraunces',serif;font-size:18px;margin:0;">Prototipo</h2><div class="faint" style="font-size:12px;margin-top:3px;">Sube el HTML del juego para probarlo aquí mismo.</div></div>`;
@@ -597,9 +607,10 @@ function renderProto(g, host){
   const rep=document.createElement('button'); rep.className='btn-q'; rep.textContent='Reemplazar'; rep.onclick=()=>$('protoFile').click(); tools.appendChild(rep);
   const del=document.createElement('button'); del.className='btn-danger'; del.textContent='Quitar'; del.onclick=async()=>{ const ok=await confirmDialog('¿Quitar el prototipo de este juego?'); if(!ok) return; delete g.proto; await saveState(); renderBoard(); toast('Prototipo quitado.'); }; tools.appendChild(del);
   host.appendChild(tools);
-  const note=document.createElement('div'); note.className='rb-note'; note.style.marginBottom='10px'; note.textContent='Vista rápida embebida. Para jugar cómodo (sobre todo en móvil) usa «Pantalla completa».'; host.appendChild(note);
+  const note=document.createElement('div'); note.className='rb-note'; note.style.marginBottom='10px'; note.textContent='El marco se ajusta a la altura del prototipo. Para jugar cómodo (sobre todo en móvil) usa «Pantalla completa».'; host.appendChild(note);
   const wrap=document.createElement('div'); wrap.className='proto-wrap'+(protoMobile?' mobile':'');
   const frame=document.createElement('iframe'); frame.className='proto-frame'; frame.setAttribute('sandbox','allow-scripts allow-same-origin allow-modals allow-popups allow-forms allow-downloads'); frame.setAttribute('title','Prototipo'); frame.srcdoc=g.proto.html;
+  frame.addEventListener('load',()=>{ autoSizeFrame(frame); [200,600,1500].forEach(t=>setTimeout(()=>autoSizeFrame(frame),t)); try{ const w=frame.contentWindow; if(w&&w.ResizeObserver){ const ro=new w.ResizeObserver(()=>autoSizeFrame(frame)); ro.observe(w.document.body); } w&&w.addEventListener&&w.addEventListener('click',()=>setTimeout(()=>autoSizeFrame(frame),100)); }catch(e){} });
   wrap.appendChild(frame); host.appendChild(wrap);
 }
 
