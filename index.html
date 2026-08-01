@@ -530,11 +530,11 @@ function openChangeDetail(g,c){
   b.innerHTML=`<h3>${escapeHtml(c.title)}</h3>
     <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--faint);margin:-6px 0 12px;">Última edición: ${fmtWhen(c.updatedAt||c.createdAt||Date.now())}</div>
     <div class="field"><label>Estado</label>${stateBtns}</div>
+    <div class="field"><label class="chk" style="font-size:13px;"><input type="checkbox" id="cdAppImpact"${c.appImpact?' checked':''}> APP idea</label>${c.appImpact?(c.appImplemented?'<div class="app-tag done">✓ Implementada en la app<button class="app-undo" id="pAppUndo">quitar</button></div>':'<div class="app-tag pending">⚙ Pendiente de implementar en la app</div>'):''}</div>
     ${c.idea?`<div class="field"><label>Idea</label><div style="font-size:13.5px;white-space:pre-wrap;">${escapeHtml(c.idea)}</div></div>`:''}
     <div class="field"><label>Notas</label><div class="note-box">${c.note?escapeHtml(c.note):'<span style="color:var(--faint)">— sin notas —</span>'}</div></div>
     ${c.section&&RB_TITLE[c.section]?`<div class="field"><label>Apunta a · ${escapeHtml(RB_TITLE[c.section])}</label></div>`:''}
     ${c.implemented?`<div class="field"><label>Reglamento</label><div style="font-size:13px;color:#f0cf92;">✓ Llevado al borrador${c.implementedSection?' · '+escapeHtml(RB_TITLE[c.implementedSection]||c.implementedSection):''}</div></div>`:''}
-    <div class="field"><label>App</label><label class="chk"><input type="checkbox" id="cdAppImpact"${c.appImpact?' checked':''}> Esta idea impacta la app (hay que construirla para probarla)</label>${c.appImpact?(c.appImplemented?'<div class="app-tag done">✓ Implementada en la app<button class="app-undo" id="pAppUndo">quitar</button></div>':'<div class="app-tag pending">⚙ Pendiente de implementar en la app</div>'):''}</div>
     <div class="pactions">
       ${c.state==='funciona'?`<button class="btn" id="pImpl">Llevar al reglamento</button>`:''}
       ${c.appImpact&&!c.appImplemented?`<button class="btn-app" id="pApp">Marcar como implementada en la app</button>`:''}
