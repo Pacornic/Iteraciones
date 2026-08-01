@@ -98,6 +98,10 @@
   .app-tag{ font-size:12px; margin-top:8px; } .app-tag.pending{ color:var(--amber); } .app-tag.done{ color:#8fd3b6; }
   .app-undo{ background:none; border:none; color:var(--amber); cursor:pointer; font-size:11.5px; padding:0 0 0 8px; text-decoration:underline; }
   .app-undo:hover{ filter:brightness(1.1); }
+  .app-toggle{ font-size:12.5px; padding:6px 14px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--faint); cursor:pointer; }
+  .app-toggle:hover{ border-color:#3a4658; color:var(--muted); }
+  .app-toggle.on{ background:rgba(232,163,61,0.16); border-color:var(--amber); color:var(--amber); font-weight:500; }
+  .app-toggle.on:hover{ filter:brightness(1.05); }
 
   .empty{ text-align:center; color:var(--muted); padding:38px 10px; }
   .empty p{ font-size:13.5px; }
@@ -530,7 +534,7 @@ function openChangeDetail(g,c){
   b.innerHTML=`<h3>${escapeHtml(c.title)}</h3>
     <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--faint);margin:-6px 0 12px;">Última edición: ${fmtWhen(c.updatedAt||c.createdAt||Date.now())}</div>
     <div class="field"><label>Estado</label>${stateBtns}</div>
-    <div class="field"><label class="chk" style="font-size:13px;"><input type="checkbox" id="cdAppImpact"${c.appImpact?' checked':''}> APP idea</label>${c.appImpact?(c.appImplemented?'<div class="app-tag done">✓ Implementada en la app<button class="app-undo" id="pAppUndo">quitar</button></div>':'<div class="app-tag pending">⚙ Pendiente de implementar en la app</div>'):''}</div>
+    <div class="field"><button class="app-toggle${c.appImpact?' on':''}" id="pAppToggle">APP idea</button>${c.appImpact?(c.appImplemented?'<div class="app-tag done">✓ Implementada en la app<button class="app-undo" id="pAppUndo">quitar</button></div>':'<div class="app-tag pending">⚙ Pendiente de implementar en la app</div>'):''}</div>
     ${c.idea?`<div class="field"><label>Idea</label><div style="font-size:13.5px;white-space:pre-wrap;">${escapeHtml(c.idea)}</div></div>`:''}
     <div class="field"><label>Notas</label><div class="note-box">${c.note?escapeHtml(c.note):'<span style="color:var(--faint)">— sin notas —</span>'}</div></div>
     ${c.section&&RB_TITLE[c.section]?`<div class="field"><label>Apunta a · ${escapeHtml(RB_TITLE[c.section])}</label></div>`:''}
@@ -544,7 +548,7 @@ function openChangeDetail(g,c){
   p.classList.add('open');
   b.querySelectorAll('.st').forEach(x=>x.onclick=()=>{ c.state=x.dataset.s; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); });
   if(c.state==='funciona') $('pImpl').onclick=()=>openImplModal(g,c);
-  { const ck=$('cdAppImpact'); if(ck) ck.onchange=()=>{ c.appImpact=ck.checked; if(!ck.checked) c.appImplemented=false; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); }; }
+  { const at=$('pAppToggle'); if(at) at.onclick=()=>{ c.appImpact=!c.appImpact; if(!c.appImpact) c.appImplemented=false; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); }; }
   { const pa=$('pApp'); if(pa) pa.onclick=()=>{ c.appImplemented=true; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); }; }
   { const pu=$('pAppUndo'); if(pu) pu.onclick=()=>{ c.appImplemented=false; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); }; }
   $('pEdit').onclick=()=>openChangeModal(c.id);
