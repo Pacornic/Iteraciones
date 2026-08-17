@@ -113,6 +113,10 @@
   /* rules */
   .sec{ margin-bottom:18px; }
   .sec label{ display:block; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.6px; text-transform:uppercase; color:var(--amber); margin-bottom:6px; }
+  .sec .sec-hd{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:6px; }
+  .sec .sec-hd label{ margin-bottom:0; }
+  .sec-exp{ background:none; border:1px solid var(--border); color:var(--muted); font-size:11px; padding:3px 10px; border-radius:6px; cursor:pointer; white-space:nowrap; }
+  .sec-exp:hover{ border-color:var(--amber); color:var(--amber); }
   .sec.pending label::after{ content:' · pendiente'; color:#f0cf92; }
   .sec textarea{ width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'IBM Plex Sans',sans-serif; font-size:13.5px; line-height:1.55; padding:10px 12px; resize:vertical; min-height:60px; }
   .sec.pending textarea{ border-color:rgba(232,163,61,0.45); } .sec textarea:focus{ outline:none; border-color:var(--amber); }
@@ -156,6 +160,9 @@
   /* modal */
   .ov{ position:fixed; inset:0; background:rgba(8,11,15,0.62); display:flex; align-items:center; justify-content:center; z-index:100; padding:16px; }
   .modal{ background:var(--surface-2); border:1px solid var(--border); border-radius:13px; width:100%; max-width:440px; padding:22px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow); }
+  .sec-modal{ max-width:680px; }
+  #scText{ width:100%; min-height:56vh; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'IBM Plex Sans',sans-serif; font-size:14.5px; line-height:1.6; padding:12px 14px; resize:vertical; }
+  #scText:focus{ outline:none; border-color:var(--amber); }
   .modal h3{ font-family:'Fraunces',serif; margin:0 0 4px; font-size:18px; }
   .modal .hint{ font-size:12px; color:var(--faint); margin-bottom:14px; }
   .macts{ display:flex; gap:10px; margin-top:16px; justify-content:flex-end; align-items:center; }
@@ -260,6 +267,16 @@
     <div class="hint" id="svHint"></div>
     <div class="field"><label for="svSum">Título de la versión</label><input type="text" id="svSum" placeholder="p. ej. Nueva economía Plenitud/Estela"></div>
     <div class="macts"><button class="btn-q" id="svCancel">Cancelar</button><button class="btn" id="svSave">Consolidar versión</button></div>
+  </div>
+</div>
+
+<!-- Section editor modal -->
+<div class="ov" id="secModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="scTitle">
+  <div class="modal sec-modal">
+    <h3 id="scTitle">Apartado</h3>
+    <div class="hint">Edita el apartado completo con más espacio.</div>
+    <div class="field"><textarea id="scText" placeholder="Escribe aquí el contenido de este apartado…"></textarea></div>
+    <div class="macts"><button class="btn-q" id="scCancel">Cancelar</button><button class="btn" id="scSave">Guardar</button></div>
   </div>
 </div>
 
@@ -640,7 +657,12 @@ function renderDraft(g, host){
         bar.appendChild(upd); bar.appendChild(nw); bar.appendChild(note); }
       else { const save=document.createElement('button'); save.className='btn'; save.textContent='✓ Guardar versión v1'; save.onclick=()=>startSaveVersion(g); const note=document.createElement('span'); note.style.cssText='font-size:11.5px;color:var(--faint);'; note.textContent='Congela la primera versión.'; bar.appendChild(save); bar.appendChild(note); } }
     else { const note=document.createElement('span'); note.style.cssText='font-size:12.5px;color:var(--faint);'; note.textContent=g.rulebookVersions.length?'Todo guardado en la última versión.':'Escribe el reglamento y podrás guardar la primera versión.'; bar.appendChild(note); } }
-  g.rulebook.sections.forEach(sec=>{ const w=document.createElement('div'); w.className='sec'+(pend[sec.key]?' pending':''); const l=document.createElement('label'); l.textContent=sec.title; const ta=document.createElement('textarea'); ta.value=sec.content; ta.addEventListener('input',()=>{ sec.content=ta.value; refreshBar(); }); ta.addEventListener('blur',()=>saveState()); w.appendChild(l); w.appendChild(ta); host.appendChild(w); });
+  g.rulebook.sections.forEach(sec=>{ const w=document.createElement('div'); w.className='sec'+(pend[sec.key]?' pending':'');
+    const hd=document.createElement('div'); hd.className='sec-hd';
+    const l=document.createElement('label'); l.textContent=sec.title; hd.appendChild(l);
+    const exp=document.createElement('button'); exp.type='button'; exp.className='sec-exp'; exp.textContent='⤢ Ampliar'; exp.title='Editar este apartado en grande'; exp.onclick=()=>openSectionModal(g,sec); hd.appendChild(exp);
+    w.appendChild(hd);
+    const ta=document.createElement('textarea'); ta.value=sec.content; ta.addEventListener('input',()=>{ sec.content=ta.value; refreshBar(); }); ta.addEventListener('blur',()=>saveState()); w.appendChild(ta); host.appendChild(w); });
   host.appendChild(bar); refreshBar();
 }
 function renderVersionList(g, host){
@@ -659,6 +681,10 @@ function renderVersionDoc(g, host){ const v=g.rulebookVersions.find(x=>x.id===rb
   const dl=document.createElement('button'); dl.className='btn-danger'; dl.textContent='Eliminar'; dl.onclick=()=>deleteVersion(g,v);
   bar.appendChild(pr); const sp=document.createElement('span'); sp.style.flex='1'; bar.appendChild(sp); bar.appendChild(rs); bar.appendChild(dl); host.appendChild(bar);
 }
+let secRef=null;
+function openSectionModal(g,sec){ lastFocused=document.activeElement; secRef=sec; $('scTitle').textContent=sec.title; $('scText').value=sec.content||''; $('secModal').style.display='flex'; $('scText').focus(); }
+function closeSectionModal(){ $('secModal').style.display='none'; secRef=null; restoreFocus(); }
+async function saveSectionModal(){ if(!secRef){ closeSectionModal(); return; } secRef.content=$('scText').value; secRef=null; $('secModal').style.display='none'; await saveState(); restoreFocus(); renderBoard(); toast('Apartado guardado.'); }
 function openSaveModal(g){ lastFocused=document.activeElement; $('svHint').textContent=`Se guardará como v${majorNext(g)} con el reglamento actual y ${g.pendingChanges.length} cambio(s) incorporado(s).`; $('svSum').value=g.currentSummary||''; $('svModal').style.display='flex'; $('svSum').focus(); }
 async function startSaveVersion(g){
   if(!hasUnsaved(g) && g.rulebookVersions.length){ toast('No hay cambios que guardar.'); return; }
@@ -713,6 +739,7 @@ $('panelClose').onclick=closePanel;
 $('cmCancel').onclick=closeChangeModal; $('cmSave').onclick=saveChange;
 $('imCancel').onclick=closeImplModal; $('imSave').onclick=saveImpl;
 $('svCancel').onclick=closeSaveModal; $('svSave').onclick=consolidateVersion;
+$('scCancel').onclick=closeSectionModal; $('scSave').onclick=saveSectionModal;
 $('cfCancel').onclick=()=>resolveConfirm(false); $('cfOk').onclick=()=>resolveConfirm(true);
 $('exportBtn').onclick=exportData; $('importBtn').onclick=()=>$('importFile').click(); $('importFile').onchange=(e)=>{ const f=e.target.files[0]; if(f) importData(f); e.target.value=''; };
 $('signOutBtn').onclick=()=>Store.signOut();
@@ -740,9 +767,9 @@ setAuthMode('login');
 document.addEventListener('click',e=>{ if(menuEl&&!menuEl.contains(e.target)&&!e.target.closest('.mn')&&e.target.id!=='gameMenuBtn') closeMenu(); },true);
 window.addEventListener('scroll',closeMenu,true);
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(menuEl){ closeMenu(); return; }
-  for(const id of ['cfModal','chgModal','implModal','svModal','gameModal']){ if($(id).style.display==='flex'){ if(id==='cfModal') resolveConfirm(false); else $(id).style.display='none'; restoreFocus(); return; } }
+  for(const id of ['cfModal','chgModal','implModal','svModal','secModal','gameModal']){ if($(id).style.display==='flex'){ if(id==='cfModal') resolveConfirm(false); else { $(id).style.display='none'; if(id==='secModal') secRef=null; } restoreFocus(); return; } }
   if($('panel').classList.contains('open')){ closePanel(); return; } } });
-[['chgModal',closeChangeModal],['implModal',closeImplModal],['svModal',closeSaveModal],['gameModal',closeGameModal],['cfModal',()=>resolveConfirm(false)]].forEach(([id,fn])=>{ $(id).addEventListener('mousedown',e=>{ if(e.target.id===id) fn(); }); });
+[['chgModal',closeChangeModal],['implModal',closeImplModal],['svModal',closeSaveModal],['secModal',closeSectionModal],['gameModal',closeGameModal],['cfModal',()=>resolveConfirm(false)]].forEach(([id,fn])=>{ $(id).addEventListener('mousedown',e=>{ if(e.target.id===id) fn(); }); });
 
 async function bootApp(){ await loadState(); if(normalizeStructures()) await saveState(); render(); updateBackend(); updateSavedIndicator(); }
 (async function init(){ await Store.init(); if(Store.ready()){ bootApp(); } else { updateBackend(); showAuthGate(); } })();
