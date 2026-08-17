@@ -102,7 +102,7 @@
   .app-toggle:hover{ border-color:#3a4658; color:var(--muted); }
   .app-toggle.on{ background:rgba(232,163,61,0.16); border-color:var(--amber); color:var(--amber); font-weight:500; }
   .app-toggle.on:hover{ filter:brightness(1.05); }
-  .cd-title{ width:100%; background:none; border:none; font-family:'Fraunces',serif; font-weight:600; font-size:19px; color:var(--text); padding:0 34px 0 0; }
+  .cd-title{ width:100%; background:none; border:none; font-family:'Fraunces',serif; font-weight:600; font-size:19px; color:var(--text); padding:0 88px 0 0; }
   .cd-title:focus{ outline:none; }
   .cd-meta{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint); margin:4px 0 12px; }
 
@@ -135,7 +135,8 @@
   /* detail panel */
   .panel{ position:fixed; top:0; right:0; bottom:0; width:340px; max-width:90vw; background:var(--surface-2); border-left:1px solid var(--border); z-index:60; padding:22px; overflow-y:auto; transform:translateX(100%); transition:transform .2s ease; box-shadow:var(--shadow); }
   .panel.open{ transform:translateX(0); }
-  .pclose{ position:absolute; top:14px; right:14px; background:none; border:none; color:var(--faint); font-size:22px; cursor:pointer; }
+  .pcancel{ position:absolute; top:12px; right:14px; background:none; border:1px solid var(--border); color:var(--muted); font-size:12.5px; padding:5px 12px; border-radius:7px; cursor:pointer; z-index:2; }
+  .pcancel:hover{ border-color:#3a4658; color:var(--text); }
   .panel h3{ font-family:'Fraunces',serif; margin:0 30px 12px 0; font-size:19px; }
   .field{ margin-bottom:14px; }
   .field label{ display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.6px; color:var(--faint); margin-bottom:5px; }
@@ -149,6 +150,8 @@
   .pactions button{ padding:9px; border-radius:7px; font-size:13px; cursor:pointer; }
   .btn-app{ background:var(--teal); border:none; color:#0d241d; font-weight:600; }
   .btn-app:hover{ filter:brightness(1.06); }
+  .btn-rule{ background:var(--blue); border:none; color:#08222e; font-weight:600; }
+  .btn-rule:hover{ filter:brightness(1.06); }
 
   /* modal */
   .ov{ position:fixed; inset:0; background:rgba(8,11,15,0.62); display:flex; align-items:center; justify-content:center; z-index:100; padding:16px; }
@@ -224,7 +227,7 @@
   </div>
 </div>
 
-<aside class="panel" id="panel" role="dialog" aria-label="Detalle"><button class="pclose" id="panelClose" aria-label="Cerrar">&times;</button><div id="panelBody"></div></aside>
+<aside class="panel" id="panel" role="dialog" aria-label="Detalle"><button class="pcancel" id="panelClose">Cancelar</button><div id="panelBody"></div></aside>
 
 <!-- Change modal -->
 <div class="ov" id="chgModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="cmTitle">
@@ -496,23 +499,14 @@ function renderBoard(){
 }
 
 function renderHome(g, host){
-  const lv=lastVersion(g); const unsaved=hasUnsaved(g);
   const vh=document.createElement('div'); vh.className='vhead';
-  vh.innerHTML=`<div class="vrow"><span class="vtag">${lv?('v'+lv.n):'Borrador'}</span><span class="vsub">${lv?(lv.summary?escapeHtml(lv.summary):'versión actual'):'sin versiones guardadas'}</span></div>`;
-  const sum=document.createElement('input'); sum.className='sum'; sum.placeholder='¿En qué estás trabajando ahora? (será el título de la próxima versión)'; sum.value=g.currentSummary||'';
-  sum.addEventListener('input',()=>{ g.currentSummary=sum.value; }); sum.addEventListener('blur',()=>saveState());
-  vh.appendChild(sum);
   const act=document.createElement('div'); act.className='vact';
   const add=document.createElement('button'); add.className='btn'; add.textContent='＋ Añadir idea'; add.onclick=()=>openChangeModal(null);
   act.appendChild(add);
-  if(unsaved){ const info=document.createElement('span'); info.style.cssText='font-size:11.5px;color:var(--faint);'; info.textContent=g.pendingChanges.length?`${g.pendingChanges.length} cambio(s) sin guardar`:'cambios sin guardar'; act.appendChild(info); }
-  const sp=document.createElement('span'); sp.style.flex='1'; act.appendChild(sp);
-  const rules=document.createElement('button'); rules.className='link'; rules.textContent=unsaved?'Guardar en Reglas →':'Ver reglas →'; rules.onclick=()=>{ currentTab='reglas'; rbView='draft'; renderBoard(); };
-  act.appendChild(rules);
   vh.appendChild(act); host.appendChild(vh);
 
   if(!g.changes.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML=`<p>Aún no hay ideas en esta versión.<br>Añade lo primero que quieras probar.</p>`; host.appendChild(e); return; }
-  const byDate=(a,b)=>a.createdAt-b.createdAt; const byState=s=>g.changes.filter(c=>c.state===s).sort(byDate);
+  const byDate=(a,b)=>(b.updatedAt||b.createdAt)-(a.updatedAt||a.createdAt); const byState=s=>g.changes.filter(c=>c.state===s).sort(byDate);
   renderGroup(host, 'Pendiente', [...byState('porprobar'), ...byState('aparcada')], g);
   renderGroup(host, 'Resuelto', byState('funciona'), g);
   renderGroup(host, 'Descartado', byState('descartada'), g);
@@ -543,9 +537,9 @@ function openChangeDetail(g,c){
     <div class="field"><label>Apunta a (apartado del reglamento)</label><select id="cdSection"></select></div>
     ${c.implemented?`<div class="field"><label>Reglamento</label><div style="font-size:13px;color:#f0cf92;">✓ Llevado al borrador${c.implementedSection?' · '+escapeHtml(RB_TITLE[c.implementedSection]||c.implementedSection):''}</div></div>`:''}
     <div class="pactions">
-      <button class="btn" id="pSave">Guardar cambios</button>
-      ${c.state==='funciona'&&c.section!=='app_solo'?`<button class="btn-q" id="pImpl">Llevar al reglamento</button>`:''}
       ${c.appImpact&&!c.appImplemented?`<button class="btn-app" id="pApp">Marcar como implementada en la app</button>`:''}
+      ${c.state==='funciona'&&c.section!=='app_solo'?`<button class="btn-rule" id="pImpl">Llevar al reglamento</button>`:''}
+      <button class="btn" id="pSave">Guardar cambios</button>
       <button class="btn-danger" id="pDel">Eliminar</button>
     </div>`;
   p.classList.add('open');
