@@ -69,7 +69,7 @@
   body.view-home .backhome{ display:none; }
   .pt-inner{ max-width:980px; margin:0 auto; padding:44px 26px 90px; }
   .pt-hero{ display:flex; align-items:center; gap:18px; padding:6px 0 28px; border-bottom:1px solid var(--line); margin-bottom:28px; }
-  .pt-logo{ width:58px; height:58px; object-fit:contain; border-radius:13px; flex-shrink:0; }
+  .pt-logo{ width:74px; height:74px; object-fit:contain; border-radius:15px; flex-shrink:0; }
   .pt-hero h1{ font-family:'Fraunces',serif; font-size:31px; font-weight:600; margin:0; letter-spacing:0.2px; }
   .pt-hero p{ margin:3px 0 0; font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--faint); letter-spacing:0.4px; }
   .pt-secrow{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
@@ -559,7 +559,7 @@ function renderPortada(){
   const inner=document.createElement('div'); inner.className='pt-inner';
   const hero=document.createElement('div'); hero.className='pt-hero';
   const lg=document.createElement('img'); lg.className='pt-logo'; lg.alt='Kaizen'; if(typeof KAIZEN_LOGO==='string'&&KAIZEN_LOGO) lg.src=KAIZEN_LOGO; else lg.style.display='none';
-  const ht=document.createElement('div'); ht.innerHTML=`<h1>Kaizen</h1><p>Estudio de diseño de juegos · mejora continua</p>`;
+  const ht=document.createElement('div'); ht.innerHTML=`<h1>Kaizen</h1><p>Iteration Design Manager</p>`;
   hero.appendChild(lg); hero.appendChild(ht); inner.appendChild(hero);
   const row=document.createElement('div'); row.className='pt-secrow';
   const sec=document.createElement('span'); sec.className='pt-sec'; sec.textContent=state.games.length?('Tus juegos · '+state.games.length):'Tus juegos'; row.appendChild(sec);
