@@ -57,6 +57,38 @@
   .content{ flex:1; overflow:auto; }
   .wrap{ max-width:680px; margin:0 auto; padding:22px 26px 60px; }
   .wrap.wide{ max-width:none; }
+  .backhome{ background:none; border:none; color:var(--blue); cursor:pointer; font-size:13px; padding:0; margin-right:2px; }
+  .backhome:hover{ text-decoration:underline; }
+
+  /* ---- Portada ---- */
+  .portada{ display:none; flex:1; overflow-y:auto; }
+  body.view-home .layout{ display:none; }
+  body.view-home .portada{ display:block; }
+  body.view-game .sidebar{ display:none; }
+  body.view-game .game-select-mobile{ display:none; }
+  body.view-home .backhome{ display:none; }
+  .pt-inner{ max-width:980px; margin:0 auto; padding:44px 26px 90px; }
+  .pt-hero{ display:flex; align-items:center; gap:18px; padding:6px 0 28px; border-bottom:1px solid var(--line); margin-bottom:28px; }
+  .pt-logo{ width:58px; height:58px; object-fit:contain; border-radius:13px; flex-shrink:0; }
+  .pt-hero h1{ font-family:'Fraunces',serif; font-size:31px; font-weight:600; margin:0; letter-spacing:0.2px; }
+  .pt-hero p{ margin:3px 0 0; font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--faint); letter-spacing:0.4px; }
+  .pt-secrow{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
+  .pt-sec{ font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:1.2px; color:var(--muted); }
+  .pt-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(224px,1fr)); gap:16px; }
+  .pt-card{ position:relative; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 16px 14px 22px; cursor:pointer; overflow:hidden; transition:border-color .15s, transform .12s; }
+  .pt-card::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--spine,var(--amber)); }
+  .pt-card:hover{ border-color:#3a4658; transform:translateY(-2px); }
+  .pt-card-top{ display:flex; align-items:center; gap:8px; margin-bottom:9px; }
+  .pt-ver{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--amber); background:var(--amber-dim); padding:2px 7px; border-radius:5px; }
+  .pt-badge{ font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--teal); }
+  .pt-mn{ margin-left:auto; opacity:0; background:none; border:none; color:var(--muted); cursor:pointer; font-size:15px; padding:0 2px; }
+  .pt-card:hover .pt-mn, .pt-card:focus-within .pt-mn{ opacity:1; }
+  .pt-name{ font-family:'Fraunces',serif; font-size:19px; font-weight:600; margin:0 0 9px; line-height:1.2; }
+  .pt-stats{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--muted); }
+  .pt-stats .dot2{ color:var(--faint); }
+  .pt-foot{ margin-top:11px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--faint); }
+  .pt-new{ display:flex; align-items:center; justify-content:center; min-height:118px; border:1px dashed var(--border); border-radius:12px; background:none; color:var(--muted); font-size:13.5px; cursor:pointer; }
+  .pt-new:hover{ border-color:var(--amber); color:var(--amber); }
 
   .btn{ background:var(--amber); border:none; color:#1a1206; font-weight:600; padding:9px 15px; border-radius:8px; cursor:pointer; font-size:13px; }
   .btn:disabled{ opacity:0.4; cursor:not-allowed; }
@@ -208,7 +240,7 @@
 <body>
 
 <div class="topbar">
-  <div class="brand"><img id="topLogo" class="top-logo" alt="Kaizen"><span class="dot"></span> Kaizen <span class="tag">Iteration Design Manager</span></div>
+  <div class="brand" id="brand" title="Ir a la portada"><img id="topLogo" class="top-logo" alt="Kaizen"><span class="dot"></span> Kaizen <span class="tag">Iteration Design Manager</span></div>
   <div class="tools">
     <span class="backend" id="savedAt"></span>
     <span class="backend" id="backend"></span>
@@ -228,11 +260,13 @@
     <button class="addg" id="addGameBtn">+ Añadir juego</button>
   </nav>
   <div class="main">
-    <div class="head"><span class="title" id="title">—</span><button class="mn" id="gameMenuBtn" title="Opciones" aria-label="Opciones del juego" style="display:none;">⋯</button></div>
+    <div class="head"><button class="backhome" id="backHome">← Todos los juegos</button><span class="title" id="title">—</span><button class="mn" id="gameMenuBtn" title="Opciones" aria-label="Opciones del juego" style="display:none;">⋯</button></div>
     <div class="tabs" id="tabs"></div>
     <div class="content"><div class="wrap" id="wrap"></div></div>
   </div>
 </div>
+
+<section id="portada" class="portada" aria-label="Portada"></section>
 
 <aside class="panel" id="panel" role="dialog" aria-label="Detalle"><button class="pcancel" id="panelClose">Cancelar</button><div id="panelBody"></div></aside>
 
@@ -387,6 +421,7 @@ function seedSetsunaHistory(game){
 const PRELOAD_VERSION = 4;
 
 let state = { games:[], currentGameId:null, preloadVersion:0 };
+let appView = 'home';                      // home | game
 let currentTab = 'inicio';                 // inicio | reglas | proto
 let rbView = 'draft';                      // draft | versions | doc
 let rbVersionId = null;
@@ -484,7 +519,7 @@ async function saveState(){ state.updatedAt=Date.now(); try{ const ok=await Stor
 
 /* ---------- Export / Import ---------- */
 function exportData(){ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`kaizen-${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); toast('Copia exportada.'); }
-async function importData(file){ try{ const parsed=JSON.parse(await file.text()); if(!parsed||!Array.isArray(parsed.games)) throw new Error('Formato no válido (falta "games").'); const ok=await confirmDialog(`Importar reemplazará TODOS los datos actuales por los del archivo (${parsed.games.length} juego(s)). ¿Continuar?`, { okLabel:'Aceptar', danger:false }); if(!ok) return; state=parsed; if(typeof state.preloadVersion!=='number') state.preloadVersion=PRELOAD_VERSION; normalizeStructures(); if(!state.currentGameId&&state.games[0]) state.currentGameId=state.games[0].id; currentTab='inicio'; await saveState(); render(); toast('Datos importados.'); }catch(e){ toast('No se pudo importar: '+(e.message||e),'warn',6000); } }
+async function importData(file){ try{ const parsed=JSON.parse(await file.text()); if(!parsed||!Array.isArray(parsed.games)) throw new Error('Formato no válido (falta "games").'); const ok=await confirmDialog(`Importar reemplazará TODOS los datos actuales por los del archivo (${parsed.games.length} juego(s)). ¿Continuar?`, { okLabel:'Aceptar', danger:false }); if(!ok) return; state=parsed; if(typeof state.preloadVersion!=='number') state.preloadVersion=PRELOAD_VERSION; normalizeStructures(); if(!state.currentGameId&&state.games[0]) state.currentGameId=state.games[0].id; currentTab='inicio'; appView='home'; await saveState(); render(); toast('Datos importados.'); }catch(e){ toast('No se pudo importar: '+(e.message||e),'warn',6000); } }
 
 /* ---------- Accessors ---------- */
 function currentGame(){ return state.games.find(g=>g.id===state.currentGameId); }
@@ -494,7 +529,48 @@ function lastVersion(g){ return g.rulebookVersions.length ? g.rulebookVersions.s
 function hasUnsaved(g){ if(g.pendingChanges.length) return true; const lv=lastVersion(g); if(!lv) return g.rulebook.sections.some(s=>s.content.trim()); return g.rulebook.sections.some(s=>{ const o=lv.sections.find(x=>x.key===s.key); return (o?o.content:'')!==s.content; }); }
 
 /* ---------- Render ---------- */
-function render(){ renderSidebar(); renderBoard(); }
+function render(){ document.body.classList.toggle('view-home', appView==='home'); document.body.classList.toggle('view-game', appView!=='home'); if(appView==='home'){ renderPortada(); } else { renderBoard(); } }
+
+/* ---------- Portada ---------- */
+function latestTouch(g){ let t=0; (g.changes||[]).forEach(c=>{ t=Math.max(t,c.updatedAt||c.createdAt||0); }); (g.rulebookVersions||[]).forEach(v=>{ t=Math.max(t,v.updatedAt||v.createdAt||0); }); if(g.proto&&g.proto.updatedAt) t=Math.max(t,g.proto.updatedAt); return t; }
+function goHome(){ appView='home'; closePanel(); render(); }
+function openGame(id){ state.currentGameId=id; currentTab='inicio'; rbView='draft'; rbVersionId=null; appView='game'; closePanel(); saveState(); render(); }
+function gameCard(g){
+  const lv=lastVersion(g);
+  const pend=(g.changes||[]).filter(c=>c.state==='porprobar'||c.state==='aparcada').length;
+  const done=(g.changes||[]).filter(c=>c.state==='funciona').length;
+  const card=document.createElement('div'); card.className='pt-card'; card.setAttribute('role','button'); card.setAttribute('tabindex','0');
+  card.style.setProperty('--spine', g.color||'var(--amber)');
+  const proto = (g.proto&&g.proto.html) ? '<span class="pt-badge">▶ proto</span>' : '';
+  const ver = lv ? ('v'+lv.n) : 'Sin versión';
+  const lt=latestTouch(g);
+  card.innerHTML=`<div class="pt-card-top"><span class="pt-ver">${ver}</span>${proto}<button class="pt-mn mn" aria-label="Opciones de ${escapeHtml(g.name)}">⋯</button></div>
+    <h3 class="pt-name">${escapeHtml(g.name)}</h3>
+    <div class="pt-stats"><span>${pend} en curso</span><span class="dot2">·</span><span>${done} resueltas</span></div>
+    <div class="pt-foot">${lt?('Última edición '+fmtWhen(lt)):'Sin actividad todavía'}</div>`;
+  const enter=()=>openGame(g.id);
+  card.onclick=(e)=>{ if(e.target.closest('.mn')) return; enter(); };
+  card.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); enter(); } };
+  card.querySelector('.mn').onclick=(e)=>{ e.stopPropagation(); openGameMenu(e.currentTarget,g.id); };
+  return card;
+}
+function renderPortada(){
+  const host=$('portada'); host.innerHTML='';
+  const inner=document.createElement('div'); inner.className='pt-inner';
+  const hero=document.createElement('div'); hero.className='pt-hero';
+  const lg=document.createElement('img'); lg.className='pt-logo'; lg.alt='Kaizen'; if(typeof KAIZEN_LOGO==='string'&&KAIZEN_LOGO) lg.src=KAIZEN_LOGO; else lg.style.display='none';
+  const ht=document.createElement('div'); ht.innerHTML=`<h1>Kaizen</h1><p>Estudio de diseño de juegos · mejora continua</p>`;
+  hero.appendChild(lg); hero.appendChild(ht); inner.appendChild(hero);
+  const row=document.createElement('div'); row.className='pt-secrow';
+  const sec=document.createElement('span'); sec.className='pt-sec'; sec.textContent=state.games.length?('Tus juegos · '+state.games.length):'Tus juegos'; row.appendChild(sec);
+  const add=document.createElement('button'); add.className='btn'; add.textContent='＋ Nuevo juego'; add.onclick=()=>openGameModal(false); row.appendChild(add);
+  inner.appendChild(row);
+  const grid=document.createElement('div'); grid.className='pt-grid';
+  state.games.forEach(g=>grid.appendChild(gameCard(g)));
+  const nw=document.createElement('button'); nw.className='pt-new'; nw.textContent=state.games.length?'＋ Nuevo juego':'＋ Crea tu primer juego'; nw.onclick=()=>openGameModal(false); grid.appendChild(nw);
+  inner.appendChild(grid);
+  host.appendChild(inner);
+}
 function renderSidebar(){
   const list=$('gameList'); list.innerHTML='';
   state.games.forEach(g=>{ const pend=(g.changes||[]).filter(c=>c.state==='porprobar').length;
@@ -714,9 +790,9 @@ function printVersion(g,v){ const a=$('printArea'); a.innerHTML=versionDocHtml(g
 
 /* ---------- Game create/rename/delete ---------- */
 function openGameModal(edit=false,id=null){ lastFocused=document.activeElement; editingGameId=edit?id:null; if(edit){ const g=state.games.find(x=>x.id===id); $('gmTitle').textContent='Renombrar juego'; $('gmHint').textContent='Cambia el nombre.'; $('gmSave').textContent='Guardar'; $('gmName').value=g?g.name:''; } else { $('gmTitle').textContent='Añadir juego'; $('gmHint').textContent='Se crea vacío.'; $('gmSave').textContent='Crear'; $('gmName').value=''; } $('gameModal').style.display='flex'; $('gmName').focus(); }
-async function saveGame(){ const name=$('gmName').value.trim(); if(!name){ $('gmName').focus(); return; } if(editingGameId){ const g=state.games.find(x=>x.id===editingGameId); if(g) g.name=name; toast('Juego renombrado.'); } else { const ng={ id:uid(), name, color:SPINE_COLORS[state.games.length%SPINE_COLORS.length], rulebook:makeRulebook(), rulebookVersions:[], changes:[], pendingChanges:[], currentSummary:'', migrated:true, flattened:true }; state.games.push(ng); state.currentGameId=ng.id; currentTab='inicio'; toast('Juego creado.'); } await saveState(); closeGameModal(); render(); }
+async function saveGame(){ const name=$('gmName').value.trim(); if(!name){ $('gmName').focus(); return; } if(editingGameId){ const g=state.games.find(x=>x.id===editingGameId); if(g) g.name=name; toast('Juego renombrado.'); } else { const ng={ id:uid(), name, color:SPINE_COLORS[state.games.length%SPINE_COLORS.length], rulebook:makeRulebook(), rulebookVersions:[], changes:[], pendingChanges:[], currentSummary:'', migrated:true, flattened:true }; state.games.push(ng); state.currentGameId=ng.id; currentTab='inicio'; appView='game'; toast('Juego creado.'); } await saveState(); closeGameModal(); render(); }
 function closeGameModal(){ $('gameModal').style.display='none'; editingGameId=null; restoreFocus(); }
-async function deleteGame(id){ const g=state.games.find(x=>x.id===id); if(!g) return; const ok=await confirmDialog(`¿Eliminar el juego "${g.name}" con todo su contenido?`); if(!ok) return; state.games=state.games.filter(x=>x.id!==id); if(state.currentGameId===id){ state.currentGameId=state.games[0]?state.games[0].id:null; currentTab='inicio'; } await saveState(); closePanel(); render(); toast('Juego eliminado.'); }
+async function deleteGame(id){ const g=state.games.find(x=>x.id===id); if(!g) return; const ok=await confirmDialog(`¿Eliminar el juego "${g.name}" con todo su contenido?`); if(!ok) return; state.games=state.games.filter(x=>x.id!==id); if(state.currentGameId===id){ state.currentGameId=null; } appView='home'; currentTab='inicio'; await saveState(); closePanel(); render(); toast('Juego eliminado.'); }
 
 /* context menu */
 let menuEl=null; function closeMenu(){ if(menuEl){ menuEl.remove(); menuEl=null; } }
@@ -735,6 +811,8 @@ $('addGameBtn').onclick=()=>openGameModal(false);
 $('addGameMobile').onclick=()=>openGameModal(false);
 $('gmCancel').onclick=closeGameModal; $('gmSave').onclick=saveGame;
 $('gameMenuBtn').onclick=(e)=>{ const g=currentGame(); if(g) openGameMenu(e.currentTarget,g.id); };
+$('backHome').onclick=goHome;
+{ const brand=$('brand'); if(brand){ brand.style.cursor='pointer'; brand.onclick=goHome; } }
 $('panelClose').onclick=closePanel;
 $('cmCancel').onclick=closeChangeModal; $('cmSave').onclick=saveChange;
 $('imCancel').onclick=closeImplModal; $('imSave').onclick=saveImpl;
