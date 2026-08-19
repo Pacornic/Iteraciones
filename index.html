@@ -693,6 +693,8 @@ function gameNameById(id){ const g=state.games.find(x=>x.id===id); return g?g.na
 function fmtAppt(v){ if(!v) return ''; const d=new Date(v); if(isNaN(d.getTime())) return v; let s=d.toLocaleString('es-ES',{ weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }); return s.charAt(0).toUpperCase()+s.slice(1); }
 function byWhen(x,y){ const a=x.when||'', b=y.when||''; if(!a&&!b) return 0; if(!a) return 1; if(!b) return -1; return a<b?-1:a>b?1:0; }
 function colorFor(str){ let h=0; str=str||'?'; for(let i=0;i<str.length;i++){ h=(h*31+str.charCodeAt(i))>>>0; } return SPINE_COLORS[h%SPINE_COLORS.length]; }
+function hexToRgba(hex,a){ if(!hex) return 'rgba(102,182,223,'+a+')'; let h=String(hex).replace('#',''); if(h.length===3) h=h.split('').map(c=>c+c).join(''); const n=parseInt(h,16); if(isNaN(n)) return 'rgba(102,182,223,'+a+')'; const r=(n>>16)&255,g=(n>>8)&255,b=n&255; return 'rgba('+r+','+g+','+b+','+a+')'; }
+function chipStyle(color){ return `background:${hexToRgba(color,0.22)};color:${color}`; }
 function fairStats(f){ const appts=(f.appointments||[]); const games=new Set(); let proto=0,inter=0; appts.forEach(a=>(a.games||[]).forEach(e=>{ games.add(e.gameId||('name:'+e.gameName)); if(e.estado==='proto')proto++; else if(e.estado==='interesado')inter++; })); return { appts:appts.length, games:games.size, proto, inter }; }
 function openFair(id){ currentFairId=id; fairSub='juego'; appView='fair'; closePanel(); saveState(); render(); }
 function fairCard(f){
@@ -736,11 +738,11 @@ function renderFairByGame(f, host){
     const card=document.createElement('div'); card.className='gcard'; card.style.setProperty('--sp', g.color);
     const proto=g.rows.filter(r=>r.e.estado==='proto').length, inter=g.rows.filter(r=>r.e.estado==='interesado').length, no=g.rows.filter(r=>r.e.estado==='no').length, pend=g.rows.filter(r=>r.e.estado==='pendiente').length;
     const sum=[proto?proto+' quiere proto':'',inter?inter+' interesado':'',pend?pend+' pendiente':'',no?no+' no':''].filter(Boolean).join(' · ');
-    const top=document.createElement('div'); top.className='gtop'; top.innerHTML=`<span class="gname">${escapeHtml(g.name)}</span><span class="gsum">${sum}</span>`; card.appendChild(top);
+    const top=document.createElement('div'); top.className='gtop'; top.innerHTML=`<span class="gname" style="${chipStyle(g.color)}">${escapeHtml(g.name)}</span><span class="gsum">${sum}</span>`; card.appendChild(top);
     g.rows.sort((a,b)=>(order[a.e.estado]??9)-(order[b.e.estado]??9));
     g.rows.forEach(r=>{ const row=document.createElement('div'); row.className='er'+(r.appt.done?' done':''); row.setAttribute('role','button'); row.setAttribute('tabindex','0');
       const metaTxt=[fmtAppt(r.appt.when), r.appt.place, r.appt.contact].filter(Boolean).join(' | ');
-      row.innerHTML=`<span class="ed" style="--sp:${colorFor(r.appt.editorial)}">${escapeHtml(r.appt.editorial||'—')}</span><span class="fchip f-${r.e.estado}">${FAIR_STATE_TITLE[r.e.estado]||r.e.estado}</span>${metaTxt?`<span class="er-meta">${escapeHtml(metaTxt)}</span>`:''}<button class="apdone${r.appt.done?' on':''}" title="Marcar como realizada" aria-label="Realizada">✓</button>${r.e.feedback?`<span class="fb">${escapeHtml(r.e.feedback)}</span>`:''}`;
+      row.innerHTML=`<span class="ed" style="${chipStyle(colorFor(r.appt.editorial))}">${escapeHtml(r.appt.editorial||'—')}</span><span class="fchip f-${r.e.estado}">${FAIR_STATE_TITLE[r.e.estado]||r.e.estado}</span>${metaTxt?`<span class="er-meta">${escapeHtml(metaTxt)}</span>`:''}<button class="apdone${r.appt.done?' on':''}" title="Marcar como realizada" aria-label="Realizada">✓</button>${r.e.feedback?`<span class="fb">${escapeHtml(r.e.feedback)}</span>`:''}`;
       const open=()=>openApptDetail(f, r.appt, false); row.onclick=open; row.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
       const chk=row.querySelector('.apdone'); if(chk) chk.onclick=(ev)=>{ ev.stopPropagation(); r.appt.done=!r.appt.done; saveState(); renderFairBoard(); };
       card.appendChild(row); });
@@ -755,7 +757,7 @@ function renderFairAgenda(f, host){
     const card=document.createElement('div'); card.className='apcard'+(a.done?' done':''); card.setAttribute('role','button'); card.setAttribute('tabindex','0'); card.style.setProperty('--sp', colorFor(a.editorial));
     const metaTxt=[fmtAppt(a.when), a.place, a.contact].filter(Boolean).join(' | ');
     const games=(a.games||[]).map(e=>`<div class="apg"><span>${escapeHtml(e.gameName||gameNameById(e.gameId)||'—')}</span><span class="fchip f-${e.estado}">${FAIR_STATE_TITLE[e.estado]||e.estado}</span></div>`).join('')||'<div class="apnil">sin juegos asignados</div>';
-    card.innerHTML=`<div class="aptop"><button class="apdone${a.done?' on':''}" title="Marcar como realizada" aria-label="Realizada">✓</button><span class="aped">${escapeHtml(a.editorial||'(sin editorial)')}</span></div>${metaTxt?`<div class="apmeta">${escapeHtml(metaTxt)}</div>`:''}${games}`;
+    card.innerHTML=`<div class="aptop"><button class="apdone${a.done?' on':''}" title="Marcar como realizada" aria-label="Realizada">✓</button><span class="aped" style="${chipStyle(colorFor(a.editorial))}">${escapeHtml(a.editorial||'(sin editorial)')}</span></div>${metaTxt?`<div class="apmeta">${escapeHtml(metaTxt)}</div>`:''}${games}`;
     const open=()=>openApptDetail(f,a,false); card.onclick=open; card.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
     const chk=card.querySelector('.apdone'); if(chk) chk.onclick=(ev)=>{ ev.stopPropagation(); a.done=!a.done; saveState(); renderFairBoard(); };
     host.appendChild(card);
