@@ -107,8 +107,13 @@
   .gcard .gsum{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint); margin-left:auto; text-align:right; }
   .gcard .er{ display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line); cursor:pointer; }
   .gcard .er:hover{ background:rgba(255,255,255,0.02); }
-  .gcard .er .ed{ font-size:13px; color:var(--text); min-width:76px; }
-  .gcard .er .er-date{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint); white-space:nowrap; }
+  .gcard .er .ed{ font-size:12.5px; color:var(--text); background:color-mix(in srgb, var(--sp,var(--blue)) 24%, transparent); padding:2px 9px; border-radius:7px; white-space:nowrap; }
+  .gcard .er .er-meta{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .er.done .ed, .apcard.done .aped{ opacity:.55; }
+  .apdone{ width:20px; height:20px; flex-shrink:0; border:1.5px solid var(--border); border-radius:5px; background:none; color:transparent; font-size:12px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+  .apdone:hover{ border-color:var(--teal); }
+  .apdone.on{ background:var(--teal); border-color:transparent; color:#08231c; }
+  .fair-dates{ font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:400; color:var(--faint); margin-left:12px; letter-spacing:0.3px; }
   .gcard .er .fb{ font-size:11px; color:var(--faint); font-style:italic; margin-left:auto; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .fchip{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; padding:3px 8px; border-radius:20px; white-space:nowrap; }
   .f-pendiente{ background:#28313f; color:#9aa6b5; }
@@ -118,7 +123,7 @@
   .apcard{ position:relative; overflow:hidden; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px 12px 18px; margin-bottom:10px; cursor:pointer; }
   .apcard::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--sp,var(--blue)); }
   .apcard:hover{ border-color:#3a4658; }
-  .apcard .aptop{ display:flex; align-items:baseline; gap:8px; }
+  .apcard .aptop{ display:flex; align-items:center; gap:8px; }
   .apcard .aped{ font-family:'Fraunces',serif; font-size:15.5px; background:color-mix(in srgb, var(--sp,var(--blue)) 26%, transparent); color:var(--text); padding:3px 11px; border-radius:8px; }
   .apcard .apmeta{ display:flex; flex-wrap:wrap; gap:12px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint); margin:5px 0 9px; }
   .apcard .apg{ display:flex; align-items:center; gap:8px; padding:5px 0; border-top:1px solid var(--line); }
@@ -707,7 +712,7 @@ function fairCard(f){
 function renderFairBoard(){
   const f=currentFair(); const tabs=$('tabs'), wrap=$('wrap');
   if(!f){ appView='home'; return render(); }
-  $('title').textContent=f.name; $('gameMenuBtn').style.display='none'; { const bh=$('backHome'); if(bh) bh.textContent='← Ferias'; }
+  $('title').innerHTML=escapeHtml(f.name)+(f.dates?`<span class="fair-dates">${escapeHtml(f.dates)}</span>`:''); $('gameMenuBtn').style.display='none'; { const bh=$('backHome'); if(bh) bh.textContent='← Ferias'; }
   tabs.innerHTML='';
   [['juego','Por juego'],['agenda','Agenda']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(fairSub===k?' on':''); b.textContent=l; b.onclick=()=>{ fairSub=k; closePanel(); renderFairBoard(); }; tabs.appendChild(b); });
   wrap.innerHTML=''; wrap.className='wrap';
@@ -717,7 +722,6 @@ function newAppt(){ return { id:uid(), editorial:'', when:'', place:'', contact:
 function fairToolbar(f, host){
   const bar=document.createElement('div'); bar.className='vact'; bar.style.marginBottom='18px';
   const add=document.createElement('button'); add.className='btn'; add.textContent='＋ Nueva cita'; add.onclick=()=>openApptDetail(f, newAppt(), true); bar.appendChild(add);
-  if(f.dates||f.place){ const meta=document.createElement('span'); meta.style.cssText='font-size:11.5px;color:var(--faint);'; meta.textContent=(f.dates||'')+(f.place?' · '+f.place:''); bar.appendChild(meta); }
   host.appendChild(bar);
 }
 function renderFairByGame(f, host){
@@ -734,9 +738,11 @@ function renderFairByGame(f, host){
     const sum=[proto?proto+' quiere proto':'',inter?inter+' interesado':'',pend?pend+' pendiente':'',no?no+' no':''].filter(Boolean).join(' · ');
     const top=document.createElement('div'); top.className='gtop'; top.innerHTML=`<span class="gname">${escapeHtml(g.name)}</span><span class="gsum">${sum}</span>`; card.appendChild(top);
     g.rows.sort((a,b)=>(order[a.e.estado]??9)-(order[b.e.estado]??9));
-    g.rows.forEach(r=>{ const row=document.createElement('div'); row.className='er'; row.setAttribute('role','button'); row.setAttribute('tabindex','0');
-      row.innerHTML=`<span class="ed">${escapeHtml(r.appt.editorial||'—')}</span><span class="fchip f-${r.e.estado}">${FAIR_STATE_TITLE[r.e.estado]||r.e.estado}</span>${r.appt.when?`<span class="er-date">${escapeHtml(fmtAppt(r.appt.when))}</span>`:''}${r.e.feedback?`<span class="fb">${escapeHtml(r.e.feedback)}</span>`:''}`;
+    g.rows.forEach(r=>{ const row=document.createElement('div'); row.className='er'+(r.appt.done?' done':''); row.setAttribute('role','button'); row.setAttribute('tabindex','0');
+      const metaTxt=[fmtAppt(r.appt.when), r.appt.place, r.appt.contact].filter(Boolean).join(' | ');
+      row.innerHTML=`<span class="ed" style="--sp:${colorFor(r.appt.editorial)}">${escapeHtml(r.appt.editorial||'—')}</span><span class="fchip f-${r.e.estado}">${FAIR_STATE_TITLE[r.e.estado]||r.e.estado}</span>${metaTxt?`<span class="er-meta">${escapeHtml(metaTxt)}</span>`:''}<button class="apdone${r.appt.done?' on':''}" title="Marcar como realizada" aria-label="Realizada">✓</button>${r.e.feedback?`<span class="fb">${escapeHtml(r.e.feedback)}</span>`:''}`;
       const open=()=>openApptDetail(f, r.appt, false); row.onclick=open; row.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
+      const chk=row.querySelector('.apdone'); if(chk) chk.onclick=(ev)=>{ ev.stopPropagation(); r.appt.done=!r.appt.done; saveState(); renderFairBoard(); };
       card.appendChild(row); });
     host.appendChild(card);
   });
@@ -746,11 +752,12 @@ function renderFairAgenda(f, host){
   if(!(f.appointments||[]).length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Sin citas todavía.<br>Pulsa «Nueva cita» para empezar tu agenda.</p>'; host.appendChild(e); return; }
   const appts=(f.appointments||[]).slice().sort(byWhen);
   appts.forEach(a=>{
-    const card=document.createElement('div'); card.className='apcard'; card.setAttribute('role','button'); card.setAttribute('tabindex','0'); card.style.setProperty('--sp', colorFor(a.editorial));
-    const meta=[a.when?`<span>${escapeHtml(fmtAppt(a.when))}</span>`:'',a.place?`<span>${escapeHtml(a.place)}</span>`:'',a.contact?`<span>${escapeHtml(a.contact)}</span>`:''].filter(Boolean).join('');
+    const card=document.createElement('div'); card.className='apcard'+(a.done?' done':''); card.setAttribute('role','button'); card.setAttribute('tabindex','0'); card.style.setProperty('--sp', colorFor(a.editorial));
+    const metaTxt=[fmtAppt(a.when), a.place, a.contact].filter(Boolean).join(' | ');
     const games=(a.games||[]).map(e=>`<div class="apg"><span>${escapeHtml(e.gameName||gameNameById(e.gameId)||'—')}</span><span class="fchip f-${e.estado}">${FAIR_STATE_TITLE[e.estado]||e.estado}</span></div>`).join('')||'<div class="apnil">sin juegos asignados</div>';
-    card.innerHTML=`<div class="aptop"><span class="aped">${escapeHtml(a.editorial||'(sin editorial)')}</span></div><div class="apmeta">${meta}</div>${games}`;
+    card.innerHTML=`<div class="aptop"><button class="apdone${a.done?' on':''}" title="Marcar como realizada" aria-label="Realizada">✓</button><span class="aped">${escapeHtml(a.editorial||'(sin editorial)')}</span></div>${metaTxt?`<div class="apmeta">${escapeHtml(metaTxt)}</div>`:''}${games}`;
     const open=()=>openApptDetail(f,a,false); card.onclick=open; card.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
+    const chk=card.querySelector('.apdone'); if(chk) chk.onclick=(ev)=>{ ev.stopPropagation(); a.done=!a.done; saveState(); renderFairBoard(); };
     host.appendChild(card);
   });
 }
