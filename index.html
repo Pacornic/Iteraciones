@@ -67,6 +67,15 @@
   body.view-game .sidebar{ display:none; }
   body.view-game .game-select-mobile{ display:none; }
   body.view-home .backhome{ display:none; }
+  .pt-back{ background:none; border:none; color:var(--blue); cursor:pointer; font-size:13px; padding:0; margin-bottom:18px; }
+  .pt-back:hover{ text-decoration:underline; }
+  .area-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; }
+  .area-card{ position:relative; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:22px 22px 20px 26px; cursor:pointer; overflow:hidden; transition:border-color .15s, transform .12s; }
+  .area-card::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:6px; background:var(--spine,var(--amber)); }
+  .area-card:hover{ border-color:#3a4658; transform:translateY(-2px); }
+  .area-card .area-t{ font-family:'Fraunces',serif; font-size:22px; font-weight:600; margin:0 0 6px; }
+  .area-card .area-d{ font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5; }
+  .area-card .area-m{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint); }
   .pt-inner{ max-width:980px; margin:0 auto; padding:44px 26px 90px; }
   .pt-hero{ display:flex; align-items:center; gap:18px; padding:6px 0 28px; border-bottom:1px solid var(--line); margin-bottom:28px; }
   .pt-logo{ width:74px; height:74px; object-fit:contain; border-radius:15px; flex-shrink:0; }
@@ -89,6 +98,45 @@
   .pt-foot{ margin-top:11px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--faint); }
   .pt-new{ display:flex; align-items:center; justify-content:center; min-height:118px; border:1px dashed var(--border); border-radius:12px; background:none; color:var(--muted); font-size:13.5px; cursor:pointer; }
   .pt-new:hover{ border-color:var(--amber); color:var(--amber); }
+
+  /* ---- Ferias ---- */
+  .gcard{ position:relative; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:13px 15px; margin-bottom:12px; overflow:hidden; }
+  .gcard::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--sp,var(--blue)); }
+  .gcard .gtop{ display:flex; align-items:baseline; gap:10px; margin-bottom:8px; }
+  .gcard .gname{ font-family:'Fraunces',serif; font-size:16px; }
+  .gcard .gsum{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint); margin-left:auto; text-align:right; }
+  .gcard .er{ display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line); cursor:pointer; }
+  .gcard .er:hover{ background:rgba(255,255,255,0.02); }
+  .gcard .er .ed{ font-size:13px; color:var(--text); min-width:76px; }
+  .gcard .er .fb{ font-size:11px; color:var(--faint); font-style:italic; margin-left:auto; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fchip{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; padding:3px 8px; border-radius:20px; white-space:nowrap; }
+  .f-pendiente{ background:#28313f; color:#9aa6b5; }
+  .f-no{ background:rgba(217,99,74,0.16); color:#e0937f; }
+  .f-interesado{ background:var(--amber-dim); color:#f0c078; }
+  .f-proto{ background:var(--teal-dim); color:#8fd3b6; }
+  .apcard{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px; cursor:pointer; }
+  .apcard:hover{ border-color:#3a4658; }
+  .apcard .aptop{ display:flex; align-items:baseline; gap:8px; }
+  .apcard .aped{ font-family:'Fraunces',serif; font-size:15.5px; }
+  .apcard .apmeta{ display:flex; flex-wrap:wrap; gap:12px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint); margin:5px 0 9px; }
+  .apcard .apg{ display:flex; align-items:center; gap:8px; padding:5px 0; border-top:1px solid var(--line); }
+  .apcard .apg span:first-child{ font-size:12.5px; color:var(--muted); flex:1; }
+  .apcard .apnil{ font-size:11.5px; color:var(--faint); padding-top:6px; }
+  .ap-in{ width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'IBM Plex Sans',sans-serif; font-size:13.5px; padding:8px 10px; color-scheme:dark; }
+  .ap-in:focus{ outline:none; border-color:var(--amber); }
+  .ag-item{ border:1px solid var(--border); border-radius:10px; padding:10px; margin-bottom:9px; }
+  .ag-item .ag-h{ display:flex; align-items:center; margin-bottom:8px; }
+  .ag-item .ag-name{ font-size:13.5px; font-weight:600; flex:1; }
+  .ag-item .ag-rm{ background:none; border:none; color:var(--faint); cursor:pointer; font-size:13px; }
+  .ag-item .ag-rm:hover{ color:var(--brick); }
+  .ag-item textarea.ag-fb{ width:100%; margin-top:8px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'IBM Plex Sans',sans-serif; font-size:12.5px; padding:8px 10px; min-height:44px; resize:vertical; }
+  .ag-item textarea.ag-fb:focus{ outline:none; border-color:var(--amber); }
+  .fstates{ display:flex; flex-wrap:wrap; gap:6px; }
+  .fst{ background:none; border:1px solid var(--border); color:var(--muted); font-size:11.5px; padding:5px 9px; border-radius:7px; cursor:pointer; }
+  .fst.on.f-pendiente{ background:#9aa6b5; color:#161b22; border-color:transparent; font-weight:600; }
+  .fst.on.f-no{ background:var(--brick); color:#2a0f0a; border-color:transparent; font-weight:600; }
+  .fst.on.f-interesado{ background:var(--amber); color:#2a1c06; border-color:transparent; font-weight:600; }
+  .fst.on.f-proto{ background:var(--teal); color:#08231c; border-color:transparent; font-weight:600; }
 
   .btn{ background:var(--amber); border:none; color:#1a1206; font-weight:600; padding:9px 15px; border-radius:8px; cursor:pointer; font-size:13px; }
   .btn:disabled{ opacity:0.4; cursor:not-allowed; }
@@ -314,6 +362,23 @@
   </div>
 </div>
 
+<!-- Fair modal -->
+<div class="ov" id="frModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="frTitle">
+  <div class="modal">
+    <h3 id="frTitle">Nueva feria</h3>
+    <div class="field"><label for="frName">Nombre de la feria</label><input type="text" id="frName" placeholder="p. ej. Essen 2026"></div>
+    <div class="field"><label>Fechas <span style="text-transform:none;letter-spacing:0;color:var(--faint)">(opcional)</span></label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="date" class="ap-in" id="frStart" aria-label="Desde">
+        <span style="color:var(--faint);font-size:12px;">→</span>
+        <input type="date" class="ap-in" id="frEnd" aria-label="Hasta">
+      </div>
+    </div>
+    <div class="field"><label for="frPlace">Lugar <span style="text-transform:none;letter-spacing:0;color:var(--faint)">(opcional)</span></label><input type="text" id="frPlace" placeholder="p. ej. Messe Essen"></div>
+    <div class="macts"><button class="btn-q" id="frCancel">Cancelar</button><button class="btn" id="frSave">Crear</button></div>
+  </div>
+</div>
+
 <!-- Game modal -->
 <div class="ov" id="gameModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="gmTitle">
   <div class="modal">
@@ -378,6 +443,8 @@ const RB_PLACEHOLDER = Object.fromEntries(RB_SECTIONS.map(([k,,p])=>[k,p]));
 function makeRulebook(c){ return { sections: RB_SECTIONS.map(([k,t])=>({ key:k, title:t, content:(c&&c[k])||'' })) }; }
 const STATES = [['porprobar','Por probar'],['funciona','OK'],['descartada','Descartada'],['aparcada','Testing']];
 const STATE_TITLE = Object.fromEntries(STATES.map(([k,t])=>[k,t]));
+const FAIR_STATES = [['pendiente','Pendiente'],['no','No interesa'],['interesado','Interesado'],['proto','Quiere proto']];
+const FAIR_STATE_TITLE = Object.fromEntries(FAIR_STATES.map(([k,t])=>[k,t]));
 const STATE_COLOR = { porprobar:'var(--violet)', funciona:'var(--teal)', descartada:'var(--brick)', aparcada:'var(--blue)' };
 const OLD_OUTCOME = { pendiente:'porprobar', funciona:'funciona', falla:'descartada', genera:'aparcada' };
 
@@ -421,7 +488,10 @@ function seedSetsunaHistory(game){
 const PRELOAD_VERSION = 4;
 
 let state = { games:[], currentGameId:null, preloadVersion:0 };
-let appView = 'home';                      // home | game
+let appView = 'home';                      // home | game | fair
+let currentFairId = null;
+let fairSub = 'juego';                      // juego | agenda
+let apptRef = null;
 let currentTab = 'inicio';                 // inicio | reglas | proto
 let rbView = 'draft';                      // draft | versions | doc
 let rbVersionId = null;
@@ -490,6 +560,7 @@ function applyPreload(){
 }
 function normalizeStructures(){
   let ch=false;
+  if(!Array.isArray(state.fairs)){ state.fairs=[]; ch=true; }
   state.games.forEach(g=>{
     if(!g.rulebook||!Array.isArray(g.rulebook.sections)){ g.rulebook=makeRulebook(); ch=true; }
     else { const have=new Set(g.rulebook.sections.map(s=>s.key)); RB_SECTIONS.forEach(([k,t],i)=>{ if(!have.has(k)){ g.rulebook.sections.splice(i,0,{key:k,title:t,content:''}); ch=true; } });
@@ -529,7 +600,9 @@ function lastVersion(g){ return g.rulebookVersions.length ? g.rulebookVersions.s
 function hasUnsaved(g){ if(g.pendingChanges.length) return true; const lv=lastVersion(g); if(!lv) return g.rulebook.sections.some(s=>s.content.trim()); return g.rulebook.sections.some(s=>{ const o=lv.sections.find(x=>x.key===s.key); return (o?o.content:'')!==s.content; }); }
 
 /* ---------- Render ---------- */
-function render(){ document.body.classList.toggle('view-home', appView==='home'); document.body.classList.toggle('view-game', appView!=='home'); if(appView==='home'){ renderPortada(); } else { renderBoard(); } }
+function render(){ const isP=(appView==='home'||appView==='design'||appView==='ferias'); document.body.classList.toggle('view-home', isP); document.body.classList.toggle('view-game', !isP); if(appView==='home') renderHomeHub(); else if(appView==='design') renderDesignPortada(); else if(appView==='ferias') renderFeriasPortada(); else if(appView==='fair') renderFairBoard(); else renderBoard(); }
+function openArea(v){ appView=v; closePanel(); render(); }
+function goBack(){ if(appView==='game') appView='design'; else if(appView==='fair') appView='ferias'; else appView='home'; closePanel(); render(); }
 
 /* ---------- Portada ---------- */
 function latestTouch(g){ let t=0; (g.changes||[]).forEach(c=>{ t=Math.max(t,c.updatedAt||c.createdAt||0); }); (g.rulebookVersions||[]).forEach(v=>{ t=Math.max(t,v.updatedAt||v.createdAt||0); }); if(g.proto&&g.proto.updatedAt) t=Math.max(t,g.proto.updatedAt); return t; }
@@ -554,15 +627,35 @@ function gameCard(g){
   card.querySelector('.mn').onclick=(e)=>{ e.stopPropagation(); openGameMenu(e.currentTarget,g.id); };
   return card;
 }
-function renderPortada(){
-  const host=$('portada'); host.innerHTML='';
-  const inner=document.createElement('div'); inner.className='pt-inner';
+function ptHero(inner){
   const hero=document.createElement('div'); hero.className='pt-hero';
   const lg=document.createElement('img'); lg.className='pt-logo'; lg.alt='Kaizen'; if(typeof KAIZEN_LOGO==='string'&&KAIZEN_LOGO) lg.src=KAIZEN_LOGO; else lg.style.display='none';
   const ht=document.createElement('div'); ht.innerHTML=`<h1>Kaizen</h1><p>Iteration Design Manager</p>`;
   hero.appendChild(lg); hero.appendChild(ht); inner.appendChild(hero);
+}
+function ptBack(inner,label,fn){ const b=document.createElement('button'); b.className='pt-back'; b.textContent=label; b.onclick=fn; inner.appendChild(b); }
+function areaCard(title,desc,meta,color,fn){
+  const c=document.createElement('div'); c.className='area-card'; c.setAttribute('role','button'); c.setAttribute('tabindex','0'); c.style.setProperty('--spine',color);
+  c.innerHTML=`<h3 class="area-t">${escapeHtml(title)}</h3><p class="area-d">${escapeHtml(desc)}</p><div class="area-m">${escapeHtml(meta)}</div>`;
+  c.onclick=fn; c.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fn(); } };
+  return c;
+}
+function renderHomeHub(){
+  const host=$('portada'); host.innerHTML='';
+  const inner=document.createElement('div'); inner.className='pt-inner';
+  ptHero(inner);
+  const grid=document.createElement('div'); grid.className='area-grid';
+  grid.appendChild(areaCard('Diseño','Tus juegos: ideas, reglamentos y prototipos.', (state.games.length||0)+' juego(s)', '#e8a33d', ()=>openArea('design')));
+  grid.appendChild(areaCard('Ferias','Prepara cada feria: citas con editoriales y feedback.', ((state.fairs||[]).length||0)+' feria(s)', '#66b6df', ()=>openArea('ferias')));
+  inner.appendChild(grid);
+  host.appendChild(inner);
+}
+function renderDesignPortada(){
+  const host=$('portada'); host.innerHTML='';
+  const inner=document.createElement('div'); inner.className='pt-inner';
+  ptBack(inner,'← Inicio',goHome);
   const row=document.createElement('div'); row.className='pt-secrow';
-  const sec=document.createElement('span'); sec.className='pt-sec'; sec.textContent=state.games.length?('Tus juegos · '+state.games.length):'Tus juegos'; row.appendChild(sec);
+  const sec=document.createElement('span'); sec.className='pt-sec'; sec.textContent=state.games.length?('Diseño · '+state.games.length+' juego(s)'):'Diseño'; row.appendChild(sec);
   const add=document.createElement('button'); add.className='btn'; add.textContent='＋ Nuevo juego'; add.onclick=()=>openGameModal(false); row.appendChild(add);
   inner.appendChild(row);
   const grid=document.createElement('div'); grid.className='pt-grid';
@@ -571,6 +664,132 @@ function renderPortada(){
   inner.appendChild(grid);
   host.appendChild(inner);
 }
+function renderFeriasPortada(){
+  const host=$('portada'); host.innerHTML='';
+  const inner=document.createElement('div'); inner.className='pt-inner';
+  ptBack(inner,'← Inicio',goHome);
+  const row=document.createElement('div'); row.className='pt-secrow';
+  const sec=document.createElement('span'); sec.className='pt-sec'; sec.textContent=(state.fairs&&state.fairs.length)?('Ferias · '+state.fairs.length):'Ferias'; row.appendChild(sec);
+  const add=document.createElement('button'); add.className='btn'; add.textContent='＋ Nueva feria'; add.onclick=()=>openFairModal(false); row.appendChild(add);
+  inner.appendChild(row);
+  const grid=document.createElement('div'); grid.className='pt-grid';
+  (state.fairs||[]).forEach(f=>grid.appendChild(fairCard(f)));
+  const nw=document.createElement('button'); nw.className='pt-new'; nw.textContent=(state.fairs&&state.fairs.length)?'＋ Nueva feria':'＋ Añade tu primera feria'; nw.onclick=()=>openFairModal(false); grid.appendChild(nw);
+  inner.appendChild(grid);
+  host.appendChild(inner);
+}
+
+/* ---------- Ferias ---------- */
+function currentFair(){ return (state.fairs||[]).find(f=>f.id===currentFairId); }
+function currentFairById(id){ return (state.fairs||[]).find(f=>f.id===id); }
+function gameNameById(id){ const g=state.games.find(x=>x.id===id); return g?g.name:null; }
+function fmtAppt(v){ if(!v) return ''; const d=new Date(v); if(isNaN(d.getTime())) return v; let s=d.toLocaleString('es-ES',{ weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }); return s.charAt(0).toUpperCase()+s.slice(1); }
+function byWhen(x,y){ const a=x.when||'', b=y.when||''; if(!a&&!b) return 0; if(!a) return 1; if(!b) return -1; return a<b?-1:a>b?1:0; }
+function fairStats(f){ const appts=(f.appointments||[]); const games=new Set(); let proto=0,inter=0; appts.forEach(a=>(a.games||[]).forEach(e=>{ games.add(e.gameId||('name:'+e.gameName)); if(e.estado==='proto')proto++; else if(e.estado==='interesado')inter++; })); return { appts:appts.length, games:games.size, proto, inter }; }
+function openFair(id){ currentFairId=id; fairSub='juego'; appView='fair'; closePanel(); saveState(); render(); }
+function fairCard(f){
+  const s=fairStats(f);
+  const card=document.createElement('div'); card.className='pt-card'; card.setAttribute('role','button'); card.setAttribute('tabindex','0');
+  card.style.setProperty('--spine', '#66b6df');
+  card.innerHTML=`<div class="pt-card-top"><span class="pt-ver" style="color:#66b6df;background:rgba(102,182,223,0.14)">Feria</span>${s.proto?`<span class="pt-badge">★ ${s.proto} quiere proto</span>`:''}<button class="pt-mn mn" aria-label="Opciones de ${escapeHtml(f.name)}">⋯</button></div>
+    <h3 class="pt-name">${escapeHtml(f.name)}</h3>
+    <div class="pt-stats"><span>${s.appts} cita(s)</span><span class="dot2">·</span><span>${s.games} juego(s)</span></div>
+    <div class="pt-foot">${f.dates?escapeHtml(f.dates):'Sin fechas'}${f.place?' · '+escapeHtml(f.place):''}</div>`;
+  const enter=()=>openFair(f.id);
+  card.onclick=(e)=>{ if(e.target.closest('.mn')) return; enter(); };
+  card.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); enter(); } };
+  card.querySelector('.mn').onclick=(e)=>{ e.stopPropagation(); openFairMenu(e.currentTarget,f.id); };
+  return card;
+}
+function renderFairBoard(){
+  const f=currentFair(); const tabs=$('tabs'), wrap=$('wrap');
+  if(!f){ appView='home'; return render(); }
+  $('title').textContent=f.name; $('gameMenuBtn').style.display='none'; { const bh=$('backHome'); if(bh) bh.textContent='← Ferias'; }
+  tabs.innerHTML='';
+  [['juego','Por juego'],['agenda','Agenda']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(fairSub===k?' on':''); b.textContent=l; b.onclick=()=>{ fairSub=k; closePanel(); renderFairBoard(); }; tabs.appendChild(b); });
+  wrap.innerHTML=''; wrap.className='wrap';
+  if(fairSub==='agenda') renderFairAgenda(f,wrap); else renderFairByGame(f,wrap);
+}
+function newAppt(){ return { id:uid(), editorial:'', when:'', place:'', contact:'', games:[], _new:true }; }
+function fairToolbar(f, host){
+  const bar=document.createElement('div'); bar.className='vact'; bar.style.marginBottom='18px';
+  const add=document.createElement('button'); add.className='btn'; add.textContent='＋ Nueva cita'; add.onclick=()=>openApptDetail(f, newAppt(), true); bar.appendChild(add);
+  if(f.dates||f.place){ const meta=document.createElement('span'); meta.style.cssText='font-size:11.5px;color:var(--faint);'; meta.textContent=(f.dates||'')+(f.place?' · '+f.place:''); bar.appendChild(meta); }
+  host.appendChild(bar);
+}
+function renderFairByGame(f, host){
+  fairToolbar(f, host);
+  const appts=f.appointments||[];
+  if(!appts.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Aún no hay citas.<br>Añade una cita con una editorial y los juegos que le enseñas.</p>'; host.appendChild(e); return; }
+  const map=new Map();
+  appts.forEach(a=>(a.games||[]).forEach(e=>{ const key=e.gameId||('name:'+e.gameName); if(!map.has(key)) map.set(key,{ name:(e.gameName||gameNameById(e.gameId)||'—'), color:((state.games.find(x=>x.id===e.gameId)||{}).color)||'#66b6df', rows:[] }); map.get(key).rows.push({ appt:a, e }); }));
+  if(!map.size){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Tienes citas, pero sin juegos asignados.<br>Abre una cita y añade los juegos que enseñas.</p>'; host.appendChild(e); return; }
+  const order={ proto:0, interesado:1, pendiente:2, no:3 };
+  map.forEach(g=>{
+    const card=document.createElement('div'); card.className='gcard'; card.style.setProperty('--sp', g.color);
+    const proto=g.rows.filter(r=>r.e.estado==='proto').length, inter=g.rows.filter(r=>r.e.estado==='interesado').length, no=g.rows.filter(r=>r.e.estado==='no').length, pend=g.rows.filter(r=>r.e.estado==='pendiente').length;
+    const sum=[proto?proto+' quiere proto':'',inter?inter+' interesado':'',pend?pend+' pendiente':'',no?no+' no':''].filter(Boolean).join(' · ');
+    const top=document.createElement('div'); top.className='gtop'; top.innerHTML=`<span class="gname">${escapeHtml(g.name)}</span><span class="gsum">${sum}</span>`; card.appendChild(top);
+    g.rows.sort((a,b)=>(order[a.e.estado]??9)-(order[b.e.estado]??9));
+    g.rows.forEach(r=>{ const row=document.createElement('div'); row.className='er'; row.setAttribute('role','button'); row.setAttribute('tabindex','0');
+      row.innerHTML=`<span class="ed">${escapeHtml(r.appt.editorial||'—')}</span><span class="fchip f-${r.e.estado}">${FAIR_STATE_TITLE[r.e.estado]||r.e.estado}</span>${r.e.feedback?`<span class="fb">${escapeHtml(r.e.feedback)}</span>`:''}`;
+      const open=()=>openApptDetail(f, r.appt, false); row.onclick=open; row.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
+      card.appendChild(row); });
+    host.appendChild(card);
+  });
+}
+function renderFairAgenda(f, host){
+  fairToolbar(f, host);
+  if(!(f.appointments||[]).length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Sin citas todavía.<br>Pulsa «Nueva cita» para empezar tu agenda.</p>'; host.appendChild(e); return; }
+  const appts=(f.appointments||[]).slice().sort(byWhen);
+  appts.forEach(a=>{
+    const card=document.createElement('div'); card.className='apcard'; card.setAttribute('role','button'); card.setAttribute('tabindex','0');
+    const meta=[a.when?`<span>${escapeHtml(fmtAppt(a.when))}</span>`:'',a.place?`<span>${escapeHtml(a.place)}</span>`:'',a.contact?`<span>${escapeHtml(a.contact)}</span>`:''].filter(Boolean).join('');
+    const games=(a.games||[]).map(e=>`<div class="apg"><span>${escapeHtml(e.gameName||gameNameById(e.gameId)||'—')}</span><span class="fchip f-${e.estado}">${FAIR_STATE_TITLE[e.estado]||e.estado}</span></div>`).join('')||'<div class="apnil">sin juegos asignados</div>';
+    card.innerHTML=`<div class="aptop"><span class="aped">${escapeHtml(a.editorial||'(sin editorial)')}</span></div><div class="apmeta">${meta}</div>${games}`;
+    const open=()=>openApptDetail(f,a,false); card.onclick=open; card.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
+    host.appendChild(card);
+  });
+}
+function saveAppt(f, a){ if(a._new){ delete a._new; f.appointments=f.appointments||[]; f.appointments.push(a); } return saveState(); }
+function openApptDetail(f, a, isNew){
+  apptRef={f,a};
+  const p=$('panel'), b=$('panelBody');
+  const catalog=state.games.filter(g=>!(a.games||[]).some(e=>e.gameId===g.id));
+  const gamesHtml=(a.games||[]).map((e,i)=>`<div class="ag-item">
+      <div class="ag-h"><span class="ag-name">${escapeHtml(e.gameName||gameNameById(e.gameId)||'—')}</span><button class="ag-rm" data-i="${i}" title="Quitar juego">✕</button></div>
+      <div class="fstates">${FAIR_STATES.map(([k,l])=>`<button class="fst f-${k}${e.estado===k?' on':''}" data-i="${i}" data-e="${k}">${l}</button>`).join('')}</div>
+      <textarea class="ag-fb" data-i="${i}" placeholder="Feedback…">${escapeHtml(e.feedback||'')}</textarea>
+    </div>`).join('');
+  b.innerHTML=`<input class="cd-title" id="apEd" placeholder="Nombre de la editorial">
+    <div class="cd-meta">Cita de feria · ${escapeHtml(f.name)}</div>
+    <div class="field"><label>Fecha y hora</label><input class="ap-in" id="apWhen" type="datetime-local"></div>
+    <div class="field"><label>Lugar / stand</label><input class="ap-in" id="apPlace" placeholder="p. ej. Hall 3 · C12"></div>
+    <div class="field"><label>Persona de contacto</label><input class="ap-in" id="apContact" placeholder="Nombre / email"></div>
+    <div class="field"><label>Juegos que le enseño</label>${gamesHtml||'<div style="font-size:12.5px;color:var(--faint);margin:2px 0 6px;">— aún ninguno —</div>'}</div>
+    ${catalog.length?`<div class="field"><label>Añadir juego</label><select class="ap-in" id="apAddG"><option value="">— elige un juego —</option>${catalog.map(g=>`<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('')}</select></div>`:''}
+    <div class="pactions">
+      <button class="btn" id="apSave">Guardar cita</button>
+      <button class="btn-danger" id="apDel">Eliminar cita</button>
+    </div>`;
+  p.classList.add('open');
+  $('apEd').value=a.editorial||''; $('apWhen').value=a.when||''; $('apPlace').value=a.place||''; $('apContact').value=a.contact||'';
+  const commit=()=>{ a.editorial=$('apEd').value.trim(); a.when=$('apWhen').value.trim(); a.place=$('apPlace').value.trim(); a.contact=$('apContact').value.trim(); b.querySelectorAll('.ag-fb').forEach(t=>{ const i=+t.dataset.i; if(a.games[i]) a.games[i].feedback=t.value.replace(/\s+$/,''); }); };
+  b.querySelectorAll('.fst').forEach(btn=>btn.onclick=()=>{ commit(); const i=+btn.dataset.i; if(a.games[i]) a.games[i].estado=btn.dataset.e; saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
+  b.querySelectorAll('.ag-rm').forEach(btn=>btn.onclick=()=>{ commit(); const i=+btn.dataset.i; a.games.splice(i,1); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
+  { const sel=$('apAddG'); if(sel) sel.onchange=()=>{ const id=sel.value; if(!id) return; commit(); a.games.push({ gameId:id, gameName:gameNameById(id), estado:'pendiente', feedback:'' }); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); }; }
+  $('apSave').onclick=async()=>{ commit(); if(!a.editorial){ $('apEd').focus(); toast('Pon el nombre de la editorial.','warn'); return; } await saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); toast('Cita guardada.'); };
+  $('apDel').onclick=async()=>{ if(a._new){ closePanel(); return; } const ok=await confirmDialog(`¿Eliminar la cita con "${a.editorial||'esta editorial'}"?`); if(!ok) return; f.appointments=f.appointments.filter(x=>x.id!==a.id); await saveState(); closePanel(); renderFairBoard(); toast('Cita eliminada.'); };
+}
+let editingFairId=null;
+function fmtRange(s,e){ const toD=(d)=>{ if(!d) return null; const dt=new Date(d+'T00:00'); return isNaN(dt.getTime())?null:dt; }; const ds=toD(s), de=toD(e); const opt={day:'numeric',month:'short'}; const optY={day:'numeric',month:'short',year:'numeric'};
+  if(ds&&de){ if(s===e) return ds.toLocaleDateString('es-ES',optY); const sM=ds.toLocaleDateString('es-ES',{month:'short'}), eM=de.toLocaleDateString('es-ES',{month:'short'}); if(sM===eM&&ds.getFullYear()===de.getFullYear()) return ds.getDate()+'–'+de.getDate()+' '+eM+' '+de.getFullYear(); return ds.toLocaleDateString('es-ES',opt)+' – '+de.toLocaleDateString('es-ES',optY); }
+  const one=ds||de; return one?one.toLocaleDateString('es-ES',optY):''; }
+function openFairModal(edit,id){ lastFocused=document.activeElement; editingFairId=edit?id:null; if(edit){ const f=currentFairById(id); $('frTitle').textContent='Editar feria'; $('frSave').textContent='Guardar'; $('frName').value=f?f.name:''; $('frStart').value=f?(f.start||''):''; $('frEnd').value=f?(f.end||''):''; $('frPlace').value=f?(f.place||''):''; } else { $('frTitle').textContent='Nueva feria'; $('frSave').textContent='Crear'; $('frName').value=''; $('frStart').value=''; $('frEnd').value=''; $('frPlace').value=''; } $('frModal').style.display='flex'; $('frName').focus(); }
+async function saveFair(){ const name=$('frName').value.trim(); if(!name){ $('frName').focus(); return; } const start=$('frStart').value, end=$('frEnd').value, place=$('frPlace').value.trim(); const dates=fmtRange(start,end); if(editingFairId){ const f=currentFairById(editingFairId); if(f){ f.name=name; f.start=start; f.end=end; f.dates=dates; f.place=place; } toast('Feria actualizada.'); } else { const nf={ id:uid(), name, start, end, dates, place, appointments:[] }; state.fairs=state.fairs||[]; state.fairs.push(nf); currentFairId=nf.id; fairSub='juego'; appView='fair'; toast('Feria creada.'); } await saveState(); closeFairModal(); render(); }
+function closeFairModal(){ $('frModal').style.display='none'; editingFairId=null; restoreFocus(); }
+async function deleteFair(id){ const f=currentFairById(id); if(!f) return; const ok=await confirmDialog(`¿Eliminar la feria "${f.name}" con todas sus citas?`); if(!ok) return; state.fairs=state.fairs.filter(x=>x.id!==id); if(currentFairId===id){ currentFairId=null; } appView='ferias'; await saveState(); closePanel(); render(); toast('Feria eliminada.'); }
+function openFairMenu(anchor,id){ closeMenu(); const m=document.createElement('div'); m.className='menu'; m.setAttribute('role','menu'); m.innerHTML=`<button data-a="edit">✎ Editar feria</button><button class="dg" data-a="del">✕ Eliminar feria</button>`; document.body.appendChild(m); const r=anchor.getBoundingClientRect(); m.style.top=(r.bottom+6)+'px'; m.style.left=Math.max(8,Math.min(r.left,window.innerWidth-180))+'px'; menuEl=m; m.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{ const act=btn.dataset.a; closeMenu(); if(act==='edit') openFairModal(true,id); else deleteFair(id); }); m.querySelector('button').focus(); }
 function renderSidebar(){
   const list=$('gameList'); list.innerHTML='';
   state.games.forEach(g=>{ const pend=(g.changes||[]).filter(c=>c.state==='porprobar').length;
@@ -584,7 +803,7 @@ function renderSidebar(){
 function renderBoard(){
   const g=currentGame(); const tabs=$('tabs'), wrap=$('wrap');
   if(!g){ $('title').textContent='Sin juegos'; $('gameMenuBtn').style.display='none'; tabs.innerHTML=''; wrap.innerHTML=`<div class="empty"><p>Añade un juego para empezar.</p></div>`; return; }
-  $('title').textContent=g.name; $('gameMenuBtn').style.display='inline-block';
+  $('title').textContent=g.name; $('gameMenuBtn').style.display='inline-block'; { const bh=$('backHome'); if(bh) bh.textContent='← Diseño'; }
   tabs.innerHTML='';
   [['inicio','Inicio'],['reglas','Reglas'],['proto','Proto']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(currentTab===k?' on':''); b.textContent=l; b.onclick=()=>{ currentTab=k; if(k==='reglas'){ rbView='draft'; rbVersionId=null; } closePanel(); renderBoard(); }; tabs.appendChild(b); });
   wrap.innerHTML=''; wrap.className='wrap'+(currentTab==='proto'?' wide':'');
@@ -792,7 +1011,7 @@ function printVersion(g,v){ const a=$('printArea'); a.innerHTML=versionDocHtml(g
 function openGameModal(edit=false,id=null){ lastFocused=document.activeElement; editingGameId=edit?id:null; if(edit){ const g=state.games.find(x=>x.id===id); $('gmTitle').textContent='Renombrar juego'; $('gmHint').textContent='Cambia el nombre.'; $('gmSave').textContent='Guardar'; $('gmName').value=g?g.name:''; } else { $('gmTitle').textContent='Añadir juego'; $('gmHint').textContent='Se crea vacío.'; $('gmSave').textContent='Crear'; $('gmName').value=''; } $('gameModal').style.display='flex'; $('gmName').focus(); }
 async function saveGame(){ const name=$('gmName').value.trim(); if(!name){ $('gmName').focus(); return; } if(editingGameId){ const g=state.games.find(x=>x.id===editingGameId); if(g) g.name=name; toast('Juego renombrado.'); } else { const ng={ id:uid(), name, color:SPINE_COLORS[state.games.length%SPINE_COLORS.length], rulebook:makeRulebook(), rulebookVersions:[], changes:[], pendingChanges:[], currentSummary:'', migrated:true, flattened:true }; state.games.push(ng); state.currentGameId=ng.id; currentTab='inicio'; appView='game'; toast('Juego creado.'); } await saveState(); closeGameModal(); render(); }
 function closeGameModal(){ $('gameModal').style.display='none'; editingGameId=null; restoreFocus(); }
-async function deleteGame(id){ const g=state.games.find(x=>x.id===id); if(!g) return; const ok=await confirmDialog(`¿Eliminar el juego "${g.name}" con todo su contenido?`); if(!ok) return; state.games=state.games.filter(x=>x.id!==id); if(state.currentGameId===id){ state.currentGameId=null; } appView='home'; currentTab='inicio'; await saveState(); closePanel(); render(); toast('Juego eliminado.'); }
+async function deleteGame(id){ const g=state.games.find(x=>x.id===id); if(!g) return; const ok=await confirmDialog(`¿Eliminar el juego "${g.name}" con todo su contenido?`); if(!ok) return; state.games=state.games.filter(x=>x.id!==id); if(state.currentGameId===id){ state.currentGameId=null; } appView='design'; currentTab='inicio'; await saveState(); closePanel(); render(); toast('Juego eliminado.'); }
 
 /* context menu */
 let menuEl=null; function closeMenu(){ if(menuEl){ menuEl.remove(); menuEl=null; } }
@@ -810,8 +1029,10 @@ if(typeof KAIZEN_LOGO==='string' && KAIZEN_LOGO){ ['homeLogo','sideLogo','topLog
 $('addGameBtn').onclick=()=>openGameModal(false);
 $('addGameMobile').onclick=()=>openGameModal(false);
 $('gmCancel').onclick=closeGameModal; $('gmSave').onclick=saveGame;
+$('frCancel').onclick=closeFairModal; $('frSave').onclick=saveFair;
+$('frName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveFair(); } });
 $('gameMenuBtn').onclick=(e)=>{ const g=currentGame(); if(g) openGameMenu(e.currentTarget,g.id); };
-$('backHome').onclick=goHome;
+$('backHome').onclick=goBack;
 { const brand=$('brand'); if(brand){ brand.style.cursor='pointer'; brand.onclick=goHome; } }
 $('panelClose').onclick=closePanel;
 $('cmCancel').onclick=closeChangeModal; $('cmSave').onclick=saveChange;
@@ -845,9 +1066,9 @@ setAuthMode('login');
 document.addEventListener('click',e=>{ if(menuEl&&!menuEl.contains(e.target)&&!e.target.closest('.mn')&&e.target.id!=='gameMenuBtn') closeMenu(); },true);
 window.addEventListener('scroll',closeMenu,true);
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(menuEl){ closeMenu(); return; }
-  for(const id of ['cfModal','chgModal','implModal','svModal','secModal','gameModal']){ if($(id).style.display==='flex'){ if(id==='cfModal') resolveConfirm(false); else { $(id).style.display='none'; if(id==='secModal') secRef=null; } restoreFocus(); return; } }
+  for(const id of ['cfModal','chgModal','implModal','svModal','secModal','frModal','gameModal']){ if($(id).style.display==='flex'){ if(id==='cfModal') resolveConfirm(false); else { $(id).style.display='none'; if(id==='secModal') secRef=null; } restoreFocus(); return; } }
   if($('panel').classList.contains('open')){ closePanel(); return; } } });
-[['chgModal',closeChangeModal],['implModal',closeImplModal],['svModal',closeSaveModal],['secModal',closeSectionModal],['gameModal',closeGameModal],['cfModal',()=>resolveConfirm(false)]].forEach(([id,fn])=>{ $(id).addEventListener('mousedown',e=>{ if(e.target.id===id) fn(); }); });
+[['chgModal',closeChangeModal],['implModal',closeImplModal],['svModal',closeSaveModal],['secModal',closeSectionModal],['frModal',closeFairModal],['gameModal',closeGameModal],['cfModal',()=>resolveConfirm(false)]].forEach(([id,fn])=>{ $(id).addEventListener('mousedown',e=>{ if(e.target.id===id) fn(); }); });
 
 async function bootApp(){ await loadState(); if(normalizeStructures()) await saveState(); render(); updateBackend(); updateSavedIndicator(); }
 (async function init(){ await Store.init(); if(Store.ready()){ bootApp(); } else { updateBackend(); showAuthGate(); } })();
