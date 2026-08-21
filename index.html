@@ -916,6 +916,7 @@ async function saveImpl(){ const {g,c}=implRef||{}; if(!c) return; const key=$('
 function closeImplModal(){ $('implModal').style.display='none'; implRef=null; restoreFocus(); }
 
 /* ---------- Proto (prototipo jugable) ---------- */
+function downloadProto(g){ if(!g.proto||!g.proto.html) return; const blob=new Blob([g.proto.html],{type:'text/html'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=(g.proto.name&&/\.html?$/i.test(g.proto.name))?g.proto.name:((g.name||'proto').replace(/[^\w\-]+/g,'_')+'-proto.html'); document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); toast('HTML del prototipo descargado.'); }
 function openProtoNewTab(g){ if(!g.proto||!g.proto.html) return; const blob=new Blob([g.proto.html],{type:'text/html'}); const url=URL.createObjectURL(blob); window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),60000); }
 function autoSizeFrame(f){ try{ const d=f.contentDocument||(f.contentWindow&&f.contentWindow.document); if(!d||!d.body) return; const h=Math.max(d.body.scrollHeight||0, d.documentElement?d.documentElement.scrollHeight:0); if(h>80) f.style.height=Math.min(h+24,7000)+'px'; }catch(e){} }
 function renderProto(g, host){
@@ -932,6 +933,7 @@ function renderProto(g, host){
   const sp=document.createElement('span'); sp.style.flex='1'; tools.appendChild(sp);
   const openBtn=document.createElement('button'); openBtn.className='btn'; openBtn.textContent='⤢ Pantalla completa'; openBtn.onclick=()=>openProtoNewTab(g); tools.appendChild(openBtn);
   const mob=document.createElement('button'); mob.className='btn-q'; mob.textContent=protoMobile?'Vista completa':'Vista móvil'; mob.onclick=()=>{ protoMobile=!protoMobile; renderBoard(); }; tools.appendChild(mob);
+  const dl=document.createElement('button'); dl.className='btn-q'; dl.textContent='⤓ Descargar'; dl.title='Descargar el HTML actual (copia de respaldo)'; dl.onclick=()=>downloadProto(g); tools.appendChild(dl);
   const rep=document.createElement('button'); rep.className='btn-q'; rep.textContent='Reemplazar'; rep.onclick=()=>$('protoFile').click(); tools.appendChild(rep);
   const del=document.createElement('button'); del.className='btn-danger'; del.textContent='Quitar'; del.onclick=async()=>{ const ok=await confirmDialog('¿Quitar el prototipo de este juego?'); if(!ok) return; delete g.proto; await saveState(); renderBoard(); toast('Prototipo quitado.'); }; tools.appendChild(del);
   host.appendChild(tools);
