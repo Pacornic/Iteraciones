@@ -691,7 +691,8 @@ function currentFair(){ return (state.fairs||[]).find(f=>f.id===currentFairId); 
 function currentFairById(id){ return (state.fairs||[]).find(f=>f.id===id); }
 function gameNameById(id){ const g=state.games.find(x=>x.id===id); return g?g.name:null; }
 function fmtAppt(v){ if(!v) return ''; const dateOnly=/^\d{4}-\d{2}-\d{2}$/.test(v); const d=new Date(dateOnly?v+'T00:00':v); if(isNaN(d.getTime())) return v; const opt=dateOnly?{ weekday:'short', day:'numeric', month:'short' }:{ weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }; let s=d.toLocaleString('es-ES',opt); return s.charAt(0).toUpperCase()+s.slice(1); }
-function timeOptions(){ let o='<option value="">—:—</option>'; for(let h=0;h<24;h++){ for(let m=0;m<60;m+=5){ const v=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'); o+=`<option value="${v}">${v}</option>`; } } return o; }
+function hourOptions(){ let o='<option value="">--</option>'; for(let h=0;h<24;h++){ const v=String(h).padStart(2,'0'); o+=`<option value="${v}">${v}</option>`; } return o; }
+function minOptions(){ let o='<option value="">--</option>'; for(let m=0;m<60;m+=5){ const v=String(m).padStart(2,'0'); o+=`<option value="${v}">${v}</option>`; } return o; }
 function byWhen(x,y){ const a=x.when||'', b=y.when||''; if(!a&&!b) return 0; if(!a) return 1; if(!b) return -1; return a<b?-1:a>b?1:0; }
 function colorFor(str){ let h=0; str=str||'?'; for(let i=0;i<str.length;i++){ h=(h*31+str.charCodeAt(i))>>>0; } return SPINE_COLORS[h%SPINE_COLORS.length]; }
 function hexToRgba(hex,a){ if(!hex) return 'rgba(102,182,223,'+a+')'; let h=String(hex).replace('#',''); if(h.length===3) h=h.split('').map(c=>c+c).join(''); const n=parseInt(h,16); if(isNaN(n)) return 'rgba(102,182,223,'+a+')'; const r=(n>>16)&255,g=(n>>8)&255,b=n&255; return 'rgba('+r+','+g+','+b+','+a+')'; }
@@ -776,7 +777,7 @@ function openApptDetail(f, a, isNew){
     </div>`).join('');
   b.innerHTML=`<input class="cd-title" id="apEd" placeholder="Nombre de la editorial">
     <div class="cd-meta">Cita de feria · ${escapeHtml(f.name)}</div>
-    <div class="field"><label>Fecha y hora</label><div style="display:flex;gap:8px;"><input class="ap-in" id="apDate" type="date" style="flex:1;"><select class="ap-in" id="apTime" style="width:112px;flex:none;">${timeOptions()}</select></div></div>
+    <div class="field"><label>Fecha y hora</label><div style="display:flex;gap:8px;align-items:center;"><input class="ap-in" id="apDate" type="date" style="flex:1;"><select class="ap-in" id="apHour" style="width:72px;flex:none;">${hourOptions()}</select><span style="color:var(--faint);">:</span><select class="ap-in" id="apMin" style="width:72px;flex:none;">${minOptions()}</select></div></div>
     <div class="field"><label>Lugar / stand</label><input class="ap-in" id="apPlace" placeholder="p. ej. Hall 3 · C12"></div>
     <div class="field"><label>Persona de contacto</label><input class="ap-in" id="apContact" placeholder="Nombre / email"></div>
     <div class="field"><label>Juegos que le enseño</label>${gamesHtml||'<div style="font-size:12.5px;color:var(--faint);margin:2px 0 6px;">— aún ninguno —</div>'}</div>
@@ -787,8 +788,8 @@ function openApptDetail(f, a, isNew){
     </div>`;
   p.classList.add('open');
   $('apEd').value=a.editorial||''; $('apPlace').value=a.place||''; $('apContact').value=a.contact||'';
-  { let dpart='', tpart=''; const mm=String(a.when||'').match(/^(\d{4}-\d{2}-\d{2})(?:T(\d{2}:\d{2}))?/); if(mm){ dpart=mm[1]; tpart=mm[2]||''; } $('apDate').value=dpart; const ts=$('apTime'); if(tpart && !Array.from(ts.options).some(o=>o.value===tpart)){ const o=document.createElement('option'); o.value=tpart; o.textContent=tpart; ts.appendChild(o); } ts.value=tpart; }
-  const commit=()=>{ a.editorial=$('apEd').value.trim(); const d=$('apDate').value, t=$('apTime').value; a.when = d ? (t? d+'T'+t : d) : ''; a.place=$('apPlace').value.trim(); a.contact=$('apContact').value.trim(); b.querySelectorAll('.ag-fb').forEach(t=>{ const i=+t.dataset.i; if(a.games[i]) a.games[i].feedback=t.value.replace(/\s+$/,''); }); };
+  { let dp='',hh='',mn=''; const m=String(a.when||'').match(/^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2}))?/); if(m){ dp=m[1]; hh=m[2]||''; mn=m[3]||''; } $('apDate').value=dp; $('apHour').value=hh; const ms=$('apMin'); if(mn && !Array.from(ms.options).some(o=>o.value===mn)){ const o=document.createElement('option'); o.value=mn; o.textContent=mn; ms.appendChild(o); } ms.value=mn; }
+  const commit=()=>{ a.editorial=$('apEd').value.trim(); const d=$('apDate').value, hh=$('apHour').value, mn=$('apMin').value; const t=(hh!==''||mn!=='')?((hh||'00')+':'+(mn||'00')):''; a.when = d ? (t? d+'T'+t : d) : ''; a.place=$('apPlace').value.trim(); a.contact=$('apContact').value.trim(); b.querySelectorAll('.ag-fb').forEach(x=>{ const i=+x.dataset.i; if(a.games[i]) a.games[i].feedback=x.value.replace(/\s+$/,''); }); };
   b.querySelectorAll('.fst').forEach(btn=>btn.onclick=()=>{ commit(); const i=+btn.dataset.i; if(a.games[i]) a.games[i].estado=btn.dataset.e; saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
   b.querySelectorAll('.ag-rm').forEach(btn=>btn.onclick=()=>{ commit(); const i=+btn.dataset.i; a.games.splice(i,1); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
   { const sel=$('apAddG'); if(sel) sel.onchange=()=>{ const id=sel.value; if(!id) return; commit(); a.games.push({ gameId:id, gameName:gameNameById(id), estado:'pendiente', feedback:'' }); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); }; }
