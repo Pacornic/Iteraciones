@@ -683,14 +683,18 @@ function renderFeriasPortada(){
   const host=$('portada'); host.innerHTML='';
   const inner=document.createElement('div'); inner.className='pt-inner';
   ptBack(inner,'← Inicio',goHome);
+  const all=state.fairs||[]; const upcoming=all.filter(f=>!f.past), past=all.filter(f=>f.past);
   const row=document.createElement('div'); row.className='pt-secrow';
-  const sec=document.createElement('span'); sec.className='pt-sec'; sec.textContent=(state.fairs&&state.fairs.length)?('Ferias · '+state.fairs.length):'Ferias'; row.appendChild(sec);
+  const sec=document.createElement('span'); sec.className='pt-sec'; sec.textContent='Próximas ferias · '+upcoming.length; row.appendChild(sec);
   const add=document.createElement('button'); add.className='btn'; add.textContent='＋ Nueva feria'; add.onclick=()=>openFairModal(false); row.appendChild(add);
   inner.appendChild(row);
   const grid=document.createElement('div'); grid.className='pt-grid';
-  (state.fairs||[]).forEach(f=>grid.appendChild(fairCard(f)));
-  const nw=document.createElement('button'); nw.className='pt-new'; nw.textContent=(state.fairs&&state.fairs.length)?'＋ Nueva feria':'＋ Añade tu primera feria'; nw.onclick=()=>openFairModal(false); grid.appendChild(nw);
+  upcoming.forEach(f=>grid.appendChild(fairCard(f)));
+  const nw=document.createElement('button'); nw.className='pt-new'; nw.textContent=all.length?'＋ Nueva feria':'＋ Añade tu primera feria'; nw.onclick=()=>openFairModal(false); grid.appendChild(nw);
   inner.appendChild(grid);
+  if(past.length){ const hr=document.createElement('hr'); hr.className='pt-sep'; inner.appendChild(hr);
+    const prow=document.createElement('div'); prow.className='pt-secrow'; const psec=document.createElement('span'); psec.className='pt-sec'; psec.textContent='Ferias pasadas · '+past.length; prow.appendChild(psec); inner.appendChild(prow);
+    const pgrid=document.createElement('div'); pgrid.className='pt-grid'; past.forEach(f=>pgrid.appendChild(fairCard(f))); inner.appendChild(pgrid); }
   host.appendChild(inner);
 }
 
@@ -709,9 +713,9 @@ function fairStats(f){ const appts=(f.appointments||[]); const games=new Set(); 
 function openFair(id){ currentFairId=id; fairSub='juego'; appView='fair'; closePanel(); saveState(); render(); }
 function fairCard(f){
   const s=fairStats(f);
-  const card=document.createElement('div'); card.className='pt-card'; card.setAttribute('role','button'); card.setAttribute('tabindex','0');
+  const card=document.createElement('div'); card.className='pt-card'+(f.past?' paused':''); card.setAttribute('role','button'); card.setAttribute('tabindex','0');
   card.style.setProperty('--spine', '#66b6df');
-  card.innerHTML=`<div class="pt-card-top"><span class="pt-ver" style="color:#66b6df;background:rgba(102,182,223,0.14)">Feria</span>${s.proto?`<span class="pt-badge">★ ${s.proto} quiere proto</span>`:''}<button class="pt-mn mn" aria-label="Opciones de ${escapeHtml(f.name)}">⋯</button></div>
+  card.innerHTML=`<div class="pt-card-top"><span class="pt-ver" style="color:#66b6df;background:rgba(102,182,223,0.14)">Feria</span>${f.past?'<span class="pt-badge pause">✓ pasada</span>':''}${s.proto?`<span class="pt-badge">★ ${s.proto} quiere proto</span>`:''}<button class="pt-mn mn" aria-label="Opciones de ${escapeHtml(f.name)}">⋯</button></div>
     <h3 class="pt-name">${escapeHtml(f.name)}</h3>
     <div class="pt-stats"><span>${s.appts} cita(s)</span><span class="dot2">·</span><span>${s.games} juego(s)</span></div>
     <div class="pt-foot">${f.dates?escapeHtml(f.dates):'Sin fechas'}${f.place?' · '+escapeHtml(f.place):''}</div>`;
@@ -812,7 +816,8 @@ function openFairModal(edit,id){ lastFocused=document.activeElement; editingFair
 async function saveFair(){ const name=$('frName').value.trim(); if(!name){ $('frName').focus(); return; } const start=$('frStart').value, end=$('frEnd').value, place=$('frPlace').value.trim(); const dates=fmtRange(start,end); if(editingFairId){ const f=currentFairById(editingFairId); if(f){ f.name=name; f.start=start; f.end=end; f.dates=dates; f.place=place; } toast('Feria actualizada.'); } else { const nf={ id:uid(), name, start, end, dates, place, appointments:[] }; state.fairs=state.fairs||[]; state.fairs.push(nf); currentFairId=nf.id; fairSub='juego'; appView='fair'; toast('Feria creada.'); } await saveState(); closeFairModal(); render(); }
 function closeFairModal(){ $('frModal').style.display='none'; editingFairId=null; restoreFocus(); }
 async function deleteFair(id){ const f=currentFairById(id); if(!f) return; const ok=await confirmDialog(`¿Eliminar la feria "${f.name}" con todas sus citas?`); if(!ok) return; state.fairs=state.fairs.filter(x=>x.id!==id); if(currentFairId===id){ currentFairId=null; } appView='ferias'; await saveState(); closePanel(); render(); toast('Feria eliminada.'); }
-function openFairMenu(anchor,id){ closeMenu(); const m=document.createElement('div'); m.className='menu'; m.setAttribute('role','menu'); m.innerHTML=`<button data-a="edit">✎ Editar feria</button><button class="dg" data-a="del">✕ Eliminar feria</button>`; document.body.appendChild(m); const r=anchor.getBoundingClientRect(); m.style.top=(r.bottom+6)+'px'; m.style.left=Math.max(8,Math.min(r.left,window.innerWidth-180))+'px'; menuEl=m; m.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{ const act=btn.dataset.a; closeMenu(); if(act==='edit') openFairModal(true,id); else deleteFair(id); }); m.querySelector('button').focus(); }
+function openFairMenu(anchor,id){ closeMenu(); const f=currentFairById(id); const m=document.createElement('div'); m.className='menu'; m.setAttribute('role','menu'); m.innerHTML=`<button data-a="edit">✎ Editar feria</button><button data-a="past">${f&&f.past?'↩ Marcar como próxima':'✓ Marcar como pasada'}</button><button class="dg" data-a="del">✕ Eliminar feria</button>`; document.body.appendChild(m); const r=anchor.getBoundingClientRect(); m.style.top=(r.bottom+6)+'px'; m.style.left=Math.max(8,Math.min(r.left,window.innerWidth-180))+'px'; menuEl=m; m.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{ const act=btn.dataset.a; closeMenu(); if(act==='edit') openFairModal(true,id); else if(act==='past') toggleFairPast(id); else deleteFair(id); }); m.querySelector('button').focus(); }
+function toggleFairPast(id){ const f=currentFairById(id); if(!f) return; f.past=!f.past; saveState(); render(); toast(f.past?'Feria marcada como pasada.':'Feria marcada como próxima.'); }
 function renderSidebar(){
   const list=$('gameList'); list.innerHTML='';
   state.games.forEach(g=>{ const pend=(g.changes||[]).filter(c=>c.state==='porprobar').length;
