@@ -101,6 +101,8 @@
   .pt-card.paused{ opacity:.62; }
   .pt-card.paused:hover{ opacity:.85; }
   .pt-badge.pause{ color:var(--faint); }
+  .pt-card.draft{ border-style:dashed; }
+  .pt-badge.draft{ color:var(--violet); }
   .pt-sep{ border:none; border-top:1px solid var(--line); margin:34px 0 0; }
 
   /* ---- Ferias ---- */
@@ -507,7 +509,7 @@ let currentTab = 'inicio';                 // inicio | reglas | proto
 let rbView = 'draft';                      // draft | versions | doc
 let rbVersionId = null;
 let protoMobile = false;
-let editingChangeId = null; let implRef = null; let editingGameId = null;
+let editingChangeId = null; let implRef = null; let editingGameId = null; let pendingGameStage = 'active';
 let lastFocused = null;
 
 function uid(){ return Math.random().toString(36).slice(2,10)+Date.now().toString(36); }
@@ -573,6 +575,7 @@ function normalizeStructures(){
   let ch=false;
   if(!Array.isArray(state.fairs)){ state.fairs=[]; ch=true; }
   state.games.forEach(g=>{
+    if(!g.stage){ g.stage=g.paused?'paused':'active'; if('paused' in g) delete g.paused; ch=true; }
     if(!g.rulebook||!Array.isArray(g.rulebook.sections)){ g.rulebook=makeRulebook(); ch=true; }
     else { const have=new Set(g.rulebook.sections.map(s=>s.key)); RB_SECTIONS.forEach(([k,t],i)=>{ if(!have.has(k)){ g.rulebook.sections.splice(i,0,{key:k,title:t,content:''}); ch=true; } });
       const before=g.rulebook.sections.length; g.rulebook.sections=g.rulebook.sections.filter(s=>RB_TITLE[s.key]); if(g.rulebook.sections.length!==before) ch=true;
@@ -623,12 +626,14 @@ function gameCard(g){
   const lv=lastVersion(g);
   const pend=(g.changes||[]).filter(c=>c.state==='porprobar'||c.state==='aparcada').length;
   const done=(g.changes||[]).filter(c=>c.state==='funciona').length;
-  const card=document.createElement('div'); card.className='pt-card'+(g.paused?' paused':''); card.setAttribute('role','button'); card.setAttribute('tabindex','0');
+  const st=g.stage||'active';
+  const card=document.createElement('div'); card.className='pt-card'+(st==='paused'?' paused':'')+(st==='draft'?' draft':''); card.setAttribute('role','button'); card.setAttribute('tabindex','0');
   card.style.setProperty('--spine', g.color||'var(--amber)');
   const proto = (g.proto&&g.proto.html) ? '<span class="pt-badge">▶ proto</span>' : '';
   const ver = lv ? ('v'+lv.n) : 'Sin versión';
   const lt=latestTouch(g);
-  card.innerHTML=`<div class="pt-card-top"><span class="pt-ver">${ver}</span>${g.paused?'<span class="pt-badge pause">⏸ en pausa</span>':''}${proto}<button class="pt-mn mn" aria-label="Opciones de ${escapeHtml(g.name)}">⋯</button></div>
+  const stBadge = st==='paused'?'<span class="pt-badge pause">⏸ en pausa</span>':(st==='draft'?'<span class="pt-badge draft">✎ borrador</span>':'');
+  card.innerHTML=`<div class="pt-card-top"><span class="pt-ver">${ver}</span>${stBadge}${proto}<button class="pt-mn mn" aria-label="Opciones de ${escapeHtml(g.name)}">⋯</button></div>
     <h3 class="pt-name">${escapeHtml(g.name)}</h3>
     <div class="pt-stats"><span>${pend} en curso</span><span class="dot2">·</span><span>${done} resueltas</span></div>
     <div class="pt-foot">${lt?('Última edición '+fmtWhen(lt)):'Sin actividad todavía'}</div>`;
@@ -665,7 +670,8 @@ function renderDesignPortada(){
   const host=$('portada'); host.innerHTML='';
   const inner=document.createElement('div'); inner.className='pt-inner';
   ptBack(inner,'← Inicio',goHome);
-  const active=state.games.filter(g=>!g.paused), paused=state.games.filter(g=>g.paused);
+  const stg=g=>g.stage||'active';
+  const active=state.games.filter(g=>stg(g)==='active'), drafts=state.games.filter(g=>stg(g)==='draft'), paused=state.games.filter(g=>stg(g)==='paused');
   const row=document.createElement('div'); row.className='pt-secrow';
   const sec=document.createElement('span'); sec.className='pt-sec'; sec.textContent='Diseño · '+active.length+' activo(s)'; row.appendChild(sec);
   const add=document.createElement('button'); add.className='btn'; add.textContent='＋ Nuevo juego'; add.onclick=()=>openGameModal(false); row.appendChild(add);
@@ -674,6 +680,14 @@ function renderDesignPortada(){
   active.forEach(g=>grid.appendChild(gameCard(g)));
   const nw=document.createElement('button'); nw.className='pt-new'; nw.textContent=state.games.length?'＋ Nuevo juego':'＋ Crea tu primer juego'; nw.onclick=()=>openGameModal(false); grid.appendChild(nw);
   inner.appendChild(grid);
+
+  { const hr=document.createElement('hr'); hr.className='pt-sep'; inner.appendChild(hr);
+    const drow=document.createElement('div'); drow.className='pt-secrow'; const dsec=document.createElement('span'); dsec.className='pt-sec'; dsec.textContent='Draft · '+drafts.length; drow.appendChild(dsec);
+    const dadd=document.createElement('button'); dadd.className='btn-q'; dadd.textContent='＋ Idea en bruto'; dadd.onclick=()=>openGameModal(false,null,'draft'); drow.appendChild(dadd); inner.appendChild(drow);
+    const dgrid=document.createElement('div'); dgrid.className='pt-grid'; drafts.forEach(g=>dgrid.appendChild(gameCard(g)));
+    if(!drafts.length){ const e=document.createElement('div'); e.className='pt-new'; e.style.cursor='default'; e.style.color='var(--faint)'; e.textContent='Ideas en bruto, sin definir aún'; dgrid.appendChild(e); }
+    inner.appendChild(dgrid); }
+
   if(paused.length){ const hr=document.createElement('hr'); hr.className='pt-sep'; inner.appendChild(hr);
     const prow=document.createElement('div'); prow.className='pt-secrow'; const psec=document.createElement('span'); psec.className='pt-sec'; psec.textContent='En pausa · '+paused.length; prow.appendChild(psec); inner.appendChild(prow);
     const pgrid=document.createElement('div'); pgrid.className='pt-grid'; paused.forEach(g=>pgrid.appendChild(gameCard(g))); inner.appendChild(pgrid); }
@@ -1038,15 +1052,15 @@ async function deleteVersion(g,v){ const ok=await confirmDialog(`¿Eliminar la v
 function printVersion(g,v){ const a=$('printArea'); a.innerHTML=versionDocHtml(g,v); const prevTitle=document.title; document.title=`Kaizen - ${g.name} - v${v.n}`; const cl=()=>{ a.innerHTML=''; document.title=prevTitle; window.removeEventListener('afterprint',cl); }; window.addEventListener('afterprint',cl); window.print(); }
 
 /* ---------- Game create/rename/delete ---------- */
-function openGameModal(edit=false,id=null){ lastFocused=document.activeElement; editingGameId=edit?id:null; if(edit){ const g=state.games.find(x=>x.id===id); $('gmTitle').textContent='Renombrar juego'; $('gmHint').textContent='Cambia el nombre.'; $('gmSave').textContent='Guardar'; $('gmName').value=g?g.name:''; } else { $('gmTitle').textContent='Añadir juego'; $('gmHint').textContent='Se crea vacío.'; $('gmSave').textContent='Crear'; $('gmName').value=''; } $('gameModal').style.display='flex'; $('gmName').focus(); }
-async function saveGame(){ const name=$('gmName').value.trim(); if(!name){ $('gmName').focus(); return; } if(editingGameId){ const g=state.games.find(x=>x.id===editingGameId); if(g) g.name=name; toast('Juego renombrado.'); } else { const ng={ id:uid(), name, color:SPINE_COLORS[state.games.length%SPINE_COLORS.length], rulebook:makeRulebook(), rulebookVersions:[], changes:[], pendingChanges:[], currentSummary:'', migrated:true, flattened:true }; state.games.push(ng); state.currentGameId=ng.id; currentTab='inicio'; appView='game'; toast('Juego creado.'); } await saveState(); closeGameModal(); render(); }
+function openGameModal(edit=false,id=null,stage){ lastFocused=document.activeElement; editingGameId=edit?id:null; pendingGameStage = edit ? pendingGameStage : (stage||'active'); if(edit){ const g=state.games.find(x=>x.id===id); $('gmTitle').textContent='Renombrar juego'; $('gmHint').textContent='Cambia el nombre.'; $('gmSave').textContent='Guardar'; $('gmName').value=g?g.name:''; } else if(pendingGameStage==='draft'){ $('gmTitle').textContent='Nueva idea (Draft)'; $('gmHint').textContent='Una idea en bruto, sin definir todavía.'; $('gmSave').textContent='Crear'; $('gmName').value=''; } else { $('gmTitle').textContent='Añadir juego'; $('gmHint').textContent='Se crea vacío.'; $('gmSave').textContent='Crear'; $('gmName').value=''; } $('gameModal').style.display='flex'; $('gmName').focus(); }
+async function saveGame(){ const name=$('gmName').value.trim(); if(!name){ $('gmName').focus(); return; } if(editingGameId){ const g=state.games.find(x=>x.id===editingGameId); if(g) g.name=name; toast('Juego renombrado.'); } else { const stage=pendingGameStage||'active'; const ng={ id:uid(), name, color:SPINE_COLORS[state.games.length%SPINE_COLORS.length], stage, rulebook:makeRulebook(), rulebookVersions:[], changes:[], pendingChanges:[], currentSummary:'', migrated:true, flattened:true }; state.games.push(ng); state.currentGameId=ng.id; currentTab='inicio'; appView = (stage==='draft') ? 'design' : 'game'; pendingGameStage='active'; toast(stage==='draft'?'Idea añadida a Draft.':'Juego creado.'); } await saveState(); closeGameModal(); render(); }
 function closeGameModal(){ $('gameModal').style.display='none'; editingGameId=null; restoreFocus(); }
 async function deleteGame(id){ const g=state.games.find(x=>x.id===id); if(!g) return; const ok=await confirmDialog(`¿Eliminar el juego "${g.name}" con todo su contenido?`); if(!ok) return; state.games=state.games.filter(x=>x.id!==id); if(state.currentGameId===id){ state.currentGameId=null; } appView='design'; currentTab='inicio'; await saveState(); closePanel(); render(); toast('Juego eliminado.'); }
 
 /* context menu */
 let menuEl=null; function closeMenu(){ if(menuEl){ menuEl.remove(); menuEl=null; } }
-function openGameMenu(anchor,id){ closeMenu(); const g=state.games.find(x=>x.id===id); const m=document.createElement('div'); m.className='menu'; m.setAttribute('role','menu'); m.innerHTML=`<button data-a="rename">✎ Renombrar</button><button data-a="pause">${g&&g.paused?'▶ Reactivar':'⏸ Poner en pausa'}</button><button class="dg" data-a="del">✕ Eliminar juego</button>`; document.body.appendChild(m); const r=anchor.getBoundingClientRect(); m.style.top=(r.bottom+6)+'px'; m.style.left=Math.max(8,Math.min(r.left,window.innerWidth-180))+'px'; menuEl=m; m.querySelectorAll('button').forEach(b=>b.onclick=()=>{ const a=b.dataset.a; closeMenu(); if(a==='rename') openGameModal(true,id); else if(a==='pause') toggleGamePause(id); else deleteGame(id); }); m.querySelector('button').focus(); }
-function toggleGamePause(id){ const g=state.games.find(x=>x.id===id); if(!g) return; g.paused=!g.paused; saveState(); render(); toast(g.paused?'Juego puesto en pausa.':'Juego reactivado.'); }
+function openGameMenu(anchor,id){ closeMenu(); const g=state.games.find(x=>x.id===id); const st=(g&&g.stage)||'active'; let items=`<button data-a="rename">✎ Renombrar</button>`; if(st!=='active') items+=`<button data-s="active">▲ Marcar como activo</button>`; if(st!=='draft') items+=`<button data-s="draft">✎ Mover a Draft</button>`; if(st!=='paused') items+=`<button data-s="paused">⏸ Poner en pausa</button>`; items+=`<button class="dg" data-a="del">✕ Eliminar juego</button>`; const m=document.createElement('div'); m.className='menu'; m.setAttribute('role','menu'); m.innerHTML=items; document.body.appendChild(m); const r=anchor.getBoundingClientRect(); m.style.top=(r.bottom+6)+'px'; m.style.left=Math.max(8,Math.min(r.left,window.innerWidth-190))+'px'; menuEl=m; m.querySelectorAll('button').forEach(b=>b.onclick=()=>{ const a=b.dataset.a, s=b.dataset.s; closeMenu(); if(s) setGameStage(id,s); else if(a==='rename') openGameModal(true,id); else deleteGame(id); }); m.querySelector('button').focus(); }
+function setGameStage(id,s){ const g=state.games.find(x=>x.id===id); if(!g) return; g.stage=s; if('paused' in g) delete g.paused; saveState(); render(); toast(s==='paused'?'Juego en pausa.':s==='draft'?'Movido a Draft.':'Juego marcado como activo.'); }
 
 /* confirm / toast / focus */
 let confirmResolver=null;
