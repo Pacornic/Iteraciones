@@ -405,10 +405,10 @@
 <div class="ov" id="setModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="setTitle">
   <div class="modal">
     <h3 id="setTitle">Ajustes</h3>
-    <div class="field"><label>Nombre</label><div class="set-val" id="setName">—</div></div>
+    <div class="field"><label for="setName">Nombre</label><input type="text" id="setName" class="ap-in" placeholder="Tu nombre" autocomplete="name"></div>
+    <div style="margin:-2px 0 14px;"><button class="btn-q" id="setNameSave">Guardar nombre</button></div>
     <div class="field"><label>Email</label><div class="set-val" id="setEmail">—</div></div>
-    <div class="field"><label>Cuenta</label><div class="set-val" id="setBackend">—</div></div>
-    <div style="border-top:1px solid var(--line);margin:6px 0 12px;"></div>
+    <div style="border-top:1px solid var(--line);margin:8px 0 14px;"></div>
     <div class="field"><label for="setPw1">Nueva contraseña</label><input type="password" id="setPw1" class="ap-in" placeholder="Mín. 6 caracteres" autocomplete="new-password"></div>
     <div class="field"><label for="setPw2">Repite la contraseña</label><input type="password" id="setPw2" class="ap-in" placeholder="Repite la nueva contraseña" autocomplete="new-password"></div>
     <div class="set-msg" id="setMsg"></div>
@@ -571,6 +571,7 @@ const Store = {
   async signUpPassword(email,password,meta){ const {data,error}=await this.supa.auth.signUp({email,password,options:{data:meta||{}}}); if(error) throw error; return data; },
   async signInMagic(email){ const {error}=await this.supa.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href.split('#')[0] } }); if(error) throw error; },
   async changePassword(pw){ if(!this.supa || this.backend!=='supabase') throw new Error('El cambio de contraseña solo está disponible con sesión en la nube (Supabase).'); const {error}=await this.supa.auth.updateUser({ password: pw }); if(error) throw error; },
+  async changeName(name){ if(!this.supa || this.backend!=='supabase') throw new Error('Cambiar el nombre requiere sesión en la nube (Supabase).'); const {error}=await this.supa.auth.updateUser({ data:{ nombre:name, full_name:name } }); if(error) throw error; this.name=name; },
   async signOut(){ if(this.supa) await this.supa.auth.signOut(); location.reload(); }
 };
 function showAuthGate(){ $('home').style.display='flex'; $('agEmail').focus(); }
@@ -578,7 +579,8 @@ function hideAuthGate(){ $('home').style.display='none'; }
 function updateBackend(){ $('backend').textContent='· '+Store.label(); $('signOutBtn').style.display = Store.backend==='supabase'?'inline-flex':'none'; updateHello(); }
 function firstName(){ return String(Store.name||'').trim().split(/\s+/)[0]||''; }
 function updateHello(){ const el=$('hello'); if(!el) return; const n=firstName(); el.textContent = n?('Hola, '+n):''; }
-function openSettings(){ lastFocused=document.activeElement; const cloud=Store.backend==='supabase'; $('setName').textContent=Store.name||'—'; $('setEmail').textContent=Store.email||'—'; $('setBackend').textContent=Store.label(); $('setPw1').value=''; $('setPw2').value=''; $('setMsg').textContent = cloud?'':'El cambio de contraseña requiere sesión en la nube (Supabase).'; $('setMsg').style.color='var(--muted)'; $('setPw1').disabled=!cloud; $('setPw2').disabled=!cloud; $('setPwSave').disabled=!cloud; $('setModal').style.display='flex'; }
+function openSettings(){ lastFocused=document.activeElement; const cloud=Store.backend==='supabase'; $('setName').value=Store.name||''; $('setEmail').textContent=Store.email||'—'; $('setPw1').value=''; $('setPw2').value=''; $('setMsg').textContent = cloud?'':'Cambiar nombre o contraseña requiere sesión en la nube (Supabase).'; $('setMsg').style.color='var(--muted)'; $('setName').disabled=!cloud; $('setNameSave').disabled=!cloud; $('setPw1').disabled=!cloud; $('setPw2').disabled=!cloud; $('setPwSave').disabled=!cloud; $('setModal').style.display='flex'; if(cloud) $('setName').focus(); }
+async function doChangeName(){ const name=$('setName').value.trim(); const msg=$('setMsg'); if(!name){ msg.style.color='var(--brick)'; msg.textContent='Escribe un nombre.'; $('setName').focus(); return; } msg.style.color='var(--muted)'; msg.textContent='Guardando…'; try{ await Store.changeName(name); updateHello(); msg.style.color='var(--teal)'; msg.textContent='Nombre actualizado.'; toast('Nombre actualizado.'); }catch(e){ msg.style.color='var(--brick)'; msg.textContent='Error: '+(e.message||e); } }
 function closeSettings(){ $('setModal').style.display='none'; restoreFocus(); }
 async function doChangePassword(){ const p1=$('setPw1').value, p2=$('setPw2').value; const msg=$('setMsg'); if(!p1||p1.length<6){ msg.style.color='var(--brick)'; msg.textContent='La contraseña debe tener al menos 6 caracteres.'; $('setPw1').focus(); return; } if(p1!==p2){ msg.style.color='var(--brick)'; msg.textContent='Las contraseñas no coinciden.'; $('setPw2').focus(); return; } msg.style.color='var(--muted)'; msg.textContent='Actualizando…'; try{ await Store.changePassword(p1); msg.style.color='var(--teal)'; msg.textContent='Contraseña actualizada.'; $('setPw1').value=''; $('setPw2').value=''; toast('Contraseña cambiada.'); }catch(e){ msg.style.color='var(--brick)'; msg.textContent='Error: '+(e.message||e); } }
 
@@ -1117,7 +1119,8 @@ $('scCancel').onclick=closeSectionModal; $('scSave').onclick=saveSectionModal;
 $('cfCancel').onclick=()=>resolveConfirm(false); $('cfOk').onclick=()=>resolveConfirm(true);
 $('exportBtn').onclick=exportData; $('importBtn').onclick=()=>$('importFile').click(); $('importFile').onchange=(e)=>{ const f=e.target.files[0]; if(f) importData(f); e.target.value=''; };
 $('signOutBtn').onclick=()=>Store.signOut();
-$('settingsBtn').onclick=openSettings; $('setClose').onclick=closeSettings; $('setPwSave').onclick=doChangePassword;
+$('settingsBtn').onclick=openSettings; $('setClose').onclick=closeSettings; $('setPwSave').onclick=doChangePassword; $('setNameSave').onclick=doChangeName;
+$('setName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); doChangeName(); } });
 $('setPw2').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); doChangePassword(); } });
 $('protoFile').onchange=async(e)=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return; const g=currentGame(); if(!g) return; const html=await f.text(); if(html.length>2000000){ toast('Archivo muy grande; puede ralentizar el guardado.','warn',5000); } g.proto={ name:f.name, html, updatedAt:Date.now() }; await saveState(); currentTab='proto'; renderBoard(); toast('Prototipo cargado.'); };
 $('cmName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveChange(); } });
