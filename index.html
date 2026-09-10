@@ -27,6 +27,11 @@
   .brand{ font-family:'Fraunces',serif; font-size:18px; font-weight:600; display:flex; align-items:center; gap:9px; }
   .brand .dot{ width:8px;height:8px;border-radius:50%;background:var(--amber); }
   .brand .tag{ font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:400; color:var(--faint); letter-spacing:0.4px; }
+  .brandwrap{ display:flex; flex-direction:column; gap:1px; }
+  .hello{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); margin-left:29px; }
+  .hello:empty{ display:none; }
+  .set-val{ font-size:14px; color:var(--text); padding:2px 0; }
+  .set-msg{ font-size:12.5px; color:var(--muted); min-height:16px; margin-top:2px; }
   .topbar .tools{ display:flex; align-items:center; gap:8px; }
   .ibtn{ width:32px;height:32px; display:inline-flex; align-items:center; justify-content:center; background:none; border:1px solid transparent; border-radius:7px; color:var(--muted); cursor:pointer; font-size:15px; }
   .ibtn:hover{ background:var(--surface-2); color:var(--text); }
@@ -301,7 +306,10 @@
 <body>
 
 <div class="topbar">
-  <div class="brand" id="brand" title="Ir a la portada"><img id="topLogo" class="top-logo" alt="Kaizen"><span class="dot"></span> Kaizen <span class="tag">Iteration Design Manager</span></div>
+  <div class="brandwrap">
+    <div class="brand" id="brand" title="Ir a la portada"><img id="topLogo" class="top-logo" alt="Kaizen"><span class="dot"></span> Kaizen <span class="tag">Iteration Design Manager</span></div>
+    <div class="hello" id="hello"></div>
+  </div>
   <div class="tools">
     <span class="backend" id="savedAt"></span>
     <span class="backend" id="backend"></span>
@@ -309,6 +317,7 @@
     <button class="ibtn" id="importBtn" title="Importar copia (.json)" aria-label="Importar">⤒</button>
     <input type="file" id="importFile" accept="application/json,.json" style="display:none;">
     <button class="ibtn" id="signOutBtn" title="Cerrar sesión" aria-label="Cerrar sesión" style="display:none;">⎋</button>
+    <button class="ibtn" id="settingsBtn" title="Ajustes" aria-label="Ajustes">⚙</button>
     <div class="game-select-mobile"><label class="sr-only" for="mgs">Juego</label><select id="mgs"></select><button class="ibtn" id="addGameMobile" title="Añadir juego" aria-label="Añadir juego">+</button></div>
   </div>
 </div>
@@ -389,6 +398,21 @@
     </div>
     <div class="field"><label for="frPlace">Lugar <span style="text-transform:none;letter-spacing:0;color:var(--faint)">(opcional)</span></label><input type="text" id="frPlace" placeholder="p. ej. Messe Essen"></div>
     <div class="macts"><button class="btn-q" id="frCancel">Cancelar</button><button class="btn" id="frSave">Crear</button></div>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div class="ov" id="setModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+  <div class="modal">
+    <h3 id="setTitle">Ajustes</h3>
+    <div class="field"><label>Nombre</label><div class="set-val" id="setName">—</div></div>
+    <div class="field"><label>Email</label><div class="set-val" id="setEmail">—</div></div>
+    <div class="field"><label>Cuenta</label><div class="set-val" id="setBackend">—</div></div>
+    <div style="border-top:1px solid var(--line);margin:6px 0 12px;"></div>
+    <div class="field"><label for="setPw1">Nueva contraseña</label><input type="password" id="setPw1" class="ap-in" placeholder="Mín. 6 caracteres" autocomplete="new-password"></div>
+    <div class="field"><label for="setPw2">Repite la contraseña</label><input type="password" id="setPw2" class="ap-in" placeholder="Repite la nueva contraseña" autocomplete="new-password"></div>
+    <div class="set-msg" id="setMsg"></div>
+    <div class="macts"><button class="btn-q" id="setClose">Cerrar</button><button class="btn" id="setPwSave">Cambiar contraseña</button></div>
   </div>
 </div>
 
@@ -546,11 +570,17 @@ const Store = {
   async signInPassword(email,password){ const {error}=await this.supa.auth.signInWithPassword({email,password}); if(error) throw error; },
   async signUpPassword(email,password,meta){ const {data,error}=await this.supa.auth.signUp({email,password,options:{data:meta||{}}}); if(error) throw error; return data; },
   async signInMagic(email){ const {error}=await this.supa.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href.split('#')[0] } }); if(error) throw error; },
+  async changePassword(pw){ if(!this.supa || this.backend!=='supabase') throw new Error('El cambio de contraseña solo está disponible con sesión en la nube (Supabase).'); const {error}=await this.supa.auth.updateUser({ password: pw }); if(error) throw error; },
   async signOut(){ if(this.supa) await this.supa.auth.signOut(); location.reload(); }
 };
 function showAuthGate(){ $('home').style.display='flex'; $('agEmail').focus(); }
 function hideAuthGate(){ $('home').style.display='none'; }
-function updateBackend(){ $('backend').textContent='· '+Store.label(); $('signOutBtn').style.display = Store.backend==='supabase'?'inline-flex':'none'; }
+function updateBackend(){ $('backend').textContent='· '+Store.label(); $('signOutBtn').style.display = Store.backend==='supabase'?'inline-flex':'none'; updateHello(); }
+function firstName(){ return String(Store.name||'').trim().split(/\s+/)[0]||''; }
+function updateHello(){ const el=$('hello'); if(!el) return; const n=firstName(); el.textContent = n?('Hola, '+n):''; }
+function openSettings(){ lastFocused=document.activeElement; const cloud=Store.backend==='supabase'; $('setName').textContent=Store.name||'—'; $('setEmail').textContent=Store.email||'—'; $('setBackend').textContent=Store.label(); $('setPw1').value=''; $('setPw2').value=''; $('setMsg').textContent = cloud?'':'El cambio de contraseña requiere sesión en la nube (Supabase).'; $('setMsg').style.color='var(--muted)'; $('setPw1').disabled=!cloud; $('setPw2').disabled=!cloud; $('setPwSave').disabled=!cloud; $('setModal').style.display='flex'; }
+function closeSettings(){ $('setModal').style.display='none'; restoreFocus(); }
+async function doChangePassword(){ const p1=$('setPw1').value, p2=$('setPw2').value; const msg=$('setMsg'); if(!p1||p1.length<6){ msg.style.color='var(--brick)'; msg.textContent='La contraseña debe tener al menos 6 caracteres.'; $('setPw1').focus(); return; } if(p1!==p2){ msg.style.color='var(--brick)'; msg.textContent='Las contraseñas no coinciden.'; $('setPw2').focus(); return; } msg.style.color='var(--muted)'; msg.textContent='Actualizando…'; try{ await Store.changePassword(p1); msg.style.color='var(--teal)'; msg.textContent='Contraseña actualizada.'; $('setPw1').value=''; $('setPw2').value=''; toast('Contraseña cambiada.'); }catch(e){ msg.style.color='var(--brick)'; msg.textContent='Error: '+(e.message||e); } }
 
 async function loadState(){
   try{ const res=await Store.get('games-data'); if(res&&res.value){ state=JSON.parse(res.value); if(typeof state.preloadVersion!=='number') state.preloadVersion=PRELOAD_VERSION; if(normalizeStructures()) await saveState(); return; } }catch(e){}
@@ -1087,6 +1117,8 @@ $('scCancel').onclick=closeSectionModal; $('scSave').onclick=saveSectionModal;
 $('cfCancel').onclick=()=>resolveConfirm(false); $('cfOk').onclick=()=>resolveConfirm(true);
 $('exportBtn').onclick=exportData; $('importBtn').onclick=()=>$('importFile').click(); $('importFile').onchange=(e)=>{ const f=e.target.files[0]; if(f) importData(f); e.target.value=''; };
 $('signOutBtn').onclick=()=>Store.signOut();
+$('settingsBtn').onclick=openSettings; $('setClose').onclick=closeSettings; $('setPwSave').onclick=doChangePassword;
+$('setPw2').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); doChangePassword(); } });
 $('protoFile').onchange=async(e)=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return; const g=currentGame(); if(!g) return; const html=await f.text(); if(html.length>2000000){ toast('Archivo muy grande; puede ralentizar el guardado.','warn',5000); } g.proto={ name:f.name, html, updatedAt:Date.now() }; await saveState(); currentTab='proto'; renderBoard(); toast('Prototipo cargado.'); };
 $('cmName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveChange(); } });
 $('gmName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveGame(); } });
@@ -1111,9 +1143,9 @@ setAuthMode('login');
 document.addEventListener('click',e=>{ if(menuEl&&!menuEl.contains(e.target)&&!e.target.closest('.mn')&&e.target.id!=='gameMenuBtn') closeMenu(); },true);
 window.addEventListener('scroll',closeMenu,true);
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(menuEl){ closeMenu(); return; }
-  for(const id of ['cfModal','chgModal','implModal','svModal','secModal','frModal','gameModal']){ if($(id).style.display==='flex'){ if(id==='cfModal') resolveConfirm(false); else { $(id).style.display='none'; if(id==='secModal') secRef=null; } restoreFocus(); return; } }
+  for(const id of ['cfModal','chgModal','implModal','svModal','secModal','frModal','setModal','gameModal']){ if($(id).style.display==='flex'){ if(id==='cfModal') resolveConfirm(false); else { $(id).style.display='none'; if(id==='secModal') secRef=null; } restoreFocus(); return; } }
   if($('panel').classList.contains('open')){ closePanel(); return; } } });
-[['chgModal',closeChangeModal],['implModal',closeImplModal],['svModal',closeSaveModal],['secModal',closeSectionModal],['frModal',closeFairModal],['gameModal',closeGameModal],['cfModal',()=>resolveConfirm(false)]].forEach(([id,fn])=>{ $(id).addEventListener('mousedown',e=>{ if(e.target.id===id) fn(); }); });
+[['chgModal',closeChangeModal],['implModal',closeImplModal],['svModal',closeSaveModal],['secModal',closeSectionModal],['frModal',closeFairModal],['setModal',closeSettings],['gameModal',closeGameModal],['cfModal',()=>resolveConfirm(false)]].forEach(([id,fn])=>{ $(id).addEventListener('mousedown',e=>{ if(e.target.id===id) fn(); }); });
 
 async function bootApp(){ await loadState(); if(normalizeStructures()) await saveState(); render(); updateBackend(); updateSavedIndicator(); }
 (async function init(){ await Store.init(); if(Store.ready()){ bootApp(); } else { updateBackend(); showAuthGate(); } })();
