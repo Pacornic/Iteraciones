@@ -791,13 +791,12 @@ function renderFairByGame(f, host){
   const map=new Map();
   appts.forEach(a=>(a.games||[]).forEach(e=>{ const key=e.gameId||('name:'+e.gameName); if(!map.has(key)) map.set(key,{ name:(e.gameName||gameNameById(e.gameId)||'—'), color:((state.games.find(x=>x.id===e.gameId)||{}).color)||'#66b6df', rows:[] }); map.get(key).rows.push({ appt:a, e }); }));
   if(!map.size){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Tienes citas, pero sin juegos asignados.<br>Abre una cita y añade los juegos que enseñas.</p>'; host.appendChild(e); return; }
-  const order={ proto:0, interesado:1, pendiente:2, no:3 };
   map.forEach(g=>{
     const card=document.createElement('div'); card.className='gcard'; card.style.setProperty('--sp', g.color);
     const proto=g.rows.filter(r=>r.e.estado==='proto').length, inter=g.rows.filter(r=>r.e.estado==='interesado').length, no=g.rows.filter(r=>r.e.estado==='no').length, pend=g.rows.filter(r=>r.e.estado==='pendiente').length;
     const sum=[proto?proto+' quiere proto':'',inter?inter+' interesado':'',pend?pend+' pendiente':'',no?no+' no':''].filter(Boolean).join(' · ');
     const top=document.createElement('div'); top.className='gtop'; top.innerHTML=`<span class="gname" style="${chipStyle(g.color)}">${escapeHtml(g.name)}</span><span class="gsum">${sum}</span>`; card.appendChild(top);
-    g.rows.sort((a,b)=>(order[a.e.estado]??9)-(order[b.e.estado]??9));
+    g.rows.sort((a,b)=>byWhen(a.appt,b.appt));
     g.rows.forEach(r=>{ const row=document.createElement('div'); row.className='er'+(r.appt.done?' done':''); row.setAttribute('role','button'); row.setAttribute('tabindex','0');
       const metaTxt=[fmtAppt(r.appt.when), r.appt.place, r.appt.contact].filter(Boolean).join(' | ');
       row.innerHTML=`<span class="ed" style="${chipStyle(colorFor(r.appt.editorial))}">${escapeHtml(r.appt.editorial||'—')}</span><span class="fchip f-${r.e.estado}">${FAIR_STATE_TITLE[r.e.estado]||r.e.estado}</span>${metaTxt?`<span class="er-meta">${escapeHtml(metaTxt)}</span>`:''}<button class="apdone${r.appt.done?' on':''}" title="Marcar como realizada" aria-label="Realizada">✓</button>${r.e.feedback?`<span class="fb">${escapeHtml(r.e.feedback)}</span>`:''}`;
