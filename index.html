@@ -130,6 +130,8 @@
   .f-no{ background:rgba(217,99,74,0.16); color:#e0937f; }
   .f-interesado{ background:var(--amber-dim); color:#f0c078; }
   .f-proto{ background:var(--teal-dim); color:#8fd3b6; }
+  .agenda-day{ font-family:'Fraunces',serif; font-size:14.5px; color:var(--text); margin:22px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  .agenda-day:first-of-type{ margin-top:4px; }
   .apcard{ position:relative; overflow:hidden; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px 12px 18px; margin-bottom:10px; cursor:pointer; }
   .apcard::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--sp,var(--blue)); }
   .apcard:hover{ border-color:#3a4658; }
@@ -751,6 +753,9 @@ function hourOptions(){ let o='<option value="">--</option>'; for(let h=0;h<24;h
 function minOptions(){ let o='<option value="">--</option>'; for(let m=0;m<60;m+=5){ const v=String(m).padStart(2,'0'); o+=`<option value="${v}">${v}</option>`; } return o; }
 function byWhen(x,y){ const a=x.when||'', b=y.when||''; if(!a&&!b) return 0; if(!a) return 1; if(!b) return -1; return a<b?-1:a>b?1:0; }
 function colorFor(str){ let h=0; str=str||'?'; for(let i=0;i<str.length;i++){ h=(h*31+str.charCodeAt(i))>>>0; } return SPINE_COLORS[h%SPINE_COLORS.length]; }
+function fmtDay(d){ const dt=new Date(d+'T00:00'); if(isNaN(dt.getTime())) return d; let s=dt.toLocaleDateString('es-ES',{ weekday:'long', day:'numeric', month:'long', year:'numeric' }); return s.charAt(0).toUpperCase()+s.slice(1); }
+function apptMs(w){ if(!w||!/T\d\d:\d\d/.test(String(w))) return null; const d=new Date(w); return isNaN(d.getTime())?null:d.getTime(); }
+function apptConflicts(f,a){ const ms=apptMs(a.when); if(ms==null) return []; return (f.appointments||[]).filter(x=>x!==a && x.id!==a.id).map(x=>({x,m:apptMs(x.when)})).filter(o=>o.m!=null && Math.abs(o.m-ms)<30*60000).map(o=>o.x); }
 function hexToRgba(hex,a){ if(!hex) return 'rgba(102,182,223,'+a+')'; let h=String(hex).replace('#',''); if(h.length===3) h=h.split('').map(c=>c+c).join(''); const n=parseInt(h,16); if(isNaN(n)) return 'rgba(102,182,223,'+a+')'; const r=(n>>16)&255,g=(n>>8)&255,b=n&255; return 'rgba('+r+','+g+','+b+','+a+')'; }
 function chipStyle(color){ return `background:${hexToRgba(color,0.22)};color:${color}`; }
 function fairStats(f){ const appts=(f.appointments||[]); const games=new Set(); let proto=0,inter=0; appts.forEach(a=>(a.games||[]).forEach(e=>{ games.add(e.gameId||('name:'+e.gameName)); if(e.estado==='proto')proto++; else if(e.estado==='interesado')inter++; })); return { appts:appts.length, games:games.size, proto, inter }; }
@@ -810,7 +815,10 @@ function renderFairAgenda(f, host){
   fairToolbar(f, host);
   if(!(f.appointments||[]).length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Sin citas todavía.<br>Pulsa «Nueva cita» para empezar tu agenda.</p>'; host.appendChild(e); return; }
   const appts=(f.appointments||[]).slice().sort(byWhen);
+  let lastDay=null;
   appts.forEach(a=>{
+    const dayKey=(a.when&&String(a.when).slice(0,10))||'';
+    if(dayKey!==lastDay){ lastDay=dayKey; const dh=document.createElement('div'); dh.className='agenda-day'; dh.textContent=dayKey?fmtDay(dayKey):'Sin fecha'; host.appendChild(dh); }
     const card=document.createElement('div'); card.className='apcard'+(a.done?' done':''); card.setAttribute('role','button'); card.setAttribute('tabindex','0'); card.style.setProperty('--sp', colorFor(a.editorial));
     const metaTxt=[fmtAppt(a.when), a.place, a.contact].filter(Boolean).join(' | ');
     const games=(a.games||[]).map(e=>`<div class="apg"><span>${escapeHtml(e.gameName||gameNameById(e.gameId)||'—')}</span><span class="fchip f-${e.estado}">${FAIR_STATE_TITLE[e.estado]||e.estado}</span></div>`).join('')||'<div class="apnil">sin juegos asignados</div>';
@@ -848,7 +856,7 @@ function openApptDetail(f, a, isNew){
   b.querySelectorAll('.fst').forEach(btn=>btn.onclick=()=>{ commit(); const i=+btn.dataset.i; if(a.games[i]) a.games[i].estado=btn.dataset.e; saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
   b.querySelectorAll('.ag-rm').forEach(btn=>btn.onclick=()=>{ commit(); const i=+btn.dataset.i; a.games.splice(i,1); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
   { const sel=$('apAddG'); if(sel) sel.onchange=()=>{ const id=sel.value; if(!id) return; commit(); a.games.push({ gameId:id, gameName:gameNameById(id), estado:'pendiente', feedback:'' }); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); }; }
-  $('apSave').onclick=async()=>{ commit(); if(!a.editorial){ $('apEd').focus(); toast('Pon el nombre de la editorial.','warn'); return; } await saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); toast('Cita guardada.'); };
+  $('apSave').onclick=async()=>{ commit(); if(!a.editorial){ $('apEd').focus(); toast('Pon el nombre de la editorial.','warn'); return; } const conflicts=apptConflicts(f,a); if(conflicts.length){ const ms=apptMs(a.when); const overlap=conflicts.some(c=>apptMs(c.when)===ms); const list=conflicts.map(c=>`${c.editorial||'(sin editorial)'} (${fmtAppt(c.when)})`).join('; '); const ok=await confirmDialog(`${overlap?'Esta cita se solapa con':'Esta cita queda a menos de 30 min de'}: ${list}. ¿Guardar igualmente?`, { okLabel:'Guardar igualmente', danger:false }); if(!ok) return; } await saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); toast('Cita guardada.'); };
   $('apDel').onclick=async()=>{ if(a._new){ closePanel(); return; } const ok=await confirmDialog(`¿Eliminar la cita con "${a.editorial||'esta editorial'}"?`); if(!ok) return; f.appointments=f.appointments.filter(x=>x.id!==a.id); await saveState(); closePanel(); renderFairBoard(); toast('Cita eliminada.'); };
 }
 let editingFairId=null;
