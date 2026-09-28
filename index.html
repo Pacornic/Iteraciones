@@ -753,6 +753,8 @@ function hourOptions(){ let o='<option value="">--</option>'; for(let h=0;h<24;h
 function minOptions(){ let o='<option value="">--</option>'; for(let m=0;m<60;m+=5){ const v=String(m).padStart(2,'0'); o+=`<option value="${v}">${v}</option>`; } return o; }
 function byWhen(x,y){ const a=x.when||'', b=y.when||''; if(!a&&!b) return 0; if(!a) return 1; if(!b) return -1; return a<b?-1:a>b?1:0; }
 function colorFor(str){ let h=0; str=str||'?'; for(let i=0;i<str.length;i++){ h=(h*31+str.charCodeAt(i))>>>0; } return SPINE_COLORS[h%SPINE_COLORS.length]; }
+function fairEditorialColors(f){ const map={}; let i=0; (f.appointments||[]).forEach(a=>{ const e=(a.editorial||'').trim(); if(!e||(e in map)) return; map[e]=SPINE_COLORS[i%SPINE_COLORS.length]; i++; }); return map; }
+function edColor(map,name){ const e=(name||'').trim(); return map[e]||colorFor(e); }
 function fmtDay(d){ const dt=new Date(d+'T00:00'); if(isNaN(dt.getTime())) return d; let s=dt.toLocaleDateString('es-ES',{ weekday:'long', day:'numeric', month:'long', year:'numeric' }); return s.charAt(0).toUpperCase()+s.slice(1); }
 function apptMs(w){ if(!w||!/T\d\d:\d\d/.test(String(w))) return null; const d=new Date(w); return isNaN(d.getTime())?null:d.getTime(); }
 function apptConflicts(f,a){ const ms=apptMs(a.when); if(ms==null) return []; return (f.appointments||[]).filter(x=>x!==a && x.id!==a.id).map(x=>({x,m:apptMs(x.when)})).filter(o=>o.m!=null && Math.abs(o.m-ms)<30*60000).map(o=>o.x); }
@@ -791,6 +793,7 @@ function fairToolbar(f, host){
 }
 function renderFairByGame(f, host){
   fairToolbar(f, host);
+  const ecol=fairEditorialColors(f);
   const appts=f.appointments||[];
   if(!appts.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Aún no hay citas.<br>Añade una cita con una editorial y los juegos que le enseñas.</p>'; host.appendChild(e); return; }
   const map=new Map();
@@ -804,7 +807,7 @@ function renderFairByGame(f, host){
     g.rows.sort((a,b)=>byWhen(a.appt,b.appt));
     g.rows.forEach(r=>{ const row=document.createElement('div'); row.className='er'+(r.appt.done?' done':''); row.setAttribute('role','button'); row.setAttribute('tabindex','0');
       const metaTxt=[fmtAppt(r.appt.when), r.appt.place, r.appt.contact].filter(Boolean).join(' | ');
-      row.innerHTML=`<span class="ed" style="${chipStyle(colorFor(r.appt.editorial))}">${escapeHtml(r.appt.editorial||'—')}</span><span class="fchip f-${r.e.estado}">${FAIR_STATE_TITLE[r.e.estado]||r.e.estado}</span>${metaTxt?`<span class="er-meta">${escapeHtml(metaTxt)}</span>`:''}<button class="apdone${r.appt.done?' on':''}" title="Marcar como realizada" aria-label="Realizada">✓</button>${r.e.feedback?`<span class="fb">${escapeHtml(r.e.feedback)}</span>`:''}`;
+      row.innerHTML=`<span class="ed" style="${chipStyle(edColor(ecol,r.appt.editorial))}">${escapeHtml(r.appt.editorial||'—')}</span><span class="fchip f-${r.e.estado}">${FAIR_STATE_TITLE[r.e.estado]||r.e.estado}</span>${metaTxt?`<span class="er-meta">${escapeHtml(metaTxt)}</span>`:''}<button class="apdone${r.appt.done?' on':''}" title="Marcar como realizada" aria-label="Realizada">✓</button>${r.e.feedback?`<span class="fb">${escapeHtml(r.e.feedback)}</span>`:''}`;
       const open=()=>openApptDetail(f, r.appt, false); row.onclick=open; row.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
       const chk=row.querySelector('.apdone'); if(chk) chk.onclick=(ev)=>{ ev.stopPropagation(); r.appt.done=!r.appt.done; saveState(); renderFairBoard(); };
       card.appendChild(row); });
@@ -814,15 +817,16 @@ function renderFairByGame(f, host){
 function renderFairAgenda(f, host){
   fairToolbar(f, host);
   if(!(f.appointments||[]).length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Sin citas todavía.<br>Pulsa «Nueva cita» para empezar tu agenda.</p>'; host.appendChild(e); return; }
+  const ecol=fairEditorialColors(f);
   const appts=(f.appointments||[]).slice().sort(byWhen);
   let lastDay=null;
   appts.forEach(a=>{
     const dayKey=(a.when&&String(a.when).slice(0,10))||'';
     if(dayKey!==lastDay){ lastDay=dayKey; const dh=document.createElement('div'); dh.className='agenda-day'; dh.textContent=dayKey?fmtDay(dayKey):'Sin fecha'; host.appendChild(dh); }
-    const card=document.createElement('div'); card.className='apcard'+(a.done?' done':''); card.setAttribute('role','button'); card.setAttribute('tabindex','0'); card.style.setProperty('--sp', colorFor(a.editorial));
+    const card=document.createElement('div'); card.className='apcard'+(a.done?' done':''); card.setAttribute('role','button'); card.setAttribute('tabindex','0'); card.style.setProperty('--sp', edColor(ecol,a.editorial));
     const metaTxt=[fmtAppt(a.when), a.place, a.contact].filter(Boolean).join(' | ');
     const games=(a.games||[]).map(e=>`<div class="apg"><span>${escapeHtml(e.gameName||gameNameById(e.gameId)||'—')}</span><span class="fchip f-${e.estado}">${FAIR_STATE_TITLE[e.estado]||e.estado}</span></div>`).join('')||'<div class="apnil">sin juegos asignados</div>';
-    card.innerHTML=`<div class="aptop"><button class="apdone${a.done?' on':''}" title="Marcar como realizada" aria-label="Realizada">✓</button><span class="aped" style="${chipStyle(colorFor(a.editorial))}">${escapeHtml(a.editorial||'(sin editorial)')}</span></div>${metaTxt?`<div class="apmeta">${escapeHtml(metaTxt)}</div>`:''}${games}`;
+    card.innerHTML=`<div class="aptop"><button class="apdone${a.done?' on':''}" title="Marcar como realizada" aria-label="Realizada">✓</button><span class="aped" style="${chipStyle(edColor(ecol,a.editorial))}">${escapeHtml(a.editorial||'(sin editorial)')}</span></div>${metaTxt?`<div class="apmeta">${escapeHtml(metaTxt)}</div>`:''}${games}`;
     const open=()=>openApptDetail(f,a,false); card.onclick=open; card.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
     const chk=card.querySelector('.apdone'); if(chk) chk.onclick=(ev)=>{ ev.stopPropagation(); a.done=!a.done; saveState(); renderFairBoard(); };
     host.appendChild(card);
