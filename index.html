@@ -43,6 +43,15 @@
   .req-acts{ display:flex; flex-wrap:wrap; gap:7px; margin-top:9px; }
   .req-acts .rqb{ padding:5px 10px; font-size:12px; }
   .pt-badge.shared{ color:#8fb6e0; }
+  .pt-card-share{ position:absolute; top:10px; right:12px; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; z-index:2; }
+  .pt-card-share.sh-none{ background:#28313f; color:#9aa6b5; }
+  .pt-card-share.sh-pending{ background:var(--amber); color:#2a1c06; }
+  .pt-card-share.sh-active{ background:var(--blue); color:#06283a; }
+  .pt-card:hover .pt-card-share{ opacity:0; }
+  .shared-info{ display:flex; align-items:center; flex-wrap:wrap; gap:8px; background:rgba(102,182,223,0.08); border:1px solid rgba(102,182,223,0.3); border-radius:9px; padding:8px 12px; margin-bottom:16px; }
+  .shared-info .si-tag{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#8fb6e0; }
+  .shared-info .si-txt{ font-size:12px; color:var(--muted); }
+  .shared-info .si-sep{ color:var(--faint); }
   .inv-banner{ border:1px solid rgba(102,182,223,0.4); background:rgba(102,182,223,0.08); border-radius:12px; padding:12px 14px; margin-bottom:20px; }
   .inv-h{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.6px; text-transform:uppercase; color:#8fb6e0; margin-bottom:8px; }
   .inv-row{ display:flex; align-items:center; gap:10px; padding:6px 0; border-top:1px solid rgba(255,255,255,0.05); }
@@ -662,6 +671,8 @@ const Store = {
   async usernameAvailable(u){ const un=(u||'').trim().toLowerCase(); if(!un) return false; const {data,error}=await this.supa.from('profiles').select('user_id').ilike('username',un).neq('user_id',this.userId); if(error) throw error; return !(data&&data.length); },
   async setUsername(u){ const un=(u||'').trim(); const {error}=await this.supa.from('profiles').upsert({ user_id:this.userId, email:this.email, name:this.name, username:un, updated_at:new Date().toISOString() }, { onConflict:'user_id' }); if(error) throw error; this.username=un; },
   async searchUsers(q){ const s=(q||'').trim().replace(/^@/,''); if(!s) return []; const {data,error}=await this.supa.from('profiles').select('user_id,username,name,email').or('username.ilike.'+s+'%,name.ilike.%'+s+'%').neq('user_id',this.userId).limit(8); if(error) throw error; return (data||[]).filter(u=>u.username); },
+  async listAllProfiles(){ if(this.backend!=='supabase') return []; const {data,error}=await this.supa.from('profiles').select('username,email'); if(error) throw error; return data||[]; },
+  async listSentInvites(){ if(this.backend!=='supabase'||!this.email) return []; const {data,error}=await this.supa.from('game_invites').select('game_id,email,status').eq('inviter_email',this.email); if(error) throw error; return data||[]; },
   async listSharedGames(){ if(this.backend!=='supabase') return []; const {data,error}=await this.supa.from('shared_games').select('*').order('updated_at',{ascending:false}); if(error) throw error; return data||[]; },
   async createSharedGame(gameObj){ const row={ owner_id:this.userId, owner_email:this.email, data:gameObj, members:[], rev:1, updated_by:this.email, updated_by_name:this.name, updated_at:new Date().toISOString() }; const {data,error}=await this.supa.from('shared_games').insert(row).select().maybeSingle(); if(error) throw error; return data; },
   async updateSharedGame(id,gameObj,expectedRev){ const {data,error}=await this.supa.from('shared_games').update({ data:gameObj, rev:(expectedRev||0)+1, updated_by:this.email, updated_by_name:this.name, updated_at:new Date().toISOString() }).eq('id',id).eq('rev',expectedRev).select(); if(error) throw error; if(!data||!data.length) return { conflict:true }; return { conflict:false, rev:data[0].rev, updated_at:data[0].updated_at }; },
@@ -754,6 +765,12 @@ function normalizeStructures(){
 let storageWarned=false;
 let sharedGames=[];
 let myInvites=[];
+let dirByEmail={};
+let sentInvites=[];
+async function reloadDirectory(){ if(Store.backend!=='supabase'){ dirByEmail={}; return; } try{ const rows=await Store.listAllProfiles(); dirByEmail={}; rows.forEach(r=>{ if(r.email) dirByEmail[r.email.toLowerCase()]=r.username||''; }); }catch(e){} }
+async function reloadSentInvites(){ if(Store.backend!=='supabase'){ sentInvites=[]; return; } try{ sentInvites=await Store.listSentInvites(); }catch(e){ sentInvites=[]; } }
+function atFor(email){ const u=dirByEmail[(email||'').toLowerCase()]; return u?('@'+u):(email||''); }
+function pendingInvitesFor(sharedId){ return sentInvites.filter(iv=>iv.game_id===sharedId && iv.status==='pending').length; }
 async function reloadInvites(){ if(Store.backend!=='supabase'){ myInvites=[]; return; } try{ myInvites=await Store.listMyInvites(); }catch(e){ myInvites=[]; } }
 async function acceptInviteUI(iv){ try{ await Store.acceptInvite(iv.id); }catch(e){ toast('No se pudo aceptar: '+(e.message||e),'warn',6000); return; } await reloadInvites(); await reloadSharedGames(); render(); toast('Invitación aceptada.'); }
 async function declineInviteUI(iv){ try{ await Store.declineInvite(iv.id); }catch(e){ toast('Error: '+(e.message||e),'warn',5000); return; } await reloadInvites(); render(); toast('Invitación rechazada.'); }
@@ -792,11 +809,13 @@ function gameCard(g){
   card.style.setProperty('--spine', g.color||'var(--amber)');
   const proto = (g.proto&&g.proto.html) ? '<span class="pt-badge">▶ proto</span>' : '';
   const ver = lv ? ('v'+lv.n) : 'Sin versión';
-  const stBadge = shared ? '<span class="pt-badge shared">⇄ compartido</span>' : (st==='paused'?'<span class="pt-badge pause">⏸ en pausa</span>':(st==='draft'?'<span class="pt-badge draft">✎ borrador</span>':''));
+  const stBadge = shared ? '' : (st==='paused'?'<span class="pt-badge pause">⏸ en pausa</span>':(st==='draft'?'<span class="pt-badge draft">✎ borrador</span>':''));
+  let shareIcon='';
+  if(shared){ let cls='sh-none', title='Compartido (aún sin invitar)'; if((g.__members||[]).length>0){ cls='sh-active'; title='Compartido · aceptado por otro usuario'; } else if(pendingInvitesFor(g.__sharedId)>0){ cls='sh-pending'; title='Invitación enviada (pendiente de aceptar)'; } shareIcon=`<span class="pt-card-share ${cls}" title="${title}" aria-label="${title}">⇄</span>`; }
   let foot;
-  if(shared){ const t=g.__updatedAt?new Date(g.__updatedAt).getTime():0; const who=g.__updatedByName||g.__updatedBy||''; foot=(t?('Último cambio '+fmtWhen(t)):'Sin cambios')+(who?(' · por '+escapeHtml(who)):''); }
+  if(shared){ const t=g.__updatedAt?new Date(g.__updatedAt).getTime():0; const who=g.__updatedByName||atFor(g.__updatedBy)||''; foot=(t?('Último cambio '+fmtWhen(t)):'Sin cambios')+(who?(' · por '+escapeHtml(who)):''); }
   else { const lt=latestTouch(g); foot=lt?('Última edición '+fmtWhen(lt)):'Sin actividad todavía'; }
-  card.innerHTML=`<div class="pt-card-top"><span class="pt-ver">${ver}</span>${stBadge}${proto}<button class="pt-mn mn" aria-label="Opciones de ${escapeHtml(g.name)}">⋯</button></div>
+  card.innerHTML=`${shareIcon}<div class="pt-card-top"><span class="pt-ver">${ver}</span>${stBadge}${proto}<button class="pt-mn mn" aria-label="Opciones de ${escapeHtml(g.name)}">⋯</button></div>
     <h3 class="pt-name">${escapeHtml(g.name)}</h3>
     <div class="pt-stats"><span>${pend} en curso</span><span class="dot2">·</span><span>${done} resueltas</span></div>
     <div class="pt-foot">${foot}</div>`;
@@ -1025,6 +1044,11 @@ function renderBoard(){
   tabs.innerHTML='';
   [['inicio','Inicio'],['reglas','Reglas'],['proto','Proto']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(currentTab===k?' on':''); b.textContent=l; b.onclick=()=>{ currentTab=k; if(k==='reglas'){ rbView='draft'; rbVersionId=null; } closePanel(); renderBoard(); }; tabs.appendChild(b); });
   wrap.innerHTML=''; wrap.className='wrap'+(currentTab==='proto'?' wide':'');
+  if(g.__shared){ const info=document.createElement('div'); info.className='shared-info';
+    const people=[atFor(g.__owner)].concat((g.__members||[]).map(atFor)).filter(Boolean);
+    const who=g.__updatedByName||atFor(g.__updatedBy)||''; const t=g.__updatedAt?new Date(g.__updatedAt).getTime():0;
+    info.innerHTML=`<span class="si-tag">⇄ Compartido</span><span class="si-txt">con ${escapeHtml(people.join(', '))}</span>${who?`<span class="si-sep">·</span><span class="si-txt">último cambio por ${escapeHtml(who)}${t?(' '+fmtWhen(t)):''}</span>`:''}`;
+    wrap.appendChild(info); }
   if(currentTab==='reglas') renderRules(g, wrap); else if(currentTab==='proto') renderProto(g, wrap); else renderHome(g, wrap);
 }
 
@@ -1242,7 +1266,7 @@ async function unshareGame(g){ const ok=await confirmDialog(`¿Dejar de comparti
 async function leaveSharedGame(g){ const ok=await confirmDialog(`¿Salir del proyecto «${g.name}»? Dejará de aparecer en tu dashboard.`, { okLabel:'Salir', danger:false }); if(!ok) return; try{ await Store.removeGameMember(g.__sharedId, Store.email); await reloadSharedGames(); render(); toast('Has salido del proyecto.'); }catch(e){ toast('Error: '+(e.message||e),'warn',6000); } }
 let shareRef=null, shareSugTimer=null;
 function openShareModal(g){ shareRef=g; lastFocused=document.activeElement; const owner=(g.__owner||'').toLowerCase()===(Store.email||'').toLowerCase(); $('shTitle').textContent='Compartir · '+(g.name||'proyecto'); $('shInput').value=''; $('shSug').innerHTML=''; $('shMsg').textContent=''; $('shMsg').style.color='var(--muted)'; $('shInput').disabled=!owner; $('shInput').placeholder=owner?'@usuario':'Solo el dueño puede invitar'; $('shareModal').style.display='flex'; renderShareMembers(g); if(owner) $('shInput').focus(); }
-function closeShareModal(){ $('shareModal').style.display='none'; shareRef=null; restoreFocus(); }
+async function closeShareModal(){ $('shareModal').style.display='none'; shareRef=null; restoreFocus(); await reloadSentInvites(); await reloadSharedGames(); render(); }
 async function renderShareMembers(g){ const host=$('shMembers'); host.innerHTML='<div style="color:var(--faint);font-size:12px;">Cargando…</div>'; const owner=(g.__owner||'').toLowerCase()===(Store.email||'').toLowerCase(); let invites=[]; try{ invites=await Store.listGameInvites(g.__sharedId); }catch(e){}
   host.innerHTML='';
   const addRow=(label,sub,status,onRemove)=>{ const it=document.createElement('div'); it.className='sh-mem'; const left=document.createElement('div'); left.innerHTML=`<div class="sh-mem-t">${escapeHtml(label)}</div>${sub?`<div class="sh-mem-s">${escapeHtml(sub)}</div>`:''}`; it.appendChild(left); const right=document.createElement('div'); right.className='sh-mem-r'; if(status){ const s=document.createElement('span'); s.className='req-st s-pending'; s.textContent=status; right.appendChild(s); } if(onRemove){ const b=document.createElement('button'); b.className='btn-q rqb'; b.textContent='Quitar'; b.onclick=onRemove; right.appendChild(b); } it.appendChild(right); host.appendChild(it); };
@@ -1251,7 +1275,7 @@ async function renderShareMembers(g){ const host=$('shMembers'); host.innerHTML=
   invites.filter(iv=>iv.status==='pending').forEach(iv=>{ addRow(iv.email,'invitación', 'pendiente', owner?()=>cancelInviteUI(g,iv):null); });
 }
 function shareInput(){ const q=$('shInput').value.trim(); clearTimeout(shareSugTimer); if(!q){ $('shSug').innerHTML=''; return; } shareSugTimer=setTimeout(async()=>{ const g=shareRef; if(!g) return; let list=[]; try{ list=await Store.searchUsers(q); }catch(e){} const have=new Set([ (g.__owner||'').toLowerCase(), ...((g.__members||[]).map(e=>(e||'').toLowerCase())) ]); list=list.filter(u=>!have.has((u.email||'').toLowerCase())); const sug=$('shSug'); if(!list.length){ sug.innerHTML='<div class="sh-sug-empty">Ese usuario no existe</div>'; return; } sug.innerHTML=''; list.forEach(u=>{ const d=document.createElement('div'); d.className='sh-sug-item'; d.innerHTML=`<span class="sh-sug-u">@${escapeHtml(u.username||'')}</span>${u.name?`<span class="sh-sug-n">${escapeHtml(u.name)}</span>`:''}`; d.onclick=()=>doInvite(g,u); sug.appendChild(d); }); },180); }
-async function doInvite(g,u){ $('shMsg').style.color='var(--muted)'; $('shMsg').textContent='Invitando…'; try{ await Store.inviteToGame(g.__sharedId, u.email, g.name); $('shInput').value=''; $('shSug').innerHTML=''; $('shMsg').style.color='var(--teal)'; $('shMsg').textContent='Invitación enviada a @'+(u.username||u.email)+'.'; renderShareMembers(g); }catch(e){ $('shMsg').style.color='var(--brick)'; $('shMsg').textContent='Error: '+(e.message||e); } }
+async function doInvite(g,u){ $('shMsg').style.color='var(--muted)'; $('shMsg').textContent='Invitando…'; try{ await Store.inviteToGame(g.__sharedId, u.email, g.name); $('shInput').value=''; $('shSug').innerHTML=''; $('shMsg').style.color='var(--teal)'; $('shMsg').textContent='Invitación enviada a @'+(u.username||u.email)+'.'; await reloadSentInvites(); renderShareMembers(g); }catch(e){ $('shMsg').style.color='var(--brick)'; $('shMsg').textContent='Error: '+(e.message||e); } }
 async function removeMemberUI(g,em){ try{ await Store.removeGameMember(g.__sharedId, em); await reloadSharedGames(); const fresh=sharedGames.find(x=>x.__sharedId===g.__sharedId)||g; shareRef=fresh; renderShareMembers(fresh); }catch(e){ toast('Error: '+(e.message||e),'warn',5000); } }
 async function cancelInviteUI(g,iv){ try{ await Store.declineInvite(iv.id); renderShareMembers(g); }catch(e){ toast('Error: '+(e.message||e),'warn',5000); } }
 function setGameStage(id,s){ const g=state.games.find(x=>x.id===id); if(!g) return; g.stage=s; if('paused' in g) delete g.paused; saveState(); render(); toast(s==='paused'?'Juego en pausa.':s==='draft'?'Movido a Draft.':'Juego marcado como activo.'); }
@@ -1317,7 +1341,7 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(menuEl){ close
   if($('panel').classList.contains('open')){ closePanel(); return; } } });
 [['chgModal',closeChangeModal],['implModal',closeImplModal],['svModal',closeSaveModal],['secModal',closeSectionModal],['frModal',closeFairModal],['setModal',closeSettings],['reqModal',closeRequests],['recModal',closeRecovery],['shareModal',closeShareModal],['gameModal',closeGameModal],['cfModal',()=>resolveConfirm(false)]].forEach(([id,fn])=>{ $(id).addEventListener('mousedown',e=>{ if(e.target.id===id) fn(); }); });
 
-async function bootApp(){ await loadState(); if(normalizeStructures()) await saveState(); if(Store.backend==='supabase'){ await Store.upsertProfile(); await reloadSharedGames(); await reloadInvites(); } render(); updateBackend(); updateSavedIndicator(); if(window.__kaizenRecovery){ window.__kaizenRecovery=false; openRecovery(); } else if(Store.backend==='supabase' && !Store.username){ openNickGate(); } }
+async function bootApp(){ await loadState(); if(normalizeStructures()) await saveState(); if(Store.backend==='supabase'){ await Store.upsertProfile(); await reloadDirectory(); await reloadSharedGames(); await reloadInvites(); await reloadSentInvites(); } render(); updateBackend(); updateSavedIndicator(); if(window.__kaizenRecovery){ window.__kaizenRecovery=false; openRecovery(); } else if(Store.backend==='supabase' && !Store.username){ openNickGate(); } }
 (async function init(){ await Store.init(); if(Store.ready()){ bootApp(); } else { updateBackend(); showAuthGate(); } })();
 </script>
 </body>
