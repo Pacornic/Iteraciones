@@ -1256,8 +1256,9 @@ function renderBitacora(g, host){
   const ta=document.createElement('textarea'); ta.className='bi-input'; ta.placeholder=''; ta.rows=1;
   ta.addEventListener('input',()=>{ ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,160)+'px'; });
   ta.addEventListener('paste', async(e)=>{ const items=(e.clipboardData&&e.clipboardData.items)||[]; let found=false; for(const it of items){ if(it.type&&it.type.indexOf('image')===0){ const f=it.getAsFile(); if(f){ found=true; try{ const d=await compressImage(f,1024,0.7); biPendingImgs.push(d); }catch(err){} } } } if(found){ e.preventDefault(); renderPrev(); } });
-  const pub=document.createElement('button'); pub.className='btn bi-pub'; pub.textContent='Publicar'; pub.onclick=async()=>{ const text=ta.value.replace(/\s+$/,''); if(!text && !biPendingImgs.length) return; g.posts=g.posts||[]; g.posts.push({ id:uid(), by:myAuthorId(), byName:myAuthorName(), text, images:biPendingImgs.slice(), createdAt:Date.now() }); biPendingImgs=[]; await saveState(); renderBoard(); };
-  rowc.appendChild(attach); rowc.appendChild(fileIn); rowc.appendChild(ta); rowc.appendChild(pub); comp.appendChild(rowc);
+  const doPublish=async()=>{ const text=ta.value.replace(/\s+$/,''); if(!text && !biPendingImgs.length) return; g.posts=g.posts||[]; g.posts.push({ id:uid(), by:myAuthorId(), byName:myAuthorName(), text, images:biPendingImgs.slice(), createdAt:Date.now() }); biPendingImgs=[]; await saveState(); renderBoard(); };
+  ta.addEventListener('keydown',(e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); doPublish(); } });
+  rowc.appendChild(attach); rowc.appendChild(fileIn); rowc.appendChild(ta); comp.appendChild(rowc);
   host.appendChild(comp);
   setTimeout(()=>{ const c=document.querySelector('.content'); if(c) c.scrollTop=c.scrollHeight; },0);
 }
