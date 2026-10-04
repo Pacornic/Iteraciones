@@ -42,6 +42,8 @@
   .req-st.s-rejected{ background:rgba(217,99,74,0.16); color:#e0937f; }
   .req-acts{ display:flex; flex-wrap:wrap; gap:7px; margin-top:9px; }
   .req-acts .rqb{ padding:5px 10px; font-size:12px; }
+  .req-sec{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.8px; text-transform:uppercase; color:var(--muted); margin:14px 0 8px; }
+  .req-sec:first-child{ margin-top:2px; }
   .pt-badge.shared{ color:#8fb6e0; }
   .pt-card-share{ position:absolute; bottom:12px; right:12px; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; z-index:2; }
   .pt-card-share.sh-none{ background:#28313f; color:#9aa6b5; }
@@ -463,8 +465,8 @@
 <!-- Requests modal -->
 <div class="ov" id="reqModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="reqTitle">
   <div class="modal sec-modal">
-    <h3 id="reqTitle">Solicitudes de acceso</h3>
-    <div class="hint">Al aprobar, crea el usuario en Supabase (Authentication → Users → Add user) con ese correo; recibirá su validación.</div>
+    <h3 id="reqTitle">Buzón</h3>
+    <div class="hint">Tus invitaciones a proyectos y, si eres admin, las solicitudes de acceso. Al aprobar una solicitud, crea el usuario en Supabase (Authentication → Users) con ese correo.</div>
     <div id="reqList" style="margin-top:4px;"></div>
     <div class="macts"><button class="btn-q" id="reqClose">Cerrar</button></div>
   </div>
@@ -668,6 +670,7 @@ const Store = {
   async changeName(name){ if(!this.supa || this.backend!=='supabase') throw new Error('Cambiar el nombre requiere sesión en la nube (Supabase).'); const {error}=await this.supa.auth.updateUser({ data:{ nombre:name, full_name:name } }); if(error) throw error; this.name=name; await this.upsertProfile(); },
   async resetPassword(email){ if(!this.supa) throw new Error('No disponible.'); const {error}=await this.supa.auth.resetPasswordForEmail(email, { redirectTo: location.href.split('#')[0] }); if(error) throw error; },
   async upsertProfile(){ if(this.backend!=='supabase'||!this.userId) return; try{ await this.supa.from('profiles').upsert({ user_id:this.userId, email:this.email, name:this.name, updated_at:new Date().toISOString() }, { onConflict:'user_id' }); }catch(e){} try{ const {data}=await this.supa.from('profiles').select('username').eq('user_id',this.userId).maybeSingle(); this.username=(data&&data.username)||''; }catch(e){} },
+  async checkAdmin(){ this.admin=false; if(this.backend!=='supabase'||!this.email) return; try{ const {data}=await this.supa.from('admins').select('email').eq('email',this.email).maybeSingle(); this.admin=!!data; }catch(e){ this.admin=false; } },
   async usernameAvailable(u){ const un=(u||'').trim().toLowerCase(); if(!un) return false; const {data,error}=await this.supa.from('profiles').select('user_id').ilike('username',un).neq('user_id',this.userId); if(error) throw error; return !(data&&data.length); },
   async setUsername(u){ const un=(u||'').trim(); const {error}=await this.supa.from('profiles').upsert({ user_id:this.userId, email:this.email, name:this.name, username:un, updated_at:new Date().toISOString() }, { onConflict:'user_id' }); if(error) throw error; this.username=un; },
   async searchUsers(q){ const s=(q||'').trim().replace(/^@/,''); if(!s) return []; const {data,error}=await this.supa.from('profiles').select('user_id,username,name,email').or('username.ilike.'+s+'%,name.ilike.%'+s+'%').neq('user_id',this.userId).limit(8); if(error) throw error; return (data||[]).filter(u=>u.username); },
@@ -683,11 +686,12 @@ const Store = {
   async acceptInvite(id){ const {error}=await this.supa.rpc('accept_game_invite',{ p_invite:id }); if(error) throw error; },
   async declineInvite(id){ const {error}=await this.supa.from('game_invites').update({ status:'declined' }).eq('id',id); if(error) throw error; },
   async removeGameMember(gameId, email){ const r=await this.supa.from('shared_games').select('members').eq('id',gameId).maybeSingle(); const cur=(r.data&&r.data.members)||[]; const members=cur.filter(e=>(e||'').toLowerCase()!==(email||'').toLowerCase()); const {error}=await this.supa.from('shared_games').update({ members }).eq('id',gameId); if(error) throw error; },
+  async leaveGame(gameId){ const {error}=await this.supa.rpc('leave_shared_game',{ p_game:gameId }); if(error) throw error; },
   async signOut(){ if(this.supa) await this.supa.auth.signOut(); location.reload(); }
 };
 function showAuthGate(){ $('home').style.display='flex'; $('agEmail').focus(); }
 function hideAuthGate(){ $('home').style.display='none'; }
-function updateBackend(){ $('backend').textContent='· '+Store.label(); $('signOutBtn').style.display = Store.backend==='supabase'?'inline-flex':'none'; $('reqBtn').style.display = Store.backend==='supabase'?'inline-flex':'none'; if(Store.backend==='supabase') refreshRequestsBadge(); updateHello(); }
+function updateBackend(){ $('backend').textContent='· '+Store.label(); $('signOutBtn').style.display = Store.backend==='supabase'?'inline-flex':'none'; const showInbox = Store.backend==='supabase' && (Store.admin || myInvites.length>0); $('reqBtn').style.display = showInbox?'inline-flex':'none'; if(Store.backend==='supabase') refreshRequestsBadge(); updateHello(); }
 function firstName(){ return String(Store.name||'').trim().split(/\s+/)[0]||''; }
 function updateHello(){ const el=$('hello'); if(!el) return; const n=firstName(); el.textContent = n?('Hola, '+n):''; }
 function openSettings(){ lastFocused=document.activeElement; const cloud=Store.backend==='supabase'; $('setName').value=Store.name||''; $('setUser').value=Store.username||''; $('setEmail').textContent=Store.email||'—'; $('setPw1').value=''; $('setPw2').value=''; $('setMsg').textContent = cloud?'':'Cambiar nombre, usuario o contraseña requiere sesión en la nube (Supabase).'; $('setMsg').style.color='var(--muted)'; ['setName','setNameSave','setUser','setUserSave','setPw1','setPw2','setPwSave'].forEach(id=>{ $(id).disabled=!cloud; }); $('setModal').style.display='flex'; if(cloud) $('setName').focus(); }
@@ -701,18 +705,25 @@ async function saveRecovery(){ const p1=$('recPw1').value, p2=$('recPw2').value,
 async function doChangeUsername(){ const u=$('setUser').value.trim().replace(/^@/,''); const msg=$('setMsg'); if(!/^[a-zA-Z0-9_]{3,20}$/.test(u)){ msg.style.color='var(--brick)'; msg.textContent='Usuario: 3–20 caracteres (letras, números o _).'; return; } msg.style.color='var(--muted)'; msg.textContent='Comprobando…'; try{ const ok=await Store.usernameAvailable(u); if(!ok){ msg.style.color='var(--brick)'; msg.textContent='Ese usuario ya está cogido.'; return; } await Store.setUsername(u); updateHello(); msg.style.color='var(--teal)'; msg.textContent='Usuario actualizado.'; toast('Usuario @'+u+' guardado.'); }catch(e){ msg.style.color='var(--brick)'; msg.textContent='Error: '+(e.message||e); } }
 function openRequests(){ lastFocused=document.activeElement; $('reqModal').style.display='flex'; renderRequests(); }
 function closeRequests(){ $('reqModal').style.display='none'; restoreFocus(); refreshRequestsBadge(); }
-async function renderRequests(){ const host=$('reqList'); host.innerHTML='<div style="color:var(--faint);font-size:12.5px;padding:8px 0;">Cargando…</div>'; let rows=[]; try{ rows=await Store.listSignupRequests(); }catch(e){ host.innerHTML='<div style="color:#e0937f;font-size:12.5px;padding:8px 0;">Error: '+escapeHtml(e.message||String(e))+'</div>'; return; } if(!rows.length){ host.innerHTML='<div style="color:var(--faint);font-size:12.5px;padding:8px 0;">No hay solicitudes.</div>'; return; }
-  host.innerHTML=''; rows.forEach(r=>{ const it=document.createElement('div'); it.className='req-item'; const name=((r.nombre||'')+' '+(r.apellido||'')).trim()||'(sin nombre)'; const when=r.created_at?fmtWhen(new Date(r.created_at).getTime()):''; const stLabel={pending:'Pendiente',approved:'Aprobada',rejected:'Rechazada'}[r.status]||r.status;
-    it.innerHTML=`<div class="req-top"><span class="req-name">${escapeHtml(name)}${r.username?` <span style="color:var(--blue);font-family:'IBM Plex Mono',monospace;font-size:11px;">@${escapeHtml(r.username)}</span>`:''}</span><span class="req-st s-${r.status}">${stLabel}</span></div><div class="req-mail">${escapeHtml(r.email||'')}</div><div class="req-when">${escapeHtml(when)}</div>`;
-    const acts=document.createElement('div'); acts.className='req-acts';
-    if(r.status!=='approved'){ const ap=document.createElement('button'); ap.className='btn-app rqb'; ap.textContent='Aprobar'; ap.onclick=()=>approveReq(r); acts.appendChild(ap); }
-    const cp=document.createElement('button'); cp.className='btn-q rqb'; cp.textContent='Copiar correo'; cp.onclick=()=>{ try{ navigator.clipboard.writeText(r.email||''); toast('Correo copiado.'); }catch(e){ toast(r.email||''); } }; acts.appendChild(cp);
-    if(r.status!=='rejected'){ const rj=document.createElement('button'); rj.className='btn-q rqb'; rj.textContent='Rechazar'; rj.onclick=async()=>{ try{ await Store.updateRequestStatus(r.id,'rejected'); }catch(e){ toast('Error: '+(e.message||e),'warn',5000); return; } renderRequests(); refreshRequestsBadge(); }; acts.appendChild(rj); }
-    const dl=document.createElement('button'); dl.className='btn-danger rqb'; dl.textContent='Eliminar'; dl.onclick=async()=>{ const ok=await confirmDialog('¿Eliminar esta solicitud?'); if(!ok) return; try{ await Store.deleteRequest(r.id); }catch(e){ toast('Error: '+(e.message||e),'warn',5000); return; } renderRequests(); refreshRequestsBadge(); }; acts.appendChild(dl);
-    it.appendChild(acts); host.appendChild(it); });
+async function renderRequests(){ const host=$('reqList'); host.innerHTML='';
+  if(myInvites.length){ const h=document.createElement('div'); h.className='req-sec'; h.textContent='Invitaciones a proyectos'; host.appendChild(h);
+    myInvites.forEach(iv=>{ const it=document.createElement('div'); it.className='req-item'; it.innerHTML=`<div class="req-top"><span class="req-name">${escapeHtml(iv.game_name||'Proyecto')}</span></div><div class="req-mail">de ${escapeHtml(atFor(iv.inviter_email)||iv.inviter_email||'')}</div>`;
+      const acts=document.createElement('div'); acts.className='req-acts'; const ac=document.createElement('button'); ac.className='btn-app rqb'; ac.textContent='Aceptar'; ac.onclick=async()=>{ await acceptInviteUI(iv); renderRequests(); refreshRequestsBadge(); }; const dc=document.createElement('button'); dc.className='btn-q rqb'; dc.textContent='Rechazar'; dc.onclick=async()=>{ await declineInviteUI(iv); renderRequests(); refreshRequestsBadge(); }; acts.appendChild(ac); acts.appendChild(dc); it.appendChild(acts); host.appendChild(it); }); }
+  if(Store.admin){ const h=document.createElement('div'); h.className='req-sec'; h.textContent='Solicitudes de acceso'; host.appendChild(h);
+    let rows=[]; try{ rows=await Store.listSignupRequests(); }catch(e){ const er=document.createElement('div'); er.style.cssText='color:#e0937f;font-size:12.5px;padding:6px 0;'; er.textContent='Error: '+(e.message||e); host.appendChild(er); }
+    if(!rows.length){ const e2=document.createElement('div'); e2.style.cssText='color:var(--faint);font-size:12.5px;padding:6px 0;'; e2.textContent='No hay solicitudes.'; host.appendChild(e2); }
+    rows.forEach(r=>{ const it=document.createElement('div'); it.className='req-item'; const name=((r.nombre||'')+' '+(r.apellido||'')).trim()||'(sin nombre)'; const when=r.created_at?fmtWhen(new Date(r.created_at).getTime()):''; const stLabel={pending:'Pendiente',approved:'Aprobada',rejected:'Rechazada'}[r.status]||r.status;
+      it.innerHTML=`<div class="req-top"><span class="req-name">${escapeHtml(name)}${r.username?` <span style="color:var(--blue);font-family:'IBM Plex Mono',monospace;font-size:11px;">@${escapeHtml(r.username)}</span>`:''}</span><span class="req-st s-${r.status}">${stLabel}</span></div><div class="req-mail">${escapeHtml(r.email||'')}</div><div class="req-when">${escapeHtml(when)}</div>`;
+      const acts=document.createElement('div'); acts.className='req-acts';
+      if(r.status!=='approved'){ const ap=document.createElement('button'); ap.className='btn-app rqb'; ap.textContent='Aprobar'; ap.onclick=()=>approveReq(r); acts.appendChild(ap); }
+      const cp=document.createElement('button'); cp.className='btn-q rqb'; cp.textContent='Copiar correo'; cp.onclick=()=>{ try{ navigator.clipboard.writeText(r.email||''); toast('Correo copiado.'); }catch(e){ toast(r.email||''); } }; acts.appendChild(cp);
+      if(r.status!=='rejected'){ const rj=document.createElement('button'); rj.className='btn-q rqb'; rj.textContent='Rechazar'; rj.onclick=async()=>{ try{ await Store.updateRequestStatus(r.id,'rejected'); }catch(e){ toast('Error: '+(e.message||e),'warn',5000); return; } renderRequests(); refreshRequestsBadge(); }; acts.appendChild(rj); }
+      const dl=document.createElement('button'); dl.className='btn-danger rqb'; dl.textContent='Eliminar'; dl.onclick=async()=>{ const ok=await confirmDialog('¿Eliminar esta solicitud?'); if(!ok) return; try{ await Store.deleteRequest(r.id); }catch(e){ toast('Error: '+(e.message||e),'warn',5000); return; } renderRequests(); refreshRequestsBadge(); }; acts.appendChild(dl);
+      it.appendChild(acts); host.appendChild(it); }); }
+  if(!myInvites.length && !Store.admin){ host.innerHTML='<div style="color:var(--faint);font-size:12.5px;padding:8px 0;">No tienes nada en el buzón.</div>'; }
 }
 async function approveReq(r){ try{ await Store.updateRequestStatus(r.id,'approved'); }catch(e){ toast('Error: '+(e.message||e),'warn',5000); return; } try{ await navigator.clipboard.writeText(r.email||''); }catch(e){} toast('Aprobada. Crea el usuario en Supabase (Add user) con '+(r.email||'')+' (correo copiado).','',6000); renderRequests(); refreshRequestsBadge(); }
-async function refreshRequestsBadge(){ const b=$('reqBtn'); if(!b||Store.backend!=='supabase') return; try{ const rows=await Store.listSignupRequests(); const n=rows.filter(x=>x.status==='pending').length; b.textContent='✉'+(n?(' '+n):''); b.title='Solicitudes de acceso'+(n?(' ('+n+' pendientes)'):''); }catch(e){} }
+async function refreshRequestsBadge(){ const b=$('reqBtn'); if(!b||Store.backend!=='supabase') return; let reqN=0; if(Store.admin){ try{ const rows=await Store.listSignupRequests(); reqN=rows.filter(x=>x.status==='pending').length; }catch(e){} } const invN=myInvites.length; const total=reqN+invN; b.style.display=(Store.admin||invN>0)?'inline-flex':'none'; b.textContent='✉'+(total?(' '+total):''); b.title='Buzón'+(total?(' ('+total+')'):''); }
 async function doChangePassword(){ const p1=$('setPw1').value, p2=$('setPw2').value; const msg=$('setMsg'); if(!p1||p1.length<6){ msg.style.color='var(--brick)'; msg.textContent='La contraseña debe tener al menos 6 caracteres.'; $('setPw1').focus(); return; } if(p1!==p2){ msg.style.color='var(--brick)'; msg.textContent='Las contraseñas no coinciden.'; $('setPw2').focus(); return; } msg.style.color='var(--muted)'; msg.textContent='Actualizando…'; try{ await Store.changePassword(p1); msg.style.color='var(--teal)'; msg.textContent='Contraseña actualizada.'; $('setPw1').value=''; $('setPw2').value=''; toast('Contraseña cambiada.'); }catch(e){ msg.style.color='var(--brick)'; msg.textContent='Error: '+(e.message||e); } }
 
 async function loadState(){
@@ -797,6 +808,8 @@ function goBack(){ if(appView==='game') appView='design'; else if(appView==='fai
 
 /* ---------- Portada ---------- */
 function latestTouch(g){ let t=0; (g.changes||[]).forEach(c=>{ t=Math.max(t,c.updatedAt||c.createdAt||0); }); (g.rulebookVersions||[]).forEach(v=>{ t=Math.max(t,v.updatedAt||v.createdAt||0); }); if(g.proto&&g.proto.updatedAt) t=Math.max(t,g.proto.updatedAt); return t; }
+function recentOf(g){ return g.__shared ? (g.__updatedAt?new Date(g.__updatedAt).getTime():0) : latestTouch(g); }
+function byRecent(a,b){ return recentOf(b)-recentOf(a); }
 function goHome(){ appView='home'; closePanel(); render(); }
 function openGame(id){ const own=state.games.some(x=>x.id===id); state.currentGameId=id; currentTab='inicio'; rbView='draft'; rbVersionId=null; appView='game'; closePanel(); if(own) saveState(); render(); }
 function gameCard(g){
@@ -844,7 +857,7 @@ function renderHomeHub(){
   const inner=document.createElement('div'); inner.className='pt-inner';
   ptHero(inner);
   const grid=document.createElement('div'); grid.className='area-grid';
-  grid.appendChild(areaCard('Diseño','Tus juegos: ideas, reglamentos y prototipos.', (state.games.length||0)+' juego(s)', '#e8a33d', ()=>openArea('design')));
+  grid.appendChild(areaCard('Diseño','Tus juegos: ideas, reglamentos y prototipos.', ((state.games.length||0)+(sharedGames.length||0))+' juego(s)', '#e8a33d', ()=>openArea('design')));
   grid.appendChild(areaCard('Ferias','Prepara cada feria: citas con editoriales y feedback.', ((state.fairs||[]).length||0)+' feria(s)', '#66b6df', ()=>openArea('ferias')));
   inner.appendChild(grid);
   host.appendChild(inner);
@@ -857,14 +870,15 @@ function renderDesignPortada(){
     myInvites.forEach(iv=>{ const it=document.createElement('div'); it.className='inv-row'; it.innerHTML=`<span class="inv-t">${escapeHtml(iv.game_name||'Proyecto')}</span><span class="inv-from">de ${escapeHtml(iv.inviter_email||'')}</span>`; const acts=document.createElement('div'); acts.className='inv-acts'; const ac=document.createElement('button'); ac.className='btn-app rqb'; ac.textContent='Aceptar'; ac.onclick=()=>acceptInviteUI(iv); const dc=document.createElement('button'); dc.className='btn-q rqb'; dc.textContent='Rechazar'; dc.onclick=()=>declineInviteUI(iv); acts.appendChild(ac); acts.appendChild(dc); it.appendChild(acts); b.appendChild(it); });
     inner.appendChild(b); }
   const stg=g=>g.stage||'active';
-  const active=state.games.filter(g=>stg(g)==='active'), drafts=state.games.filter(g=>stg(g)==='draft'), paused=state.games.filter(g=>stg(g)==='paused');
+  const active=state.games.filter(g=>stg(g)==='active').sort(byRecent), drafts=state.games.filter(g=>stg(g)==='draft').sort(byRecent), paused=state.games.filter(g=>stg(g)==='paused').sort(byRecent);
+  const sg=sharedGames.slice().sort(byRecent);
   const row=document.createElement('div'); row.className='pt-secrow';
   const sec=document.createElement('span'); sec.className='pt-sec'; sec.textContent='Diseño · '+active.length+' activo(s)'; row.appendChild(sec);
   const add=document.createElement('button'); add.className='btn'; add.textContent='＋ Nuevo juego'; add.onclick=()=>openGameModal(false); row.appendChild(add);
   inner.appendChild(row);
   const grid=document.createElement('div'); grid.className='pt-grid';
   active.forEach(g=>grid.appendChild(gameCard(g)));
-  sharedGames.forEach(g=>grid.appendChild(gameCard(g)));
+  sg.forEach(g=>grid.appendChild(gameCard(g)));
   const nw=document.createElement('button'); nw.className='pt-new'; nw.textContent=state.games.length?'＋ Nuevo juego':'＋ Crea tu primer juego'; nw.onclick=()=>openGameModal(false); grid.appendChild(nw);
   inner.appendChild(grid);
 
@@ -1267,7 +1281,7 @@ function openSharedEditMenu(anchor,g){ closeMenu(); const m=document.createEleme
 function renameSharedGame(g){ sharedRenameRef=g; editingGameId=null; lastFocused=document.activeElement; $('gmTitle').textContent='Renombrar proyecto'; $('gmHint').textContent='Cambia el nombre (lo verán todos los que tienen acceso).'; $('gmSave').textContent='Guardar'; $('gmName').value=g.name||''; $('gameModal').style.display='flex'; $('gmName').focus(); }
 async function shareGame(id){ const g=state.games.find(x=>x.id===id); if(!g) return; if(Store.backend!=='supabase'){ toast('Compartir requiere sesión en la nube.','warn',5000); return; } try{ const data=gameData(g); const row=await Store.createSharedGame(data); state.games=state.games.filter(x=>x.id!==id); await saveState(); await reloadSharedGames(); const sg=sharedGames.find(x=>x.__sharedId===row.id); toast('«'+g.name+'» ahora es un proyecto compartido.'); render(); if(sg) openShareModal(sg); }catch(e){ toast('No se pudo compartir: '+(e.message||e),'warn',6000); } }
 async function unshareGame(g){ const ok=await confirmDialog(`¿Dejar de compartir «${g.name}»? Volverá a ser un juego privado tuyo y los invitados dejarán de verlo.`, { okLabel:'Dejar de compartir', danger:false }); if(!ok) return; try{ const data=gameData(g); data.stage='active'; state.games.push(data); await Store.deleteSharedGame(g.__sharedId); await saveState(); await reloadSharedGames(); render(); toast('Vuelve a ser privado.'); }catch(e){ toast('Error: '+(e.message||e),'warn',6000); } }
-async function leaveSharedGame(g){ const ok=await confirmDialog(`¿Salir del proyecto «${g.name}»? Dejará de aparecer en tu dashboard.`, { okLabel:'Salir', danger:false }); if(!ok) return; try{ await Store.removeGameMember(g.__sharedId, Store.email); await reloadSharedGames(); render(); toast('Has salido del proyecto.'); }catch(e){ toast('Error: '+(e.message||e),'warn',6000); } }
+async function leaveSharedGame(g){ const ok=await confirmDialog(`¿Salir del proyecto «${g.name}»? Dejará de aparecer en tu dashboard.`, { okLabel:'Salir', danger:false }); if(!ok) return; try{ await Store.leaveGame(g.__sharedId); await reloadSharedGames(); render(); toast('Has salido del proyecto.'); }catch(e){ toast('Error: '+(e.message||e),'warn',6000); } }
 let shareRef=null, shareSugTimer=null;
 function openShareModal(g){ shareRef=g; lastFocused=document.activeElement; const owner=(g.__owner||'').toLowerCase()===(Store.email||'').toLowerCase(); $('shTitle').textContent='Compartir · '+(g.name||'proyecto'); $('shInput').value=''; $('shSug').innerHTML=''; $('shMsg').textContent=''; $('shMsg').style.color='var(--muted)'; $('shInput').disabled=!owner; $('shInput').placeholder=owner?'@usuario':'Solo el dueño puede invitar'; $('shareModal').style.display='flex'; renderShareMembers(g); if(owner) $('shInput').focus(); }
 async function closeShareModal(){ $('shareModal').style.display='none'; shareRef=null; restoreFocus(); await reloadSentInvites(); await reloadSharedGames(); render(); }
@@ -1345,7 +1359,7 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(menuEl){ close
   if($('panel').classList.contains('open')){ closePanel(); return; } } });
 [['chgModal',closeChangeModal],['implModal',closeImplModal],['svModal',closeSaveModal],['secModal',closeSectionModal],['frModal',closeFairModal],['setModal',closeSettings],['reqModal',closeRequests],['recModal',closeRecovery],['shareModal',closeShareModal],['gameModal',closeGameModal],['cfModal',()=>resolveConfirm(false)]].forEach(([id,fn])=>{ $(id).addEventListener('mousedown',e=>{ if(e.target.id===id) fn(); }); });
 
-async function bootApp(){ await loadState(); if(normalizeStructures()) await saveState(); if(Store.backend==='supabase'){ await Store.upsertProfile(); await reloadDirectory(); await reloadSharedGames(); await reloadInvites(); await reloadSentInvites(); } render(); updateBackend(); updateSavedIndicator(); if(window.__kaizenRecovery){ window.__kaizenRecovery=false; openRecovery(); } else if(Store.backend==='supabase' && !Store.username){ openNickGate(); } }
+async function bootApp(){ await loadState(); if(normalizeStructures()) await saveState(); if(Store.backend==='supabase'){ await Store.upsertProfile(); await Store.checkAdmin(); await reloadDirectory(); await reloadSharedGames(); await reloadInvites(); await reloadSentInvites(); } render(); updateBackend(); updateSavedIndicator(); if(window.__kaizenRecovery){ window.__kaizenRecovery=false; openRecovery(); } else if(Store.backend==='supabase' && !Store.username){ openNickGate(); } }
 (async function init(){ await Store.init(); if(Store.ready()){ bootApp(); } else { updateBackend(); showAuthGate(); } })();
 </script>
 </body>
