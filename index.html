@@ -31,6 +31,17 @@
   .hellobar:empty{ display:none; }
   .set-val{ font-size:14px; color:var(--text); padding:2px 0; }
   .set-msg{ font-size:12.5px; color:var(--muted); min-height:16px; margin-top:2px; }
+  .req-item{ border:1px solid var(--border); border-radius:10px; padding:10px 12px; margin-bottom:9px; }
+  .req-top{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .req-name{ font-size:14px; color:var(--text); }
+  .req-mail{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--blue); margin-top:2px; }
+  .req-when{ font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--faint); margin-top:2px; }
+  .req-st{ font-family:'IBM Plex Mono',monospace; font-size:10px; padding:2px 8px; border-radius:20px; white-space:nowrap; }
+  .req-st.s-pending{ background:var(--amber-dim); color:#f0c078; }
+  .req-st.s-approved{ background:var(--teal-dim); color:#8fd3b6; }
+  .req-st.s-rejected{ background:rgba(217,99,74,0.16); color:#e0937f; }
+  .req-acts{ display:flex; flex-wrap:wrap; gap:7px; margin-top:9px; }
+  .req-acts .rqb{ padding:5px 10px; font-size:12px; }
   .topbar .tools{ display:flex; align-items:center; gap:8px; }
   .ibtn{ width:32px;height:32px; display:inline-flex; align-items:center; justify-content:center; background:none; border:1px solid transparent; border-radius:7px; color:var(--muted); cursor:pointer; font-size:15px; }
   .ibtn:hover{ background:var(--surface-2); color:var(--text); }
@@ -315,6 +326,7 @@
     <button class="ibtn" id="importBtn" title="Importar copia (.json)" aria-label="Importar">⤒</button>
     <input type="file" id="importFile" accept="application/json,.json" style="display:none;">
     <button class="ibtn" id="signOutBtn" title="Cerrar sesión" aria-label="Cerrar sesión" style="display:none;">⎋</button>
+    <button class="ibtn" id="reqBtn" title="Solicitudes de acceso" aria-label="Solicitudes de acceso" style="display:none;">✉</button>
     <button class="ibtn" id="settingsBtn" title="Ajustes" aria-label="Ajustes">⚙</button>
     <div class="game-select-mobile"><label class="sr-only" for="mgs">Juego</label><select id="mgs"></select><button class="ibtn" id="addGameMobile" title="Añadir juego" aria-label="Añadir juego">+</button></div>
   </div>
@@ -416,6 +428,16 @@
   </div>
 </div>
 
+<!-- Requests modal -->
+<div class="ov" id="reqModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="reqTitle">
+  <div class="modal sec-modal">
+    <h3 id="reqTitle">Solicitudes de acceso</h3>
+    <div class="hint">Al aprobar, crea el usuario en Supabase (Authentication → Users → Add user) con ese correo; recibirá su validación.</div>
+    <div id="reqList" style="margin-top:4px;"></div>
+    <div class="macts"><button class="btn-q" id="reqClose">Cerrar</button></div>
+  </div>
+</div>
+
 <!-- Game modal -->
 <div class="ov" id="gameModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="gmTitle">
   <div class="modal">
@@ -443,7 +465,8 @@
     <p class="home-desc">Diseña, versiona y prueba tus juegos de mesa en un mismo sitio. Entra para acceder a tu espacio.</p>
     <div id="regFields" style="display:none;"><div class="row2"><div class="field"><label for="agNombre">Nombre</label><input id="agNombre" autocomplete="given-name"></div><div class="field"><label for="agApellido">Apellido</label><input id="agApellido" autocomplete="family-name"></div></div></div>
     <div class="field"><label for="agEmail">Correo</label><input type="email" id="agEmail" placeholder="tucorreo@ejemplo.com" autocomplete="username"></div>
-    <div class="field"><label for="agPass">Contraseña</label><input type="password" id="agPass" placeholder="tu contraseña" autocomplete="current-password"></div>
+    <div class="field" id="loginPassField"><label for="agPass">Contraseña</label><input type="password" id="agPass" placeholder="tu contraseña" autocomplete="current-password"></div>
+    <div class="hint" id="regNote" style="display:none;margin:-2px 0 10px;color:var(--muted);">Déjanos tus datos y revisaremos tu solicitud. Cuando se apruebe, recibirás un correo para validar tu cuenta.</div>
     <div class="field" id="regPass2Field" style="display:none;"><label for="agPass2">Repite la contraseña</label><input type="password" id="agPass2" placeholder="repite la contraseña" autocomplete="new-password"></div>
     <div class="macts"><button class="btn" id="agPrimary" style="width:100%;">Entrar</button></div>
     <div class="hint" id="agToggleWrap" style="margin-top:12px;"></div>
@@ -570,18 +593,36 @@ const Store = {
   async signInPassword(email,password){ const {error}=await this.supa.auth.signInWithPassword({email,password}); if(error) throw error; },
   async signUpPassword(email,password,meta){ const {data,error}=await this.supa.auth.signUp({email,password,options:{data:meta||{}}}); if(error) throw error; return data; },
   async signInMagic(email){ const {error}=await this.supa.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href.split('#')[0] } }); if(error) throw error; },
+  async submitSignupRequest(r){ if(!this.supa) throw new Error('Registro no disponible sin conexión a la nube.'); const {error}=await this.supa.from('signup_requests').insert({ nombre:r.nombre||'', apellido:r.apellido||'', email:r.email }); if(error) throw error; },
+  async listSignupRequests(){ if(!this.supa) return []; const {data,error}=await this.supa.from('signup_requests').select('*').order('created_at',{ascending:true}); if(error) throw error; return data||[]; },
+  async updateRequestStatus(id,status){ const {error}=await this.supa.from('signup_requests').update({ status }).eq('id',id); if(error) throw error; },
+  async deleteRequest(id){ const {error}=await this.supa.from('signup_requests').delete().eq('id',id); if(error) throw error; },
   async changePassword(pw){ if(!this.supa || this.backend!=='supabase') throw new Error('El cambio de contraseña solo está disponible con sesión en la nube (Supabase).'); const {error}=await this.supa.auth.updateUser({ password: pw }); if(error) throw error; },
   async changeName(name){ if(!this.supa || this.backend!=='supabase') throw new Error('Cambiar el nombre requiere sesión en la nube (Supabase).'); const {error}=await this.supa.auth.updateUser({ data:{ nombre:name, full_name:name } }); if(error) throw error; this.name=name; },
   async signOut(){ if(this.supa) await this.supa.auth.signOut(); location.reload(); }
 };
 function showAuthGate(){ $('home').style.display='flex'; $('agEmail').focus(); }
 function hideAuthGate(){ $('home').style.display='none'; }
-function updateBackend(){ $('backend').textContent='· '+Store.label(); $('signOutBtn').style.display = Store.backend==='supabase'?'inline-flex':'none'; updateHello(); }
+function updateBackend(){ $('backend').textContent='· '+Store.label(); $('signOutBtn').style.display = Store.backend==='supabase'?'inline-flex':'none'; $('reqBtn').style.display = Store.backend==='supabase'?'inline-flex':'none'; if(Store.backend==='supabase') refreshRequestsBadge(); updateHello(); }
 function firstName(){ return String(Store.name||'').trim().split(/\s+/)[0]||''; }
 function updateHello(){ const el=$('hello'); if(!el) return; const n=firstName(); el.textContent = n?('Hola, '+n):''; }
 function openSettings(){ lastFocused=document.activeElement; const cloud=Store.backend==='supabase'; $('setName').value=Store.name||''; $('setEmail').textContent=Store.email||'—'; $('setPw1').value=''; $('setPw2').value=''; $('setMsg').textContent = cloud?'':'Cambiar nombre o contraseña requiere sesión en la nube (Supabase).'; $('setMsg').style.color='var(--muted)'; $('setName').disabled=!cloud; $('setNameSave').disabled=!cloud; $('setPw1').disabled=!cloud; $('setPw2').disabled=!cloud; $('setPwSave').disabled=!cloud; $('setModal').style.display='flex'; if(cloud) $('setName').focus(); }
 async function doChangeName(){ const name=$('setName').value.trim(); const msg=$('setMsg'); if(!name){ msg.style.color='var(--brick)'; msg.textContent='Escribe un nombre.'; $('setName').focus(); return; } msg.style.color='var(--muted)'; msg.textContent='Guardando…'; try{ await Store.changeName(name); updateHello(); msg.style.color='var(--teal)'; msg.textContent='Nombre actualizado.'; toast('Nombre actualizado.'); }catch(e){ msg.style.color='var(--brick)'; msg.textContent='Error: '+(e.message||e); } }
 function closeSettings(){ $('setModal').style.display='none'; restoreFocus(); }
+function openRequests(){ lastFocused=document.activeElement; $('reqModal').style.display='flex'; renderRequests(); }
+function closeRequests(){ $('reqModal').style.display='none'; restoreFocus(); refreshRequestsBadge(); }
+async function renderRequests(){ const host=$('reqList'); host.innerHTML='<div style="color:var(--faint);font-size:12.5px;padding:8px 0;">Cargando…</div>'; let rows=[]; try{ rows=await Store.listSignupRequests(); }catch(e){ host.innerHTML='<div style="color:#e0937f;font-size:12.5px;padding:8px 0;">Error: '+escapeHtml(e.message||String(e))+'</div>'; return; } if(!rows.length){ host.innerHTML='<div style="color:var(--faint);font-size:12.5px;padding:8px 0;">No hay solicitudes.</div>'; return; }
+  host.innerHTML=''; rows.forEach(r=>{ const it=document.createElement('div'); it.className='req-item'; const name=((r.nombre||'')+' '+(r.apellido||'')).trim()||'(sin nombre)'; const when=r.created_at?fmtWhen(new Date(r.created_at).getTime()):''; const stLabel={pending:'Pendiente',approved:'Aprobada',rejected:'Rechazada'}[r.status]||r.status;
+    it.innerHTML=`<div class="req-top"><span class="req-name">${escapeHtml(name)}</span><span class="req-st s-${r.status}">${stLabel}</span></div><div class="req-mail">${escapeHtml(r.email||'')}</div><div class="req-when">${escapeHtml(when)}</div>`;
+    const acts=document.createElement('div'); acts.className='req-acts';
+    if(r.status!=='approved'){ const ap=document.createElement('button'); ap.className='btn-app rqb'; ap.textContent='Aprobar'; ap.onclick=()=>approveReq(r); acts.appendChild(ap); }
+    const cp=document.createElement('button'); cp.className='btn-q rqb'; cp.textContent='Copiar correo'; cp.onclick=()=>{ try{ navigator.clipboard.writeText(r.email||''); toast('Correo copiado.'); }catch(e){ toast(r.email||''); } }; acts.appendChild(cp);
+    if(r.status!=='rejected'){ const rj=document.createElement('button'); rj.className='btn-q rqb'; rj.textContent='Rechazar'; rj.onclick=async()=>{ try{ await Store.updateRequestStatus(r.id,'rejected'); }catch(e){ toast('Error: '+(e.message||e),'warn',5000); return; } renderRequests(); refreshRequestsBadge(); }; acts.appendChild(rj); }
+    const dl=document.createElement('button'); dl.className='btn-danger rqb'; dl.textContent='Eliminar'; dl.onclick=async()=>{ const ok=await confirmDialog('¿Eliminar esta solicitud?'); if(!ok) return; try{ await Store.deleteRequest(r.id); }catch(e){ toast('Error: '+(e.message||e),'warn',5000); return; } renderRequests(); refreshRequestsBadge(); }; acts.appendChild(dl);
+    it.appendChild(acts); host.appendChild(it); });
+}
+async function approveReq(r){ try{ await Store.updateRequestStatus(r.id,'approved'); }catch(e){ toast('Error: '+(e.message||e),'warn',5000); return; } try{ await navigator.clipboard.writeText(r.email||''); }catch(e){} toast('Aprobada. Crea el usuario en Supabase (Add user) con '+(r.email||'')+' (correo copiado).','',6000); renderRequests(); refreshRequestsBadge(); }
+async function refreshRequestsBadge(){ const b=$('reqBtn'); if(!b||Store.backend!=='supabase') return; try{ const rows=await Store.listSignupRequests(); const n=rows.filter(x=>x.status==='pending').length; b.textContent='✉'+(n?(' '+n):''); b.title='Solicitudes de acceso'+(n?(' ('+n+' pendientes)'):''); }catch(e){} }
 async function doChangePassword(){ const p1=$('setPw1').value, p2=$('setPw2').value; const msg=$('setMsg'); if(!p1||p1.length<6){ msg.style.color='var(--brick)'; msg.textContent='La contraseña debe tener al menos 6 caracteres.'; $('setPw1').focus(); return; } if(p1!==p2){ msg.style.color='var(--brick)'; msg.textContent='Las contraseñas no coinciden.'; $('setPw2').focus(); return; } msg.style.color='var(--muted)'; msg.textContent='Actualizando…'; try{ await Store.changePassword(p1); msg.style.color='var(--teal)'; msg.textContent='Contraseña actualizada.'; $('setPw1').value=''; $('setPw2').value=''; toast('Contraseña cambiada.'); }catch(e){ msg.style.color='var(--brick)'; msg.textContent='Error: '+(e.message||e); } }
 
 async function loadState(){
@@ -1129,6 +1170,7 @@ $('cfCancel').onclick=()=>resolveConfirm(false); $('cfOk').onclick=()=>resolveCo
 $('exportBtn').onclick=exportData; $('importBtn').onclick=()=>$('importFile').click(); $('importFile').onchange=(e)=>{ const f=e.target.files[0]; if(f) importData(f); e.target.value=''; };
 $('signOutBtn').onclick=()=>Store.signOut();
 $('settingsBtn').onclick=openSettings; $('setClose').onclick=closeSettings; $('setPwSave').onclick=doChangePassword; $('setNameSave').onclick=doChangeName;
+$('reqBtn').onclick=openRequests; $('reqClose').onclick=closeRequests;
 $('setName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); doChangeName(); } });
 $('setPw2').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); doChangePassword(); } });
 $('protoFile').onchange=async(e)=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return; const g=currentGame(); if(!g) return; const html=await f.text(); if(html.length>2000000){ toast('Archivo muy grande; puede ralentizar el guardado.','warn',5000); } g.proto={ name:f.name, html, updatedAt:Date.now() }; await saveState(); currentTab='proto'; renderBoard(); toast('Prototipo cargado.'); };
@@ -1136,15 +1178,15 @@ $('cmName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefaul
 $('gmName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveGame(); } });
 $('svSum').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); consolidateVersion(); } });
 async function agLogin(){ const em=$('agEmail').value.trim(), pw=$('agPass').value; if(!em||!pw){ $('agMsg').textContent='Escribe correo y contraseña.'; return; } $('agMsg').textContent='Entrando…'; try{ await Store.signInPassword(em,pw); }catch(e){ $('agMsg').textContent='Error: '+(e.message||e); } }
-async function agSignup(){ const em=$('agEmail').value.trim(), pw=$('agPass').value, pw2=$('agPass2').value, nom=$('agNombre').value.trim(), ape=$('agApellido').value.trim(); if(!nom){ $('agMsg').textContent='Pon tu nombre para crear la cuenta.'; return; } if(!em||!pw){ $('agMsg').textContent='Escribe correo y una contraseña (mín. 6).'; return; } if(pw!==pw2){ $('agMsg').textContent='Las contraseñas no coinciden.'; return; } $('agMsg').textContent='Creando cuenta…'; try{ const d=await Store.signUpPassword(em,pw,{ nombre:nom, apellido:ape, full_name:(nom+' '+ape).trim() }); if(!(d&&d.session)) $('agMsg').textContent='Cuenta creada. Si pide confirmar el correo, revísalo; si no, pulsa Entrar.'; }catch(e){ $('agMsg').textContent='Error: '+(e.message||e); } }
+async function agSignup(){ const em=$('agEmail').value.trim(), nom=$('agNombre').value.trim(), ape=$('agApellido').value.trim(); $('agMsg').style.color=''; if(!nom){ $('agMsg').textContent='Pon tu nombre.'; return; } if(!em||!/.+@.+\..+/.test(em)){ $('agMsg').textContent='Escribe un correo válido.'; return; } $('agMsg').textContent='Enviando solicitud…'; try{ await Store.submitSignupRequest({ nombre:nom, apellido:ape, email:em }); $('agMsg').style.color='var(--teal)'; $('agMsg').textContent='Solicitud enviada. Cuando se apruebe, recibirás un correo para validar tu cuenta.'; $('agNombre').value=''; $('agApellido').value=''; $('agEmail').value=''; }catch(e){ $('agMsg').style.color=''; $('agMsg').textContent='Error: '+(e.message||e); } }
 async function agMagic(){ const em=$('agEmail').value.trim(); if(!em){ $('agMsg').textContent='Escribe tu correo.'; return; } $('agMsg').textContent='Enviando enlace…'; try{ await Store.signInMagic(em); $('agMsg').textContent='Enlace enviado. Revisa tu correo (y spam).'; }catch(e){ $('agMsg').textContent='Error: '+(e.message||e); } }
 let authMode='login';
 function setAuthMode(m){ authMode=m; const su=m==='signup';
-  $('regFields').style.display=su?'':'none'; $('regPass2Field').style.display=su?'':'none'; $('agMagicWrap').style.display=su?'none':'';
-  $('agPrimary').textContent=su?'Crear cuenta':'Entrar';
-  $('agToggleWrap').innerHTML=su?'¿Ya tienes cuenta? <a href="#" id="agToggle" style="color:var(--blue);text-decoration:none;">Entrar</a>':'¿No tienes cuenta? <a href="#" id="agToggle" style="color:var(--blue);text-decoration:none;">Crear cuenta</a>';
+  $('regFields').style.display=su?'':'none'; $('loginPassField').style.display=su?'none':''; $('regPass2Field').style.display='none'; $('regNote').style.display=su?'':'none'; $('agMagicWrap').style.display=su?'none':'';
+  $('agPrimary').textContent=su?'Enviar solicitud':'Entrar';
+  $('agToggleWrap').innerHTML=su?'¿Ya tienes cuenta? <a href="#" id="agToggle" style="color:var(--blue);text-decoration:none;">Entrar</a>':'¿No tienes cuenta? <a href="#" id="agToggle" style="color:var(--blue);text-decoration:none;">Solicitar acceso</a>';
   $('agToggle').onclick=(e)=>{ e.preventDefault(); setAuthMode(su?'login':'signup'); const f=$(su?'agEmail':'agNombre'); if(f) f.focus(); };
-  $('agMsg').textContent='';
+  $('agMsg').style.color=''; $('agMsg').textContent='';
 }
 $('agPrimary').onclick=()=>{ authMode==='signup'?agSignup():agLogin(); };
 $('agMagic').onclick=(e)=>{ e.preventDefault(); agMagic(); };
@@ -1155,9 +1197,9 @@ setAuthMode('login');
 document.addEventListener('click',e=>{ if(menuEl&&!menuEl.contains(e.target)&&!e.target.closest('.mn')&&e.target.id!=='gameMenuBtn') closeMenu(); },true);
 window.addEventListener('scroll',closeMenu,true);
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(menuEl){ closeMenu(); return; }
-  for(const id of ['cfModal','chgModal','implModal','svModal','secModal','frModal','setModal','gameModal']){ if($(id).style.display==='flex'){ if(id==='cfModal') resolveConfirm(false); else { $(id).style.display='none'; if(id==='secModal') secRef=null; } restoreFocus(); return; } }
+  for(const id of ['cfModal','chgModal','implModal','svModal','secModal','frModal','setModal','reqModal','gameModal']){ if($(id).style.display==='flex'){ if(id==='cfModal') resolveConfirm(false); else { $(id).style.display='none'; if(id==='secModal') secRef=null; } restoreFocus(); return; } }
   if($('panel').classList.contains('open')){ closePanel(); return; } } });
-[['chgModal',closeChangeModal],['implModal',closeImplModal],['svModal',closeSaveModal],['secModal',closeSectionModal],['frModal',closeFairModal],['setModal',closeSettings],['gameModal',closeGameModal],['cfModal',()=>resolveConfirm(false)]].forEach(([id,fn])=>{ $(id).addEventListener('mousedown',e=>{ if(e.target.id===id) fn(); }); });
+[['chgModal',closeChangeModal],['implModal',closeImplModal],['svModal',closeSaveModal],['secModal',closeSectionModal],['frModal',closeFairModal],['setModal',closeSettings],['reqModal',closeRequests],['gameModal',closeGameModal],['cfModal',()=>resolveConfirm(false)]].forEach(([id,fn])=>{ $(id).addEventListener('mousedown',e=>{ if(e.target.id===id) fn(); }); });
 
 async function bootApp(){ await loadState(); if(normalizeStructures()) await saveState(); render(); updateBackend(); updateSavedIndicator(); }
 (async function init(){ await Store.init(); if(Store.ready()){ bootApp(); } else { updateBackend(); showAuthGate(); } })();
