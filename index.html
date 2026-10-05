@@ -600,7 +600,7 @@ const RB_SECTIONS = [
 const RB_TITLE = Object.fromEntries(RB_SECTIONS.map(([k,t])=>[k,t]));
 const RB_PLACEHOLDER = Object.fromEntries(RB_SECTIONS.map(([k,,p])=>[k,p]));
 function makeRulebook(c){ return { sections: RB_SECTIONS.map(([k,t])=>({ key:k, title:t, content:(c&&c[k])||'' })) }; }
-const STATES = [['porprobar','Por probar'],['funciona','OK'],['descartada','Descartada'],['aparcada','Testing']];
+const STATES = [['porprobar','Por probar'],['aparcada','Testing'],['funciona','OK'],['descartada','Descartada']];
 const STATE_TITLE = Object.fromEntries(STATES.map(([k,t])=>[k,t]));
 const FAIR_STATES = [['pendiente','Pendiente'],['no','No interesa'],['interesado','Interesado'],['proto','Quiere proto']];
 const FAIR_STATE_TITLE = Object.fromEntries(FAIR_STATES.map(([k,t])=>[k,t]));
