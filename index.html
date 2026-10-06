@@ -767,8 +767,9 @@ async function renderReqUsuarios(host){ const load=document.createElement('div')
   let users=[]; try{ users=await Store.listUsers(); }catch(e){ load.style.color='#e0937f'; load.textContent='Error: '+(e.message||e); return; }
   load.remove();
   if(!users.length){ const e2=document.createElement('div'); e2.style.cssText='color:var(--faint);font-size:12.5px;padding:6px 0;'; e2.textContent='No hay usuarios todavía.'; host.appendChild(e2); return; }
-  users.sort((a,b)=>(new Date(b.last_sign_in_at||0))-(new Date(a.last_sign_in_at||0)));
-  users.forEach(u=>{ const it=document.createElement('div'); it.className='req-item'; const last=u.last_sign_in_at?('Último acceso '+fmtWhen(new Date(u.last_sign_in_at).getTime())):'Nunca ha entrado'; const created=u.created_at?('Alta '+fmtWhen(new Date(u.created_at).getTime())):'';
+  const lastOf=u=>u.last_seen||u.last_sign_in_at||0;
+  users.sort((a,b)=>(new Date(lastOf(b)))-(new Date(lastOf(a))));
+  users.forEach(u=>{ const it=document.createElement('div'); it.className='req-item'; const lv=lastOf(u); const last=lv?('Último acceso '+fmtWhen(new Date(lv).getTime())):'Nunca ha entrado'; const created=u.created_at?('Alta '+fmtWhen(new Date(u.created_at).getTime())):'';
     it.innerHTML=`<div class="req-top"><span class="req-name">${escapeHtml(u.name||u.email||'')}${u.username?` <span style="color:var(--blue);font-family:'IBM Plex Mono',monospace;font-size:11px;">@${escapeHtml(u.username)}</span>`:''}</span></div><div class="req-mail">${escapeHtml(u.email||'')}</div><div class="req-when">${escapeHtml(last)}${created?(' · '+escapeHtml(created)):''}</div>`;
     host.appendChild(it); });
 }
