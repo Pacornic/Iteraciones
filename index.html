@@ -977,7 +977,7 @@ function renderFeriasPortada(){
   inner.appendChild(row);
   const grid=document.createElement('div'); grid.className='pt-grid';
   upcoming.forEach(f=>grid.appendChild(fairCard(f)));
-  const nw=document.createElement('button'); nw.className='pt-new'; nw.textContent=all.length?'＋ Nueva feria':'＋ Añade tu primera feria'; nw.onclick=()=>openFairModal(false); grid.appendChild(nw);
+  if(!upcoming.length){ const nw=document.createElement('button'); nw.className='pt-new'; nw.textContent=all.length?'No hay próximas ferias':'＋ Añade tu primera feria'; nw.onclick=()=>openFairModal(false); grid.appendChild(nw); }
   inner.appendChild(grid);
   if(past.length){ const hr=document.createElement('hr'); hr.className='pt-sep'; inner.appendChild(hr);
     const prow=document.createElement('div'); prow.className='pt-secrow'; const psec=document.createElement('span'); psec.className='pt-sec'; psec.textContent='Ferias pasadas · '+past.length; prow.appendChild(psec); inner.appendChild(prow);
