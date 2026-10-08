@@ -314,8 +314,8 @@
   /* detail panel */
   .panel{ position:fixed; top:0; right:0; bottom:0; width:340px; max-width:90vw; background:var(--surface-2); border-left:1px solid var(--border); z-index:60; padding:22px; overflow-y:auto; transform:translateX(100%); transition:transform .2s ease; box-shadow:var(--shadow); }
   .panel.open{ transform:translateX(0); }
-  .pcancel{ position:absolute; top:12px; right:14px; background:none; border:1px solid var(--border); color:var(--muted); font-size:12.5px; padding:5px 12px; border-radius:7px; cursor:pointer; z-index:2; }
-  .pcancel:hover{ border-color:#3a4658; color:var(--text); }
+  .pcancel{ position:absolute; top:12px; right:14px; background:var(--amber-dim); border:1px solid rgba(232,163,61,0.45); color:var(--amber); font-size:12.5px; padding:5px 12px; border-radius:7px; cursor:pointer; z-index:2; }
+  .pcancel:hover{ background:rgba(232,163,61,0.22); color:#f0c078; }
   .panel h3{ font-family:'Fraunces',serif; margin:0 30px 12px 0; font-size:19px; }
   .field{ margin-bottom:14px; }
   .field label{ display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.6px; color:var(--faint); margin-bottom:5px; }
@@ -1102,7 +1102,7 @@ function openApptDetail(f, a, isNew){
   b.querySelectorAll('.fst').forEach(btn=>btn.onclick=()=>{ commit(); const i=+btn.dataset.i; if(a.games[i]) a.games[i].estado=btn.dataset.e; saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
   b.querySelectorAll('.ag-rm').forEach(btn=>btn.onclick=()=>{ commit(); const i=+btn.dataset.i; a.games.splice(i,1); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
   { const sel=$('apAddG'); if(sel) sel.onchange=()=>{ const id=sel.value; if(!id) return; commit(); a.games.push({ gameId:id, gameName:gameNameById(id), estado:'pendiente', feedback:'' }); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); }; }
-  $('apSave').onclick=async()=>{ commit(); if(!a.editorial){ $('apEd').focus(); toast('Pon el nombre de la editorial.','warn'); return; } const conflicts=apptConflicts(f,a); if(conflicts.length){ const ms=apptMs(a.when); const overlap=conflicts.some(c=>apptMs(c.when)===ms); const list=conflicts.map(c=>`${c.editorial||'(sin editorial)'} (${fmtAppt(c.when)})`).join('; '); const ok=await confirmDialog(`${overlap?'Esta cita se solapa con':'Esta cita queda a menos de 30 min de'}: ${list}. ¿Guardar igualmente?`, { okLabel:'Guardar igualmente', danger:false }); if(!ok) return; } await saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); toast('Cita guardada.'); };
+  $('apSave').onclick=async()=>{ commit(); if(!a.editorial){ $('apEd').focus(); toast('Pon el nombre de la editorial.','warn'); return; } const conflicts=apptConflicts(f,a); if(conflicts.length){ const ms=apptMs(a.when); const overlap=conflicts.some(c=>apptMs(c.when)===ms); const list=conflicts.map(c=>`${c.editorial||'(sin editorial)'} (${fmtAppt(c.when)})`).join('; '); const ok=await confirmDialog(`${overlap?'Esta cita se solapa con':'Esta cita queda a menos de 30 min de'}: ${list}. ¿Guardar igualmente?`, { okLabel:'Guardar igualmente', danger:false }); if(!ok) return; } await saveAppt(f,a); closePanel(); renderFairBoard(); toast('Cita guardada.'); };
   $('apDel').onclick=async()=>{ if(a._new){ closePanel(); return; } const ok=await confirmDialog(`¿Eliminar la cita con "${a.editorial||'esta editorial'}"?`); if(!ok) return; f.appointments=f.appointments.filter(x=>x.id!==a.id); await saveState(); closePanel(); renderFairBoard(); toast('Cita eliminada.'); };
 }
 let editingFairId=null;
@@ -1193,7 +1193,7 @@ function openChangeDetail(g,c){
   { const at=$('pAppToggle'); if(at) at.onclick=()=>{ commit(); c.appImpact=!c.appImpact; if(!c.appImpact){ c.appImplemented=false; if(c.section==='app_solo') c.section=''; } c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); }; }
   { const pa=$('pApp'); if(pa) pa.onclick=()=>{ commit(); c.appImplemented=true; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); }; }
   { const pu=$('pAppUndo'); if(pu) pu.onclick=()=>{ commit(); c.appImplemented=false; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); }; }
-  $('pSave').onclick=async()=>{ commit(); c.updatedAt=Date.now(); await saveState(); renderBoard(); openChangeDetail(g,c); toast('Cambios guardados.'); };
+  $('pSave').onclick=async()=>{ commit(); c.updatedAt=Date.now(); await saveState(); closePanel(); renderBoard(); toast('Cambios guardados.'); };
   $('pDel').onclick=async()=>{ const ok=await confirmDialog(`¿Eliminar "${c.title}"?`); if(!ok) return; g.changes=g.changes.filter(x=>x.id!==c.id); await saveState(); closePanel(); renderBoard(); toast('Idea eliminada.'); };
 }
 function closePanel(){ $('panel').classList.remove('open'); }
