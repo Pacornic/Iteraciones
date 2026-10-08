@@ -988,7 +988,8 @@ function renderFeriasPortada(){
 /* ---------- Ferias ---------- */
 function currentFair(){ return (state.fairs||[]).find(f=>f.id===currentFairId); }
 function currentFairById(id){ return (state.fairs||[]).find(f=>f.id===id); }
-function gameNameById(id){ const g=state.games.find(x=>x.id===id); return g?g.name:null; }
+function allGames(){ return state.games.concat(sharedGames||[]); }
+function gameNameById(id){ const g=allGames().find(x=>x.id===id); return g?g.name:null; }
 function fmtAppt(v){ if(!v) return ''; const dateOnly=/^\d{4}-\d{2}-\d{2}$/.test(v); const d=new Date(dateOnly?v+'T00:00':v); if(isNaN(d.getTime())) return v; const opt=dateOnly?{ weekday:'short', day:'numeric', month:'short' }:{ weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }; let s=d.toLocaleString('es-ES',opt); return s.charAt(0).toUpperCase()+s.slice(1); }
 function hourOptions(){ let o='<option value="">--</option>'; for(let h=0;h<24;h++){ const v=String(h).padStart(2,'0'); o+=`<option value="${v}">${v}</option>`; } return o; }
 function minOptions(){ let o='<option value="">--</option>'; for(let m=0;m<60;m+=5){ const v=String(m).padStart(2,'0'); o+=`<option value="${v}">${v}</option>`; } return o; }
@@ -1077,7 +1078,7 @@ function saveAppt(f, a){ if(a._new){ delete a._new; f.appointments=f.appointment
 function openApptDetail(f, a, isNew){
   apptRef={f,a};
   const p=$('panel'), b=$('panelBody');
-  const catalog=state.games.filter(g=>!(a.games||[]).some(e=>e.gameId===g.id));
+  const catalog=allGames().filter(g=>(g.__shared||(g.stage||'active')==='active') && !(a.games||[]).some(e=>e.gameId===g.id));
   const gamesHtml=(a.games||[]).map((e,i)=>`<div class="ag-item">
       <div class="ag-h"><span class="ag-name">${escapeHtml(e.gameName||gameNameById(e.gameId)||'—')}</span><button class="ag-rm" data-i="${i}" title="Quitar juego">✕</button></div>
       <div class="fstates">${FAIR_STATES.map(([k,l])=>`<button class="fst f-${k}${e.estado===k?' on':''}" data-i="${i}" data-e="${k}">${l}</button>`).join('')}</div>
