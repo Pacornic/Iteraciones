@@ -433,7 +433,8 @@
   }
   ::-webkit-scrollbar{ width:9px;height:9px; } ::-webkit-scrollbar-thumb{ background:#2a3340; border-radius:6px; }
   .sr-only{ position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0); }
-  @media (max-width:720px){ .sidebar{ display:none; } .backend{ display:none; } .brand .tag{ display:none; } .chg{ overflow-x:auto; scrollbar-width:none; } .chg::-webkit-scrollbar{ display:none; } .chg>*{ flex-shrink:0; } .chg .t{ flex:1 0 auto; min-width:96px; max-width:56vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .chg .chg-date{ font-size:9px; padding-right:6px; } .has-logo .top-logo{ display:inline-block; } .has-logo .brand .dot{ display:none; } .game-select-mobile{ display:flex; align-items:center; gap:6px; } .game-select-mobile select{ background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 9px; font-size:13px; max-width:130px; } }
+  @media (max-width:720px){ .sidebar{ display:none; } .backend{ display:none; } .brand .tag{ display:none; } .chg{ overflow-x:auto; scrollbar-width:none; } .chg::-webkit-scrollbar{ display:none; } .chg>*{ flex-shrink:0; } .chg .t{ flex:1 0 auto; min-width:96px; max-width:56vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .chg .chg-date{ font-size:9px; padding-right:6px; } .has-logo .top-logo{ display:inline-block; } .has-logo .brand .dot{ display:none; } }
+  .game-select-mobile{ display:none !important; }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
@@ -717,7 +718,7 @@ const PRELOAD_VERSION = 4;
 let state = { games:[], currentGameId:null, preloadVersion:0 };
 let appView = 'home';                      // home | game | fair
 let currentFairId = null;
-let fairSub = 'juego';                      // juego | agenda
+let fairSub = 'agenda';                     // agenda | juego
 let apptRef = null;
 let currentTab = 'inicio';                 // inicio | reglas | proto
 let rbView = 'draft';                      // draft | versions | doc
@@ -1110,7 +1111,7 @@ function apptConflicts(f,a){ const ms=apptMs(a.when); if(ms==null) return []; re
 function hexToRgba(hex,a){ if(!hex) return 'rgba(102,182,223,'+a+')'; let h=String(hex).replace('#',''); if(h.length===3) h=h.split('').map(c=>c+c).join(''); const n=parseInt(h,16); if(isNaN(n)) return 'rgba(102,182,223,'+a+')'; const r=(n>>16)&255,g=(n>>8)&255,b=n&255; return 'rgba('+r+','+g+','+b+','+a+')'; }
 function chipStyle(color){ return `background:${hexToRgba(color,0.22)};color:${color}`; }
 function fairStats(f){ const appts=(f.appointments||[]); const games=new Set(); let proto=0,inter=0; appts.forEach(a=>(a.games||[]).forEach(e=>{ games.add(e.gameId||('name:'+e.gameName)); if(e.estado==='proto')proto++; else if(e.estado==='interesado')inter++; })); return { appts:appts.length, games:games.size, proto, inter }; }
-function openFair(id){ currentFairId=id; fairSub='juego'; appView='fair'; closePanel(); saveState(); render(); }
+function openFair(id){ currentFairId=id; fairSub='agenda'; appView='fair'; closePanel(); saveState(); render(); }
 function fairCard(f){
   const s=fairStats(f);
   const card=document.createElement('div'); card.className='pt-card'+(f.past?' paused':''); card.setAttribute('role','button'); card.setAttribute('tabindex','0');
@@ -1130,7 +1131,7 @@ function renderFairBoard(){
   if(!f){ appView='home'; return render(); }
   $('title').innerHTML=escapeHtml(f.name)+(f.dates?`<span class="fair-dates">${escapeHtml(f.dates)}</span>`:''); $('gameMenuBtn').style.display='none'; { const bh=$('backHome'); if(bh) bh.textContent='← Ferias'; }
   tabs.innerHTML='';
-  [['juego','Por juego'],['agenda','Agenda']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(fairSub===k?' on':''); b.textContent=l; b.onclick=()=>{ fairSub=k; closePanel(); renderFairBoard(); }; tabs.appendChild(b); });
+  [['agenda','Agenda'],['juego','Por juego']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(fairSub===k?' on':''); b.textContent=l; b.onclick=()=>{ fairSub=k; closePanel(); renderFairBoard(); }; tabs.appendChild(b); });
   wrap.innerHTML=''; wrap.className='wrap';
   if(fairSub==='agenda') renderFairAgenda(f,wrap); else renderFairByGame(f,wrap);
 }
@@ -1217,7 +1218,7 @@ function fmtRange(s,e){ const toD=(d)=>{ if(!d) return null; const dt=new Date(d
   if(ds&&de){ if(s===e) return ds.toLocaleDateString('es-ES',optY); const sM=ds.toLocaleDateString('es-ES',{month:'short'}), eM=de.toLocaleDateString('es-ES',{month:'short'}); if(sM===eM&&ds.getFullYear()===de.getFullYear()) return ds.getDate()+'–'+de.getDate()+' '+eM+' '+de.getFullYear(); return ds.toLocaleDateString('es-ES',opt)+' – '+de.toLocaleDateString('es-ES',optY); }
   const one=ds||de; return one?one.toLocaleDateString('es-ES',optY):''; }
 function openFairModal(edit,id){ lastFocused=document.activeElement; editingFairId=edit?id:null; if(edit){ const f=currentFairById(id); $('frTitle').textContent='Editar feria'; $('frSave').textContent='Guardar'; $('frName').value=f?f.name:''; $('frStart').value=f?(f.start||''):''; $('frEnd').value=f?(f.end||''):''; $('frPlace').value=f?(f.place||''):''; } else { $('frTitle').textContent='Nueva feria'; $('frSave').textContent='Crear'; $('frName').value=''; $('frStart').value=''; $('frEnd').value=''; $('frPlace').value=''; } $('frModal').style.display='flex'; $('frName').focus(); }
-async function saveFair(){ const name=$('frName').value.trim(); if(!name){ $('frName').focus(); return; } const start=$('frStart').value, end=$('frEnd').value, place=$('frPlace').value.trim(); const dates=fmtRange(start,end); if(editingFairId){ const f=currentFairById(editingFairId); if(f){ f.name=name; f.start=start; f.end=end; f.dates=dates; f.place=place; } toast('Feria actualizada.'); } else { const nf={ id:uid(), name, start, end, dates, place, appointments:[] }; state.fairs=state.fairs||[]; state.fairs.push(nf); currentFairId=nf.id; fairSub='juego'; appView='fair'; toast('Feria creada.'); } await saveState(); closeFairModal(); render(); }
+async function saveFair(){ const name=$('frName').value.trim(); if(!name){ $('frName').focus(); return; } const start=$('frStart').value, end=$('frEnd').value, place=$('frPlace').value.trim(); const dates=fmtRange(start,end); if(editingFairId){ const f=currentFairById(editingFairId); if(f){ f.name=name; f.start=start; f.end=end; f.dates=dates; f.place=place; } toast('Feria actualizada.'); } else { const nf={ id:uid(), name, start, end, dates, place, appointments:[] }; state.fairs=state.fairs||[]; state.fairs.push(nf); currentFairId=nf.id; fairSub='agenda'; appView='fair'; toast('Feria creada.'); } await saveState(); closeFairModal(); render(); }
 function closeFairModal(){ $('frModal').style.display='none'; editingFairId=null; restoreFocus(); }
 async function deleteFair(id){ const f=currentFairById(id); if(!f) return; const ok=await confirmDialog(`¿Eliminar la feria "${f.name}" con todas sus citas?`); if(!ok) return; state.fairs=state.fairs.filter(x=>x.id!==id); if(currentFairId===id){ currentFairId=null; } appView='ferias'; await saveState(); closePanel(); render(); toast('Feria eliminada.'); }
 function openFairMenu(anchor,id){ closeMenu(); const f=currentFairById(id); const m=document.createElement('div'); m.className='menu'; m.setAttribute('role','menu'); m.innerHTML=`<button data-a="edit">✎ Editar feria</button><button data-a="past">${f&&f.past?'↩ Marcar como próxima':'✓ Marcar como pasada'}</button><button class="dg" data-a="del">✕ Eliminar feria</button>`; document.body.appendChild(m); const r=anchor.getBoundingClientRect(); m.style.top=(r.bottom+6)+'px'; m.style.left=Math.max(8,Math.min(r.left,window.innerWidth-180))+'px'; menuEl=m; m.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{ const act=btn.dataset.a; closeMenu(); if(act==='edit') openFairModal(true,id); else if(act==='past') toggleFairPast(id); else deleteFair(id); }); m.querySelector('button').focus(); }
