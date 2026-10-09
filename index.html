@@ -482,14 +482,18 @@
 <div class="ov" id="setModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="setTitle">
   <div class="modal">
     <h3 id="setTitle">Ajustes</h3>
-    <div class="field"><label for="setName">Nombre</label><input type="text" id="setName" class="ap-in" placeholder="Tu nombre" autocomplete="name"></div>
-    <div style="margin:-2px 0 14px;"><button class="btn-q" id="setNameSave">Guardar nombre</button></div>
-    <div class="field"><label for="setUser">Usuario (@)</label><input type="text" id="setUser" class="ap-in" placeholder="tu usuario" autocomplete="off"></div>
-    <div style="margin:-2px 0 14px;"><button class="btn-q" id="setUserSave">Guardar usuario</button></div>
-    <div class="field"><label>Email</label><div class="set-val" id="setEmail">—</div></div>
-    <div style="border-top:1px solid var(--line);margin:8px 0 14px;"></div>
-    <div class="field"><label for="setPw1">Nueva contraseña</label><input type="password" id="setPw1" class="ap-in" placeholder="Mín. 6 caracteres" autocomplete="new-password"></div>
-    <div class="field"><label for="setPw2">Repite la contraseña</label><input type="password" id="setPw2" class="ap-in" placeholder="Repite la nueva contraseña" autocomplete="new-password"></div>
+    <div class="req-tabs" id="setTabs" style="display:none;"></div>
+    <div id="setCuenta">
+      <div class="field"><label for="setName">Nombre</label><input type="text" id="setName" class="ap-in" placeholder="Tu nombre" autocomplete="name"></div>
+      <div style="margin:-2px 0 14px;"><button class="btn-q" id="setNameSave">Guardar nombre</button></div>
+      <div class="field"><label for="setUser">Usuario (@)</label><input type="text" id="setUser" class="ap-in" placeholder="tu usuario" autocomplete="off"></div>
+      <div style="margin:-2px 0 14px;"><button class="btn-q" id="setUserSave">Guardar usuario</button></div>
+      <div class="field"><label>Email</label><div class="set-val" id="setEmail">—</div></div>
+      <div style="border-top:1px solid var(--line);margin:8px 0 14px;"></div>
+      <div class="field"><label for="setPw1">Nueva contraseña</label><input type="password" id="setPw1" class="ap-in" placeholder="Mín. 6 caracteres" autocomplete="new-password"></div>
+      <div class="field"><label for="setPw2">Repite la contraseña</label><input type="password" id="setPw2" class="ap-in" placeholder="Repite la nueva contraseña" autocomplete="new-password"></div>
+    </div>
+    <div id="setUsuarios" style="display:none;"><div id="setUsersList"></div></div>
     <div class="set-msg" id="setMsg"></div>
     <div class="macts"><button class="btn-q" id="setClose">Cerrar</button><button class="btn" id="setPwSave">Cambiar contraseña</button></div>
   </div>
@@ -735,7 +739,9 @@ function hideAuthGate(){ $('home').style.display='none'; }
 function updateBackend(){ $('backend').textContent='· '+Store.label(); $('signOutBtn').style.display = Store.backend==='supabase'?'inline-flex':'none'; const showInbox = Store.backend==='supabase' && (Store.admin || myInvites.length>0 || unreadAnn()>0); $('reqBtn').style.display = showInbox?'inline-flex':'none'; if(Store.backend==='supabase') refreshRequestsBadge(); updateHello(); }
 function firstName(){ return String(Store.name||'').trim().split(/\s+/)[0]||''; }
 function updateHello(){ const el=$('hello'); if(!el) return; const n=firstName(); el.textContent = n?('Hola, '+n):''; }
-function openSettings(){ lastFocused=document.activeElement; const cloud=Store.backend==='supabase'; $('setName').value=Store.name||''; $('setUser').value=Store.username||''; $('setEmail').textContent=Store.email||'—'; $('setPw1').value=''; $('setPw2').value=''; $('setMsg').textContent = cloud?'':'Cambiar nombre, usuario o contraseña requiere sesión en la nube (Supabase).'; $('setMsg').style.color='var(--muted)'; ['setName','setNameSave','setUser','setUserSave','setPw1','setPw2','setPwSave'].forEach(id=>{ $(id).disabled=!cloud; }); $('setModal').style.display='flex'; if(cloud) $('setName').focus(); }
+let setTab='cuenta';
+function showSetTab(t){ setTab=t; const admin=Store.admin; $('setCuenta').style.display=(t==='usuarios')?'none':''; $('setUsuarios').style.display=(t==='usuarios')?'':'none'; $('setPwSave').style.display=(t==='usuarios')?'none':''; $('setMsg').style.display=(t==='usuarios')?'none':''; const bar=$('setTabs'); bar.style.display=admin?'flex':'none'; bar.innerHTML=''; if(admin){ [['cuenta','Cuenta'],['usuarios','Usuarios']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='rtab'+(setTab===k?' on':''); b.textContent=l; b.onclick=()=>showSetTab(k); bar.appendChild(b); }); } if(t==='usuarios'){ const ul=$('setUsersList'); ul.innerHTML=''; renderReqUsuarios(ul); } }
+function openSettings(){ lastFocused=document.activeElement; const cloud=Store.backend==='supabase'; $('setName').value=Store.name||''; $('setUser').value=Store.username||''; $('setEmail').textContent=Store.email||'—'; $('setPw1').value=''; $('setPw2').value=''; $('setMsg').textContent = cloud?'':'Cambiar nombre, usuario o contraseña requiere sesión en la nube (Supabase).'; $('setMsg').style.color='var(--muted)'; ['setName','setNameSave','setUser','setUserSave','setPw1','setPw2','setPwSave'].forEach(id=>{ $(id).disabled=!cloud; }); showSetTab('cuenta'); $('setModal').style.display='flex'; if(cloud) $('setName').focus(); }
 async function doChangeName(){ const name=$('setName').value.trim(); const msg=$('setMsg'); if(!name){ msg.style.color='var(--brick)'; msg.textContent='Escribe un nombre.'; $('setName').focus(); return; } msg.style.color='var(--muted)'; msg.textContent='Guardando…'; try{ await Store.changeName(name); updateHello(); msg.style.color='var(--teal)'; msg.textContent='Nombre actualizado.'; toast('Nombre actualizado.'); }catch(e){ msg.style.color='var(--brick)'; msg.textContent='Error: '+(e.message||e); } }
 function closeSettings(){ $('setModal').style.display='none'; restoreFocus(); }
 function openNickGate(){ lastFocused=document.activeElement; $('nickInput').value=Store.username||Store.requestedUsername||''; $('nickMsg').textContent=''; $('nickMsg').style.color='var(--muted)'; $('nickModal').style.display='flex'; $('nickInput').focus(); }
@@ -781,9 +787,9 @@ async function renderRequests(){ const host=$('reqList'); host.innerHTML='';
   renderInvitesSection(host);
   if(Store.admin){
     const bar=document.createElement('div'); bar.className='req-tabs';
-    [['solicitudes','Solicitudes'],['usuarios','Usuarios'],['anuncios','Anuncios']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='rtab'+(reqTab===k?' on':''); b.textContent=l; b.onclick=()=>{ reqTab=k; renderRequests(); }; bar.appendChild(b); });
+    [['solicitudes','Solicitudes'],['anuncios','Anuncios']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='rtab'+(reqTab===k?' on':''); b.textContent=l; b.onclick=()=>{ reqTab=k; renderRequests(); }; bar.appendChild(b); });
     host.appendChild(bar);
-    if(reqTab==='usuarios') renderReqUsuarios(host); else if(reqTab==='anuncios') renderReqAnuncios(host); else renderReqSolicitudes(host);
+    if(reqTab==='anuncios') renderReqAnuncios(host); else renderReqSolicitudes(host);
   } else {
     if(announcements.length){ const h=document.createElement('div'); h.className='req-sec'; h.textContent='Anuncios'; host.appendChild(h); announcements.forEach(a=>host.appendChild(annItem(a))); }
     if(!myInvites.length && !announcements.length){ host.innerHTML='<div style="color:var(--faint);font-size:12.5px;padding:8px 0;">No tienes nada en el buzón.</div>'; }
@@ -1386,8 +1392,8 @@ async function deleteVersion(g,v){ const ok=await confirmDialog(`¿Eliminar la v
 function printVersion(g,v){ const a=$('printArea'); a.innerHTML=versionDocHtml(g,v); const prevTitle=document.title; document.title=`Kaizen - ${g.name} - v${v.n}`; const cl=()=>{ a.innerHTML=''; document.title=prevTitle; window.removeEventListener('afterprint',cl); }; window.addEventListener('afterprint',cl); window.print(); }
 
 /* ---------- Game create/rename/delete ---------- */
-function openGameModal(edit=false,id=null,stage){ lastFocused=document.activeElement; editingGameId=edit?id:null; pendingGameStage = edit ? pendingGameStage : (stage||'active'); if(edit){ const g=state.games.find(x=>x.id===id); $('gmTitle').textContent='Renombrar juego'; $('gmHint').textContent='Cambia el nombre.'; $('gmSave').textContent='Guardar'; $('gmName').value=g?g.name:''; } else if(pendingGameStage==='draft'){ $('gmTitle').textContent='Nueva idea (Draft)'; $('gmHint').textContent='Una idea en bruto, sin definir todavía.'; $('gmSave').textContent='Crear'; $('gmName').value=''; } else { $('gmTitle').textContent='Añadir juego'; $('gmHint').textContent='Se crea vacío.'; $('gmSave').textContent='Crear'; $('gmName').value=''; } $('gameModal').style.display='flex'; $('gmName').focus(); }
-async function saveGame(){ const name=$('gmName').value.trim(); if(!name){ $('gmName').focus(); return; } if(sharedRenameRef){ const g=sharedRenameRef; g.name=name; sharedRenameRef=null; await saveSharedGame(g); await reloadSharedGames(); closeGameModal(); render(); toast('Proyecto renombrado.'); return; } if(editingGameId){ const g=state.games.find(x=>x.id===editingGameId); if(g) g.name=name; toast('Juego renombrado.'); } else { const stage=pendingGameStage||'active'; const ng={ id:uid(), name, color:SPINE_COLORS[state.games.length%SPINE_COLORS.length], stage, rulebook:makeRulebook(), rulebookVersions:[], changes:[], pendingChanges:[], currentSummary:'', migrated:true, flattened:true }; state.games.push(ng); state.currentGameId=ng.id; currentTab='inicio'; appView = (stage==='draft') ? 'design' : 'game'; pendingGameStage='active'; toast(stage==='draft'?'Idea añadida a Draft.':'Juego creado.'); } await saveState(); closeGameModal(); render(); }
+function openGameModal(edit=false,id=null,stage){ lastFocused=document.activeElement; editingGameId=edit?id:null; pendingGameStage = edit ? pendingGameStage : (stage||'draft'); if(edit){ const g=state.games.find(x=>x.id===id); $('gmTitle').textContent='Renombrar juego'; $('gmHint').textContent='Cambia el nombre.'; $('gmSave').textContent='Guardar'; $('gmName').value=g?g.name:''; } else { $('gmTitle').textContent='Nuevo juego'; $('gmHint').textContent='Se crea en Draft; cuando esté listo lo pasas a activos desde el menú ⋯.'; $('gmSave').textContent='Crear'; $('gmName').value=''; } $('gameModal').style.display='flex'; $('gmName').focus(); }
+async function saveGame(){ const name=$('gmName').value.trim(); if(!name){ $('gmName').focus(); return; } if(sharedRenameRef){ const g=sharedRenameRef; g.name=name; sharedRenameRef=null; await saveSharedGame(g); await reloadSharedGames(); closeGameModal(); render(); toast('Proyecto renombrado.'); return; } if(editingGameId){ const g=state.games.find(x=>x.id===editingGameId); if(g) g.name=name; toast('Juego renombrado.'); } else { const stage=pendingGameStage||'draft'; const ng={ id:uid(), name, color:SPINE_COLORS[state.games.length%SPINE_COLORS.length], stage, rulebook:makeRulebook(), rulebookVersions:[], changes:[], pendingChanges:[], currentSummary:'', migrated:true, flattened:true }; state.games.push(ng); state.currentGameId=ng.id; currentTab='inicio'; appView = (stage==='draft') ? 'design' : 'game'; pendingGameStage='draft'; toast(stage==='draft'?'Juego creado en Draft.':'Juego creado.'); } await saveState(); closeGameModal(); render(); }
 function closeGameModal(){ $('gameModal').style.display='none'; editingGameId=null; sharedRenameRef=null; restoreFocus(); }
 async function deleteGame(id){ const g=state.games.find(x=>x.id===id); if(!g) return; const ok=await confirmDialog(`¿Eliminar el juego "${g.name}" con todo su contenido?`); if(!ok) return; state.games=state.games.filter(x=>x.id!==id); if(state.currentGameId===id){ state.currentGameId=null; } appView='design'; currentTab='inicio'; await saveState(); closePanel(); render(); toast('Juego eliminado.'); }
 
