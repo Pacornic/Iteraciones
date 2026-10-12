@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kaizen — Iteration Design Manager</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -233,6 +235,11 @@
   .wl-c-a{ font-size:11.5px; color:var(--blue); } .wl-c-t{ flex:1; font-size:12px; color:var(--muted); word-break:break-word; } .wl-c-tm{ font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--faint); } .wl-c-x{ background:none; border:none; color:var(--faint); font-size:10px; cursor:pointer; }
   .wl-c-in{ width:100%; margin-top:6px; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:12px; padding:7px 10px; }
   .wl-c-in:focus{ outline:none; border-color:var(--amber); }
+  /* pull to refresh */
+  .ptr{ position:fixed; top:0; left:50%; transform:translateX(-50%) translateY(-60px); z-index:80; width:40px; height:40px; border-radius:50%; background:var(--surface-2); border:1px solid var(--border); box-shadow:var(--shadow); display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:18px; pointer-events:none; }
+  .ptr.on{ color:var(--amber); border-color:var(--amber); }
+  .ptr.spin .ptr-i{ animation:ptrspin .8s linear infinite; display:inline-block; }
+  @keyframes ptrspin{ to{ transform:rotate(360deg); } }
   /* home tareas */
   .home-tasks{ background:var(--surface); border:1px solid var(--border); border-radius:13px; padding:8px 14px 12px; }
   .ht-blk{ padding:8px 0; border-top:1px solid var(--line); }
@@ -471,6 +478,7 @@
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
+<script>try{var u=window.SUPABASE_CONFIG&&window.SUPABASE_CONFIG.url;if(u){var l=document.createElement("link");l.rel="preconnect";l.href=u;l.crossOrigin="anonymous";document.head.appendChild(l);}}catch(e){}</script>
 </head>
 <body>
 
@@ -1761,8 +1769,25 @@ $('drawClear').onclick=clearDraw;
 $('drawCancel').onclick=closeDraw;
 $('drawAdd').onclick=()=>{ const cv=$('drawCanvas'); let url=null; try{ url=cv.toDataURL('image/jpeg',0.85); }catch(e){} if(url && drawDone) drawDone(url); closeDraw(); };
 
-async function bootApp(){ await loadState(); if(normalizeStructures()) await saveState(); if(Store.backend==='supabase'){ await Store.upsertProfile(); await Store.checkAdmin(); await reloadDirectory(); await reloadSharedGames(); await reloadInvites(); await reloadSentInvites(); await reloadAnnouncements(); await reloadWall(); } render(); updateBackend(); updateSavedIndicator(); if(window.__kaizenRecovery){ window.__kaizenRecovery=false; openRecovery(); } else if(Store.backend==='supabase'){ await ensureUsername(); } }
+async function bootApp(){ await loadState(); if(normalizeStructures()) await saveState();
+  render(); updateBackend(); updateSavedIndicator();
+  if(Store.backend==='supabase'){
+    await Store.upsertProfile();
+    await Promise.allSettled([ Store.checkAdmin(), reloadDirectory(), reloadSharedGames(), reloadInvites(), reloadSentInvites(), reloadAnnouncements() ]);
+    render(); updateBackend();
+  }
+  if(window.__kaizenRecovery){ window.__kaizenRecovery=false; openRecovery(); } else if(Store.backend==='supabase'){ await ensureUsername(); } }
+async function refreshCloud(){ if(Store.backend!=='supabase') return; await Promise.allSettled([ Store.checkAdmin(), reloadDirectory(), reloadSharedGames(), reloadInvites(), reloadSentInvites(), reloadAnnouncements() ]); render(); updateBackend(); }
 async function ensureUsername(){ if(Store.backend!=='supabase' || Store.username) return; const want=(Store.requestedUsername||'').trim(); if(want && /^[a-zA-Z0-9_]{3,20}$/.test(want)){ try{ if(await Store.usernameAvailable(want)){ await Store.setUsername(want); updateHello(); return; } }catch(e){} } openNickGate(); }
+(function setupPTR(){
+  const scroller=$('portada'); if(!scroller) return;
+  const ind=document.createElement('div'); ind.className='ptr'; ind.innerHTML='<span class="ptr-i">↓</span>'; document.body.appendChild(ind);
+  const icon=ind.querySelector('.ptr-i'); const TH=70; let startY=0, pulling=false, ready=false, active=false;
+  const reset=()=>{ ind.style.transform='translateX(-50%) translateY(-60px)'; ind.classList.remove('on','spin'); icon.textContent='↓'; };
+  scroller.addEventListener('touchstart',e=>{ if(active||e.touches.length!==1){ pulling=false; return; } if(scroller.scrollTop>0){ pulling=false; return; } startY=e.touches[0].clientY; pulling=true; ready=false; },{passive:true});
+  scroller.addEventListener('touchmove',e=>{ if(!pulling||active) return; const dy=e.touches[0].clientY-startY; if(dy<=0){ reset(); return; } const d=Math.min(dy*0.5,96); ind.style.transform=`translateX(-50%) translateY(${d-60}px)`; ready=dy>TH; ind.classList.toggle('on',ready); },{passive:true});
+  scroller.addEventListener('touchend',async()=>{ if(!pulling||active){ pulling=false; return; } pulling=false; if(!ready){ reset(); return; } active=true; ind.classList.add('spin','on'); icon.textContent='⟳'; ind.style.transform='translateX(-50%) translateY(16px)'; try{ await refreshCloud(); toast('Actualizado.'); }catch(_){} reset(); active=false; });
+})();
 (async function init(){ await Store.init(); if(Store.ready()){ bootApp(); } else { updateBackend(); showAuthGate(); } })();
 </script>
 </body>
