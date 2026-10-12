@@ -51,6 +51,10 @@
   .ann-compose{ margin-bottom:10px; }
   .ann-text{ font-size:13px; color:var(--text); white-space:pre-wrap; word-break:break-word; }
   .img-full{ max-width:92vw; max-height:88vh; border-radius:10px; box-shadow:var(--shadow); cursor:zoom-out; }
+  .draw-tools{ display:flex; align-items:center; gap:9px; margin-bottom:10px; }
+  .draw-sw{ width:22px; height:22px; border-radius:50%; cursor:pointer; border:2px solid transparent; box-shadow:0 0 0 1px rgba(255,255,255,0.1); }
+  .draw-sw.on{ border-color:#fff; }
+  .draw-canvas{ width:100%; height:auto; background:#fff; border:1px solid var(--border); border-radius:8px; touch-action:none; cursor:crosshair; display:block; }
   .bi-feed{ display:flex; flex-direction:column; gap:16px; padding-bottom:6px; }
   .bi-msg{ display:flex; gap:10px; }
   .bi-av{ width:30px; height:30px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:#0d1117; font-weight:600; }
@@ -77,6 +81,19 @@
   .bi-input{ flex:1; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'IBM Plex Sans',sans-serif; font-size:13.5px; padding:9px 11px; resize:none; line-height:1.4; }
   .bi-input:focus{ outline:none; border-color:var(--amber); }
   .bi-pub{ flex-shrink:0; }
+  /* tareas */
+  .tk-composer{ display:flex; gap:8px; margin-bottom:14px; }
+  .tk-in{ flex:1; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:13.5px; padding:9px 11px; }
+  .tk-in:focus{ outline:none; border-color:var(--amber); } .tk-add{ flex-shrink:0; }
+  .tk-list{ display:flex; flex-direction:column; }
+  .tk-row{ display:flex; align-items:center; gap:10px; padding:9px 2px; border-top:1px solid var(--line); }
+  .tk-row:first-child{ border-top:none; }
+  .tk-cb{ width:22px; height:22px; flex-shrink:0; border:1.5px solid var(--border); border-radius:6px; background:none; color:transparent; font-size:12px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+  .tk-cb:hover{ border-color:var(--teal); } .tk-cb.on{ background:var(--teal); border-color:transparent; color:#08231c; }
+  .tk-tx{ flex:1; font-size:13.5px; color:var(--text); word-break:break-word; }
+  .tk-row.done .tk-tx{ color:var(--faint); text-decoration:line-through; }
+  .tk-del{ background:none; border:none; color:var(--faint); font-size:12px; cursor:pointer; opacity:.6; } .tk-del:hover{ color:var(--brick); opacity:1; }
+  .tk-donehdr{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.8px; text-transform:uppercase; color:var(--faint); margin:16px 0 6px; }
   .pt-badge.shared{ color:#8fb6e0; }
   .pt-card-share{ position:absolute; bottom:12px; right:12px; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; z-index:2; }
   .pt-card-share.sh-none{ background:#28313f; color:#9aa6b5; }
@@ -211,6 +228,15 @@
   .wl-c-a{ font-size:11.5px; color:var(--blue); } .wl-c-t{ flex:1; font-size:12px; color:var(--muted); word-break:break-word; } .wl-c-tm{ font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--faint); } .wl-c-x{ background:none; border:none; color:var(--faint); font-size:10px; cursor:pointer; }
   .wl-c-in{ width:100%; margin-top:6px; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:12px; padding:7px 10px; }
   .wl-c-in:focus{ outline:none; border-color:var(--amber); }
+  /* home tareas */
+  .home-tasks{ background:var(--surface); border:1px solid var(--border); border-radius:13px; padding:8px 14px 12px; }
+  .ht-blk{ padding:8px 0; border-top:1px solid var(--line); }
+  .ht-blk:first-child{ border-top:none; }
+  .ht-game{ display:flex; align-items:center; gap:8px; width:100%; background:none; border:none; cursor:pointer; color:var(--text); font-family:'IBM Plex Sans',sans-serif; font-size:13px; font-weight:600; padding:4px 0; }
+  .ht-game b{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .ht-game:hover{ color:var(--amber); }
+  .ht-n{ margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint); background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:1px 8px; }
+  .home-tasks .tk-row{ padding:5px 0 5px 17px; }
   @media(max-width:560px){ .home-metrics{ grid-template-columns:1fr 1fr; } .home-areas{ grid-template-columns:1fr; } .home-two{ grid-template-columns:1fr; } }
   .pt-inner{ max-width:980px; margin:0 auto; padding:44px 26px 90px; }
   .pt-hero{ display:flex; align-items:center; gap:18px; padding:6px 0 28px; border-bottom:1px solid var(--line); margin-bottom:28px; }
@@ -226,7 +252,8 @@
   .pt-card-top{ display:flex; align-items:center; gap:8px; margin-bottom:9px; }
   .pt-ver{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--amber); background:var(--amber-dim); padding:2px 7px; border-radius:5px; }
   .pt-badge{ font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--teal); }
-  .pt-mn{ margin-left:auto; opacity:0; background:none; border:none; color:var(--muted); cursor:pointer; font-size:15px; padding:0 2px; }
+  .pt-mn{ margin-left:auto; opacity:1; background:var(--card-2,rgba(255,255,255,0.05)); border:1px solid var(--border); border-radius:7px; color:var(--muted); cursor:pointer; font-size:15px; line-height:1; padding:3px 7px; transition:background .12s, color .12s, border-color .12s; }
+  .pt-mn:hover{ background:var(--amber,#e8a33d); border-color:var(--amber,#e8a33d); color:#1f1a13; }
   .pt-card:hover .pt-mn, .pt-card:focus-within .pt-mn{ opacity:1; }
   .pt-name{ font-family:'Fraunces',serif; font-size:19px; font-weight:600; margin:0 0 9px; line-height:1.2; }
   .pt-stats{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--muted); }
@@ -392,7 +419,7 @@
 
   /* modal */
   .ov{ position:fixed; inset:0; background:rgba(8,11,15,0.62); display:flex; align-items:center; justify-content:center; z-index:100; padding:16px; }
-  .modal{ background:var(--surface-2); border:1px solid var(--border); border-radius:13px; width:100%; max-width:440px; padding:22px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow); }
+  .modal{ position:relative; background:var(--surface-2); border:1px solid var(--border); border-radius:13px; width:100%; max-width:440px; padding:22px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow); }
   .sec-modal{ max-width:680px; }
   #scText{ width:100%; min-height:56vh; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'IBM Plex Sans',sans-serif; font-size:14.5px; line-height:1.6; padding:12px 14px; resize:vertical; }
   #scText:focus{ outline:none; border-color:var(--amber); }
@@ -436,8 +463,8 @@
   @media (max-width:720px){ .sidebar{ display:none; } .backend{ display:none; } .brand .tag{ display:none; } .chg{ overflow-x:auto; scrollbar-width:none; } .chg::-webkit-scrollbar{ display:none; } .chg>*{ flex-shrink:0; } .chg .t{ flex:1 0 auto; min-width:96px; max-width:56vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .chg .chg-date{ font-size:9px; padding-right:6px; } .has-logo .top-logo{ display:inline-block; } .has-logo .brand .dot{ display:none; } }
   .game-select-mobile{ display:none !important; }
 </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
 </head>
 <body>
 
@@ -540,9 +567,11 @@
 <!-- Settings modal -->
 <div class="ov" id="setModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="setTitle">
   <div class="modal">
+    <button class="pcancel" id="setTopClose" style="display:none;">Cerrar</button>
     <h3 id="setTitle">Ajustes</h3>
     <div class="req-tabs" id="setTabs" style="display:none;"></div>
     <div id="setCuenta">
+      <div style="margin:0 0 12px;"><button class="btn-q" id="setEdit">✎ Editar nombre y usuario</button></div>
       <div class="field"><label for="setName">Nombre</label><input type="text" id="setName" class="ap-in" placeholder="Tu nombre" autocomplete="name"></div>
       <div style="margin:-2px 0 14px;"><button class="btn-q" id="setNameSave">Guardar nombre</button></div>
       <div class="field"><label for="setUser">Usuario (@)</label><input type="text" id="setUser" class="ap-in" placeholder="tu usuario" autocomplete="off"></div>
@@ -605,6 +634,23 @@
 
 <!-- Image lightbox -->
 <div class="ov" id="imgModal" style="display:none;" role="dialog" aria-modal="true" aria-label="Imagen"><img id="imgModalImg" class="img-full" alt="imagen"></div>
+
+<!-- Draw modal -->
+<div class="ov" id="drawModal" style="display:none;" role="dialog" aria-modal="true" aria-label="Dibujar">
+  <div class="modal" style="max-width:720px;">
+    <h3>Dibujo</h3>
+    <div class="draw-tools">
+      <span class="draw-sw" data-c="#1f1a13" style="background:#1f1a13"></span>
+      <span class="draw-sw" data-c="#d1492e" style="background:#d1492e"></span>
+      <span class="draw-sw" data-c="#e8a33d" style="background:#e8a33d"></span>
+      <span class="draw-sw" data-c="#57b394" style="background:#57b394"></span>
+      <span class="draw-sw" data-c="#66b6df" style="background:#66b6df"></span>
+      <button class="btn-q" id="drawClear" style="margin-left:auto;">Limpiar</button>
+    </div>
+    <canvas id="drawCanvas" width="680" height="440" class="draw-canvas"></canvas>
+    <div class="macts"><button class="btn-q" id="drawCancel">Cancelar</button><button class="btn" id="drawAdd">Añadir al post</button></div>
+  </div>
+</div>
 
 <!-- Game modal -->
 <div class="ov" id="gameModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="gmTitle">
@@ -804,8 +850,12 @@ function updateBackend(){ $('backend').textContent='· '+Store.label(); $('signO
 function firstName(){ return String(Store.name||'').trim().split(/\s+/)[0]||''; }
 function updateHello(){ const el=$('hello'); if(!el) return; const n=firstName(); el.textContent = n?('Hola, '+n):''; }
 let setTab='cuenta';
-function showSetTab(t){ setTab=t; const admin=Store.admin; $('setCuenta').style.display=(t==='usuarios')?'none':''; $('setUsuarios').style.display=(t==='usuarios')?'':'none'; $('setPwSave').style.display=(t==='usuarios')?'none':''; $('setMsg').style.display=(t==='usuarios')?'none':''; const bar=$('setTabs'); bar.style.display=admin?'flex':'none'; bar.innerHTML=''; if(admin){ [['cuenta','Cuenta'],['usuarios','Usuarios']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='rtab'+(setTab===k?' on':''); b.textContent=l; b.onclick=()=>showSetTab(k); bar.appendChild(b); }); } if(t==='usuarios'){ const ul=$('setUsersList'); ul.innerHTML=''; renderReqUsuarios(ul); } }
-function openSettings(){ lastFocused=document.activeElement; const cloud=Store.backend==='supabase'; $('setName').value=Store.name||''; $('setUser').value=Store.username||''; $('setEmail').textContent=Store.email||'—'; $('setPw1').value=''; $('setPw2').value=''; $('setMsg').textContent = cloud?'':'Cambiar nombre, usuario o contraseña requiere sesión en la nube (Supabase).'; $('setMsg').style.color='var(--muted)'; ['setName','setNameSave','setUser','setUserSave','setPw1','setPw2','setPwSave'].forEach(id=>{ $(id).disabled=!cloud; }); showSetTab('cuenta'); $('setModal').style.display='flex'; if(cloud) $('setName').focus(); }
+function showSetTab(t){ setTab=t; const admin=Store.admin; $('setCuenta').style.display=(t==='usuarios')?'none':''; $('setUsuarios').style.display=(t==='usuarios')?'':'none'; $('setTopClose').style.display=(t==='usuarios')?'':'none'; $('setClose').style.display=(t==='usuarios')?'none':''; $('setPwSave').style.display=(t==='usuarios')?'none':''; $('setMsg').style.display=(t==='usuarios')?'none':''; const bar=$('setTabs'); bar.style.display=admin?'flex':'none'; bar.innerHTML=''; if(admin){ [['cuenta','Cuenta'],['usuarios','Usuarios']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='rtab'+(setTab===k?' on':''); b.textContent=l; b.onclick=()=>showSetTab(k); bar.appendChild(b); }); } if(t==='usuarios'){ const ul=$('setUsersList'); ul.innerHTML=''; renderReqUsuarios(ul); } }
+function enableSettingsEdit(){ $('setName').disabled=false; $('setUser').disabled=false; $('setNameSave').style.display=''; $('setUserSave').style.display=''; $('setEdit').style.display='none'; $('setName').focus(); }
+function openSettings(){ lastFocused=document.activeElement; const cloud=Store.backend==='supabase'; $('setName').value=Store.name||''; $('setUser').value=Store.username||''; $('setEmail').textContent=Store.email||'—'; $('setPw1').value=''; $('setPw2').value=''; $('setMsg').textContent = cloud?'':'Cambiar nombre, usuario o contraseña requiere sesión en la nube (Supabase).'; $('setMsg').style.color='var(--muted)';
+  $('setName').disabled=true; $('setUser').disabled=true; $('setNameSave').style.display='none'; $('setUserSave').style.display='none'; $('setEdit').style.display=cloud?'inline-flex':'none';
+  ['setPw1','setPw2','setPwSave'].forEach(id=>{ $(id).disabled=!cloud; });
+  showSetTab('cuenta'); $('setModal').style.display='flex'; }
 async function doChangeName(){ const name=$('setName').value.trim(); const msg=$('setMsg'); if(!name){ msg.style.color='var(--brick)'; msg.textContent='Escribe un nombre.'; $('setName').focus(); return; } msg.style.color='var(--muted)'; msg.textContent='Guardando…'; try{ await Store.changeName(name); updateHello(); msg.style.color='var(--teal)'; msg.textContent='Nombre actualizado.'; toast('Nombre actualizado.'); }catch(e){ msg.style.color='var(--brick)'; msg.textContent='Error: '+(e.message||e); } }
 function closeSettings(){ $('setModal').style.display='none'; restoreFocus(); }
 function openNickGate(){ lastFocused=document.activeElement; $('nickInput').value=Store.username||Store.requestedUsername||''; $('nickMsg').textContent=''; $('nickMsg').style.color='var(--muted)'; $('nickModal').style.display='flex'; $('nickInput').focus(); }
@@ -958,6 +1008,25 @@ function recentOf(g){ return g.__shared ? (g.__updatedAt?new Date(g.__updatedAt)
 function byRecent(a,b){ return recentOf(b)-recentOf(a); }
 function goHome(){ appView='home'; closePanel(); render(); }
 function openGame(id){ const own=state.games.some(x=>x.id===id); state.currentGameId=id; currentTab='inicio'; rbView='draft'; rbVersionId=null; appView='game'; closePanel(); if(own) saveState(); render(); }
+function openGameTab(id,tab){ openGame(id); currentTab=tab; render(); }
+async function saveGame(g){ if(g && g.__shared) return saveSharedGame(g); state.updatedAt=Date.now(); try{ const ok=await Store.set('games-data', JSON.stringify(state)); updateSavedIndicator(); if(!ok&&!storageWarned){ storageWarned=true; toast('No se pudo guardar de forma persistente.','warn',6000); } }catch(e){} }
+function renderHomeTareas(host){
+  host.innerHTML='';
+  const total=allGames().reduce((s,g)=>s+(g.tasks||[]).filter(t=>!t.done).length,0);
+  if(!total){ const e=document.createElement('div'); e.className='home-empty'; e.textContent='Sin tareas pendientes. Añádelas desde la Nota rápida (tipo Tarea) o dentro de cada juego.'; host.appendChild(e); return; }
+  allGames().filter(g=>(g.tasks||[]).some(t=>!t.done)).sort(byRecent).forEach(g=>{
+    const pend=(g.tasks||[]).filter(t=>!t.done);
+    const blk=document.createElement('div'); blk.className='ht-blk';
+    const hd=document.createElement('button'); hd.className='ht-game'; hd.innerHTML=`<b style="background:${g.color||'#e8a33d'}"></b>${escapeHtml(g.name)}<span class="ht-n">${pend.length}</span>`; hd.title='Abrir tareas de '+g.name; hd.onclick=()=>openGameTab(g.id,'tareas'); blk.appendChild(hd);
+    pend.forEach(t=>{
+      const r=document.createElement('div'); r.className='tk-row';
+      const cb=document.createElement('button'); cb.className='tk-cb'; cb.textContent='✓'; cb.title='Marcar como hecha'; cb.onclick=async()=>{ t.done=true; t.doneAt=Date.now(); await saveGame(g); renderHomeHub(); };
+      const tx=document.createElement('span'); tx.className='tk-tx'; tx.textContent=t.text;
+      r.appendChild(cb); r.appendChild(tx); blk.appendChild(r);
+    });
+    host.appendChild(blk);
+  });
+}
 function gameCard(g){
   const shared=!!g.__shared;
   const lv=lastVersion(g);
@@ -1001,7 +1070,18 @@ function areaCard(title,desc,meta,color,fn){
 function hsec(text){ const d=document.createElement('div'); d.className='pt-sec home-sec'; d.textContent=text; return d; }
 function nextFair(){ const today=new Date(); today.setHours(0,0,0,0); let best=null; (state.fairs||[]).filter(f=>!f.past).forEach(f=>{ if(!f.start) return; const d=new Date(f.start+'T00:00'); if(isNaN(d.getTime())) return; const diff=Math.round((d-today)/86400000); if(diff>=0 && (!best||diff<best.diff)) best={f,diff}; }); return best; }
 function metricTile(n,label,cls,fn){ const d=document.createElement('div'); d.className='mt'+(fn?' clk':''); d.innerHTML=`<div class="n ${cls||''}">${escapeHtml(String(n))}</div><div class="l">${escapeHtml(label)}</div>`; if(fn) d.onclick=fn; return d; }
-function buildQuickNote(){ const w=document.createElement('div'); w.className='home-note'; const inp=document.createElement('input'); inp.className='hn-in'; inp.placeholder='Suelta una idea…'; const sel=document.createElement('select'); sel.className='hn-sel'; sel.innerHTML='<option value="draft">→ Draft (nuevo)</option>'+state.games.filter(g=>(g.stage||'active')==='active').concat(sharedGames).map(g=>`<option value="${g.id}">→ ${escapeHtml(g.name)}</option>`).join(''); const bt=document.createElement('button'); bt.className='btn hn-btn'; bt.textContent='Guardar'; const go=async()=>{ const txt=inp.value.trim(); if(!txt) return; const dest=sel.value; if(dest==='draft'){ const ng={ id:uid(), name:txt.slice(0,80), color:SPINE_COLORS[state.games.length%SPINE_COLORS.length], stage:'draft', rulebook:makeRulebook(), rulebookVersions:[], changes:[], pendingChanges:[], currentSummary:'', posts:[], migrated:true, flattened:true }; state.games.push(ng); await saveState(); toast('Añadido a Draft.'); } else { const g=allGames().find(x=>x.id===dest); if(g){ g.changes=g.changes||[]; const now=Date.now(); g.changes.push({ id:uid(), title:txt, idea:'', note:'', state:'porprobar', section:'', implemented:false, createdAt:now, updatedAt:now }); if(g.__shared) await saveSharedGame(g); else await saveState(); toast('Idea añadida a '+g.name+'.'); } } inp.value=''; render(); }; bt.onclick=go; inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } }); w.appendChild(inp); w.appendChild(sel); w.appendChild(bt); return w; }
+function buildQuickNote(){ const w=document.createElement('div'); w.className='home-note'; const inp=document.createElement('input'); inp.className='hn-in'; inp.placeholder='Suelta una idea…';
+  const typ=document.createElement('select'); typ.className='hn-sel'; typ.innerHTML='<option value="idea">Idea</option><option value="tarea">Tarea</option>';
+  const sel=document.createElement('select'); sel.className='hn-sel'; sel.innerHTML='<option value="draft">→ Draft (nuevo)</option>'+state.games.filter(g=>(g.stage||'active')==='active').concat(sharedGames).map(g=>`<option value="${g.id}">→ ${escapeHtml(g.name)}</option>`).join('');
+  typ.onchange=()=>{ inp.placeholder=(typ.value==='tarea')?'Nueva tarea pendiente…':'Suelta una idea…'; };
+  const bt=document.createElement('button'); bt.className='btn hn-btn'; bt.textContent='Guardar';
+  const go=async()=>{ const txt=inp.value.trim(); if(!txt) return; const dest=sel.value; const tipo=typ.value;
+    if(tipo==='tarea'){ if(dest==='draft'){ toast('Elige un juego para la tarea.','warn',4000); return; } const g=allGames().find(x=>x.id===dest); if(g){ g.tasks=g.tasks||[]; g.tasks.push({ id:uid(), text:txt, done:false, createdAt:Date.now() }); if(g.__shared) await saveSharedGame(g); else await saveState(); toast('Tarea añadida a '+g.name+'.'); } }
+    else if(dest==='draft'){ const ng={ id:uid(), name:txt.slice(0,80), color:SPINE_COLORS[state.games.length%SPINE_COLORS.length], stage:'draft', rulebook:makeRulebook(), rulebookVersions:[], changes:[], pendingChanges:[], currentSummary:'', posts:[], migrated:true, flattened:true }; state.games.push(ng); await saveState(); toast('Añadido a Draft.'); }
+    else { const g=allGames().find(x=>x.id===dest); if(g){ g.changes=g.changes||[]; const now=Date.now(); g.changes.push({ id:uid(), title:txt, idea:'', note:'', state:'porprobar', section:'', implemented:false, createdAt:now, updatedAt:now }); if(g.__shared) await saveSharedGame(g); else await saveState(); toast('Idea añadida a '+g.name+'.'); } }
+    inp.value=''; render(); };
+  bt.onclick=go; inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } });
+  w.appendChild(inp); w.appendChild(typ); w.appendChild(sel); w.appendChild(bt); return w; }
 function homeAreaDiseno(){ const stg=g=>g.stage||'active'; const active=state.games.filter(g=>stg(g)==='active').concat(sharedGames); const draftN=state.games.filter(g=>stg(g)==='draft').length; const recent=active.slice().sort(byRecent).slice(0,5); const c=document.createElement('div'); c.className='home-area'; c.style.setProperty('--spine','#e8a33d'); c.setAttribute('role','button'); c.setAttribute('tabindex','0'); c.innerHTML=`<svg class="ha-em" viewBox="0 0 24 24" fill="none" stroke="#e8a33d" stroke-width="1.6"><path d="M4 20c2-6 8-12 14-16M15 5c1-1 3-1 4 0s1 3 0 4"/></svg><h3>Diseño</h3><div class="ha-d">Ideas, reglas, Board y prototipos.</div><div class="ha-s">${active.length} juego(s) activo(s)${draftN?(' · '+draftN+' en Draft'):''}</div><div class="ha-spines">${recent.map(g=>`<i style="background:${g.color||'#e8a33d'}"></i>`).join('')}</div>`; const go=()=>openArea('design'); c.onclick=go; c.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } }; return c; }
 function homeAreaFerias(nf){ const up=(state.fairs||[]).filter(f=>!f.past).length; const c=document.createElement('div'); c.className='home-area'; c.style.setProperty('--spine','#66b6df'); c.setAttribute('role','button'); c.setAttribute('tabindex','0'); c.innerHTML=`<svg class="ha-em" viewBox="0 0 24 24" fill="none" stroke="#66b6df" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg><h3>Ferias</h3><div class="ha-d">Citas con editoriales y feedback.</div><div class="ha-s">${up} próxima(s)</div>${nf?`<span class="ha-fair">◷ ${escapeHtml(nf.f.name)} · en ${nf.diff} días</span>`:`<span class="ha-fair off">Sin ferias próximas</span>`}`; const go=()=>openArea('ferias'); c.onclick=go; c.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } }; return c; }
 function homeAttentionItems(){ const items=[]; myInvites.forEach(iv=>items.push({ic:'✉',tx:'Invitación a '+(iv.game_name||'un proyecto')+' de '+(atFor(iv.inviter_email)||iv.inviter_email||''),go:()=>openRequests()})); state.games.forEach(g=>{ const n=(g.changes||[]).filter(c=>c.state==='porprobar').length; if(n>0) items.push({ic:'○',tx:n+' idea(s) por probar en '+g.name, go:()=>openGame(g.id)}); }); return items; }
@@ -1034,8 +1114,8 @@ function renderHomeHub(){
   inner.appendChild(buildQuickNote());
   inner.appendChild(hsec('Tus áreas'));
   const ag=document.createElement('div'); ag.className='home-areas'; ag.appendChild(homeAreaDiseno()); ag.appendChild(homeAreaFerias(nf)); inner.appendChild(ag);
-  inner.appendChild(hsec('Muro común'));
-  const wall=document.createElement('div'); wall.className='wall'; renderMuro(wall); inner.appendChild(wall);
+  inner.appendChild(hsec('Tareas pendientes'));
+  const tph=document.createElement('div'); tph.className='home-tasks'; renderHomeTareas(tph); inner.appendChild(tph);
   const two=document.createElement('div'); two.className='home-two';
   const colA=document.createElement('div'); colA.appendChild(hsec('Requiere tu atención')); colA.appendChild(buildAtencion());
   const colB=document.createElement('div'); colB.appendChild(hsec('Actividad en compartidos')); colB.appendChild(buildActividad());
@@ -1061,7 +1141,7 @@ function renderDesignPortada(){
   const grid=document.createElement('div'); grid.className='pt-grid';
   active.forEach(g=>grid.appendChild(gameCard(g)));
   sg.forEach(g=>grid.appendChild(gameCard(g)));
-  const nw=document.createElement('button'); nw.className='pt-new'; nw.textContent=state.games.length?'＋ Nuevo juego':'＋ Crea tu primer juego'; nw.onclick=()=>openGameModal(false); grid.appendChild(nw);
+  if(!active.length && !sg.length){ const nw=document.createElement('button'); nw.className='pt-new'; nw.textContent=state.games.length?'No hay juegos activos':'＋ Crea tu primer juego'; nw.onclick=()=>openGameModal(false); grid.appendChild(nw); }
   inner.appendChild(grid);
 
   { const hr=document.createElement('hr'); hr.className='pt-sep'; inner.appendChild(hr);
@@ -1240,7 +1320,7 @@ function renderBoard(){
   if(!g){ $('title').textContent='Sin juegos'; $('gameMenuBtn').style.display='none'; tabs.innerHTML=''; wrap.innerHTML=`<div class="empty"><p>Añade un juego para empezar.</p></div>`; return; }
   $('title').textContent=g.name; $('gameMenuBtn').style.display='inline-block'; { const bh=$('backHome'); if(bh) bh.textContent='← Diseño'; }
   tabs.innerHTML='';
-  [['inicio','Inicio'],['bitacora','Board'],['reglas','Reglas'],['proto','Proto']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(currentTab===k?' on':''); b.textContent=l; b.onclick=()=>{ currentTab=k; if(k==='reglas'){ rbView='draft'; rbVersionId=null; } closePanel(); renderBoard(); }; tabs.appendChild(b); });
+  [['inicio','Ideas'],['bitacora','Board'],['tareas','Tareas'],['reglas','Reglas'],['proto','Proto']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(currentTab===k?' on':''); b.textContent=l; b.onclick=()=>{ currentTab=k; if(k==='reglas'){ rbView='draft'; rbVersionId=null; } closePanel(); renderBoard(); }; tabs.appendChild(b); });
   wrap.innerHTML=''; wrap.className='wrap'+(currentTab==='proto'?' wide':'');
   if(g.__shared){ const info=document.createElement('div'); info.className='shared-info';
     const mine=(Store.email||'').toLowerCase();
@@ -1249,7 +1329,23 @@ function renderBoard(){
     const who=g.__updatedByName||nameFor(g.__updatedBy)||''; const t=g.__updatedAt?new Date(g.__updatedAt).getTime():0;
     info.innerHTML=`<span class="si-tag">⇄ Compartido</span><span class="si-txt">${escapeHtml(withTxt)}</span>${who?`<span class="si-sep">·</span><span class="si-txt">último cambio por ${escapeHtml(who)}${t?(' '+fmtWhen(t)):''}</span>`:''}`;
     wrap.appendChild(info); }
-  if(currentTab==='reglas') renderRules(g, wrap); else if(currentTab==='proto') renderProto(g, wrap); else if(currentTab==='bitacora') renderBitacora(g, wrap); else renderHome(g, wrap);
+  if(currentTab==='reglas') renderRules(g, wrap); else if(currentTab==='proto') renderProto(g, wrap); else if(currentTab==='bitacora') renderBitacora(g, wrap); else if(currentTab==='tareas') renderTareas(g, wrap); else renderHome(g, wrap);
+}
+function renderTareas(g, host){
+  g.tasks=g.tasks||[];
+  const comp=document.createElement('div'); comp.className='tk-composer';
+  const inp=document.createElement('input'); inp.className='tk-in'; inp.placeholder='Nueva tarea… (imprimir, recortar, pegar…)';
+  const bt=document.createElement('button'); bt.className='btn tk-add'; bt.textContent='Añadir';
+  const add=async()=>{ const t=inp.value.trim(); if(!t) return; g.tasks.push({ id:uid(), text:t, done:false, createdAt:Date.now() }); inp.value=''; await saveState(); renderBoard(); };
+  bt.onclick=add; inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); add(); } });
+  comp.appendChild(inp); comp.appendChild(bt); host.appendChild(comp);
+  const list=document.createElement('div'); list.className='tk-list';
+  if(!g.tasks.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Sin tareas pendientes.<br>Apunta lo que haya que hacer para este juego.</p>'; list.appendChild(e); host.appendChild(list); return; }
+  const rowFor=(t)=>{ const r=document.createElement('div'); r.className='tk-row'+(t.done?' done':''); const cb=document.createElement('button'); cb.className='tk-cb'+(t.done?' on':''); cb.textContent='✓'; cb.title=t.done?'Marcar como pendiente':'Marcar como hecha'; cb.onclick=async()=>{ t.done=!t.done; t.doneAt=t.done?Date.now():null; await saveState(); renderBoard(); }; const tx=document.createElement('span'); tx.className='tk-tx'; tx.textContent=t.text; const dl=document.createElement('button'); dl.className='tk-del'; dl.textContent='✕'; dl.title='Eliminar'; dl.onclick=async()=>{ g.tasks=g.tasks.filter(x=>x.id!==t.id); await saveState(); renderBoard(); }; r.appendChild(cb); r.appendChild(tx); r.appendChild(dl); return r; };
+  const pend=g.tasks.filter(t=>!t.done), done=g.tasks.filter(t=>t.done);
+  pend.forEach(t=>list.appendChild(rowFor(t)));
+  if(done.length){ const h=document.createElement('div'); h.className='tk-donehdr'; h.textContent='Hechas ('+done.length+')'; list.appendChild(h); done.forEach(t=>list.appendChild(rowFor(t))); }
+  host.appendChild(list);
 }
 
 function renderHome(g, host){
@@ -1409,17 +1505,24 @@ function renderBitacora(g, host){
   const fileIn=document.createElement('input'); fileIn.type='file'; fileIn.accept='image/*'; fileIn.multiple=true; fileIn.style.display='none';
   fileIn.onchange=async(e)=>{ const files=[...e.target.files]; e.target.value=''; for(const f of files){ try{ const d=await compressImage(f,1024,0.7); biPendingImgs.push(d); }catch(err){} } renderPrev(); };
   const attach=document.createElement('button'); attach.className='bi-attach'; attach.textContent='+'; attach.title='Adjuntar imagen'; attach.onclick=()=>fileIn.click();
+  const draw=document.createElement('button'); draw.className='bi-attach'; draw.textContent='✎'; draw.title='Dibujar'; draw.onclick=()=>openDraw((d)=>{ biPendingImgs.push(d); renderPrev(); });
   const ta=document.createElement('textarea'); ta.className='bi-input'; ta.placeholder=''; ta.rows=1;
   ta.addEventListener('input',()=>{ ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,160)+'px'; });
   ta.addEventListener('paste', async(e)=>{ const items=(e.clipboardData&&e.clipboardData.items)||[]; let found=false; for(const it of items){ if(it.type&&it.type.indexOf('image')===0){ const f=it.getAsFile(); if(f){ found=true; try{ const d=await compressImage(f,1024,0.7); biPendingImgs.push(d); }catch(err){} } } } if(found){ e.preventDefault(); renderPrev(); } });
   const doPublish=async()=>{ const text=ta.value.replace(/\s+$/,''); if(!text && !biPendingImgs.length) return; g.posts=g.posts||[]; g.posts.push({ id:uid(), by:myAuthorId(), byName:myAuthorName(), text, images:biPendingImgs.slice(), createdAt:Date.now() }); biPendingImgs=[]; await saveState(); renderBoard(); };
   ta.addEventListener('keydown',(e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); doPublish(); } });
-  rowc.appendChild(attach); rowc.appendChild(fileIn); rowc.appendChild(ta); comp.appendChild(rowc);
+  rowc.appendChild(attach); rowc.appendChild(draw); rowc.appendChild(fileIn); rowc.appendChild(ta); comp.appendChild(rowc);
   host.appendChild(comp);
   setTimeout(()=>{ const c=document.querySelector('.content'); if(c) c.scrollTop=c.scrollHeight; },0);
 }
 function openImg(src){ $('imgModalImg').src=src; $('imgModal').style.display='flex'; }
 function closeImg(){ $('imgModal').style.display='none'; $('imgModalImg').src=''; }
+let drawCtx=null, drawing=false, drawColor='#1f1a13', drawDone=null;
+function updateDrawSw(){ document.querySelectorAll('.draw-sw').forEach(s=>s.classList.toggle('on', s.dataset.c===drawColor)); }
+function clearDraw(){ const cv=$('drawCanvas'); if(!drawCtx) return; drawCtx.fillStyle='#ffffff'; drawCtx.fillRect(0,0,cv.width,cv.height); }
+function openDraw(onDone){ drawDone=onDone; lastFocused=document.activeElement; const cv=$('drawCanvas'); drawCtx=cv.getContext('2d'); clearDraw(); drawColor='#1f1a13'; updateDrawSw(); $('drawModal').style.display='flex'; }
+function closeDraw(){ $('drawModal').style.display='none'; drawDone=null; restoreFocus(); }
+function drawPos(e){ const cv=$('drawCanvas'); const r=cv.getBoundingClientRect(); return { x:(e.clientX-r.left)*(cv.width/r.width), y:(e.clientY-r.top)*(cv.height/r.height) }; }
 
 /* ---------- Reglas ---------- */
 function renderRules(g, host){
@@ -1555,9 +1658,9 @@ $('scCancel').onclick=closeSectionModal; $('scSave').onclick=saveSectionModal;
 $('cfCancel').onclick=()=>resolveConfirm(false); $('cfOk').onclick=()=>resolveConfirm(true);
 $('exportBtn').onclick=exportData; $('importBtn').onclick=()=>$('importFile').click(); $('importFile').onchange=(e)=>{ const f=e.target.files[0]; if(f) importData(f); e.target.value=''; };
 $('signOutBtn').onclick=()=>Store.signOut();
-$('settingsBtn').onclick=openSettings; $('setClose').onclick=closeSettings; $('setPwSave').onclick=doChangePassword; $('setNameSave').onclick=doChangeName;
+$('settingsBtn').onclick=openSettings; $('setClose').onclick=closeSettings; $('setTopClose').onclick=closeSettings; $('setPwSave').onclick=doChangePassword; $('setNameSave').onclick=doChangeName;
 $('reqBtn').onclick=openRequests; $('reqClose').onclick=closeRequests;
-$('setUserSave').onclick=doChangeUsername;
+$('setUserSave').onclick=doChangeUsername; $('setEdit').onclick=enableSettingsEdit;
 $('nickSave').onclick=saveNick; $('nickInput').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveNick(); } });
 $('recCancel').onclick=closeRecovery; $('recSave').onclick=saveRecovery; $('recPw2').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveRecovery(); } });
 $('shClose').onclick=closeShareModal; $('shInput').addEventListener('input',shareInput);
@@ -1587,10 +1690,15 @@ setAuthMode('login');
 document.addEventListener('click',e=>{ if(menuEl&&!menuEl.contains(e.target)&&!e.target.closest('.mn')&&e.target.id!=='gameMenuBtn') closeMenu(); },true);
 window.addEventListener('scroll',closeMenu,true);
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(menuEl){ closeMenu(); return; }
-  for(const id of ['cfModal','chgModal','implModal','svModal','secModal','frModal','setModal','reqModal','recModal','shareModal','imgModal','gameModal']){ if($(id).style.display==='flex'){ if(id==='cfModal') resolveConfirm(false); else { $(id).style.display='none'; if(id==='secModal') secRef=null; } restoreFocus(); return; } }
+  for(const id of ['cfModal','chgModal','implModal','svModal','secModal','frModal','setModal','reqModal','recModal','shareModal','imgModal','drawModal','gameModal']){ if($(id).style.display==='flex'){ if(id==='cfModal') resolveConfirm(false); else { $(id).style.display='none'; if(id==='secModal') secRef=null; } restoreFocus(); return; } }
   if($('panel').classList.contains('open')){ closePanel(); return; } } });
-[['chgModal',closeChangeModal],['implModal',closeImplModal],['svModal',closeSaveModal],['secModal',closeSectionModal],['frModal',closeFairModal],['setModal',closeSettings],['reqModal',closeRequests],['recModal',closeRecovery],['shareModal',closeShareModal],['imgModal',closeImg],['gameModal',closeGameModal],['cfModal',()=>resolveConfirm(false)]].forEach(([id,fn])=>{ $(id).addEventListener('mousedown',e=>{ if(e.target.id===id) fn(); }); });
+[['chgModal',closeChangeModal],['implModal',closeImplModal],['svModal',closeSaveModal],['secModal',closeSectionModal],['frModal',closeFairModal],['setModal',closeSettings],['reqModal',closeRequests],['recModal',closeRecovery],['shareModal',closeShareModal],['imgModal',closeImg],['drawModal',closeDraw],['gameModal',closeGameModal],['cfModal',()=>resolveConfirm(false)]].forEach(([id,fn])=>{ $(id).addEventListener('mousedown',e=>{ if(e.target.id===id) fn(); }); });
 $('imgModalImg').onclick=closeImg;
+{ const cv=$('drawCanvas'); if(cv){ cv.addEventListener('pointerdown',e=>{ if(!drawCtx) return; drawing=true; try{ cv.setPointerCapture(e.pointerId); }catch(_){} const p=drawPos(e); drawCtx.strokeStyle=drawColor; drawCtx.lineWidth=3; drawCtx.lineCap='round'; drawCtx.lineJoin='round'; drawCtx.beginPath(); drawCtx.moveTo(p.x,p.y); }); cv.addEventListener('pointermove',e=>{ if(!drawing||!drawCtx) return; const p=drawPos(e); drawCtx.lineTo(p.x,p.y); drawCtx.stroke(); }); cv.addEventListener('pointerup',()=>{ drawing=false; }); cv.addEventListener('pointerleave',()=>{ drawing=false; }); } }
+document.querySelectorAll('.draw-sw').forEach(s=>{ s.onclick=()=>{ drawColor=s.dataset.c; updateDrawSw(); }; });
+$('drawClear').onclick=clearDraw;
+$('drawCancel').onclick=closeDraw;
+$('drawAdd').onclick=()=>{ const cv=$('drawCanvas'); let url=null; try{ url=cv.toDataURL('image/jpeg',0.85); }catch(e){} if(url && drawDone) drawDone(url); closeDraw(); };
 
 async function bootApp(){ await loadState(); if(normalizeStructures()) await saveState(); if(Store.backend==='supabase'){ await Store.upsertProfile(); await Store.checkAdmin(); await reloadDirectory(); await reloadSharedGames(); await reloadInvites(); await reloadSentInvites(); await reloadAnnouncements(); await reloadWall(); } render(); updateBackend(); updateSavedIndicator(); if(window.__kaizenRecovery){ window.__kaizenRecovery=false; openRecovery(); } else if(Store.backend==='supabase'){ await ensureUsername(); } }
 async function ensureUsername(){ if(Store.backend!=='supabase' || Store.username) return; const want=(Store.requestedUsername||'').trim(); if(want && /^[a-zA-Z0-9_]{3,20}$/.test(want)){ try{ if(await Store.usernameAvailable(want)){ await Store.setUsername(want); updateHello(); return; } }catch(e){} } openNickGate(); }
