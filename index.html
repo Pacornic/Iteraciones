@@ -55,6 +55,7 @@
   .draw-sw{ width:22px; height:22px; border-radius:50%; cursor:pointer; border:2px solid transparent; box-shadow:0 0 0 1px rgba(255,255,255,0.1); }
   .draw-sw.on{ border-color:#fff; }
   .draw-canvas{ width:100%; height:auto; background:#fff; border:1px solid var(--border); border-radius:8px; touch-action:none; cursor:crosshair; display:block; }
+  @media(max-width:560px){ .draw-modal{ width:98vw !important; max-width:98vw !important; padding:14px; } }
   .bi-feed{ display:flex; flex-direction:column; gap:16px; padding-bottom:6px; }
   .bi-msg{ display:flex; gap:10px; }
   .bi-av{ width:30px; height:30px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:#0d1117; font-weight:600; }
@@ -80,6 +81,8 @@
   .bi-attach:hover{ border-color:var(--amber); color:var(--amber); }
   .bi-input{ flex:1; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'IBM Plex Sans',sans-serif; font-size:13.5px; padding:9px 11px; resize:none; line-height:1.4; }
   .bi-input:focus{ outline:none; border-color:var(--amber); }
+  .bi-send{ flex-shrink:0; height:36px; padding:0 14px; border:none; background:var(--amber); color:#2a1c06; border-radius:8px; font-family:'IBM Plex Sans',sans-serif; font-size:13px; font-weight:600; cursor:pointer; }
+  .bi-send:hover{ background:#f0b24e; }
   .bi-pub{ flex-shrink:0; }
   /* tareas */
   .tk-composer{ display:flex; gap:8px; margin-bottom:14px; }
@@ -93,6 +96,8 @@
   .tk-tx{ flex:1; font-size:13.5px; color:var(--text); word-break:break-word; }
   .tk-row.done .tk-tx{ color:var(--faint); text-decoration:line-through; }
   .tk-del{ background:none; border:none; color:var(--faint); font-size:12px; cursor:pointer; opacity:.6; } .tk-del:hover{ color:var(--brick); opacity:1; }
+  .tk-move{ flex-shrink:0; max-width:120px; background:var(--surface); border:1px solid var(--border); border-radius:6px; color:var(--muted); font-size:11px; padding:3px 4px; cursor:pointer; }
+  .tk-move:focus{ outline:none; border-color:var(--amber); }
   .tk-donehdr{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.8px; text-transform:uppercase; color:var(--faint); margin:16px 0 6px; }
   .pt-badge.shared{ color:#8fb6e0; }
   .pt-card-share{ position:absolute; bottom:12px; right:12px; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; z-index:2; }
@@ -638,7 +643,7 @@
 
 <!-- Draw modal -->
 <div class="ov" id="drawModal" style="display:none;" role="dialog" aria-modal="true" aria-label="Dibujar">
-  <div class="modal" style="max-width:720px;">
+  <div class="modal draw-modal" style="max-width:1000px;width:96vw;">
     <h3>Dibujo</h3>
     <div class="draw-tools">
       <span class="draw-sw" data-c="#1f1a13" style="background:#1f1a13"></span>
@@ -649,7 +654,7 @@
       <button class="btn-q" id="drawUndo" style="margin-left:auto;" title="Deshacer último trazo">↶ Atrás</button>
       <button class="btn-q" id="drawClear">Limpiar</button>
     </div>
-    <canvas id="drawCanvas" width="680" height="440" class="draw-canvas"></canvas>
+    <canvas id="drawCanvas" width="900" height="640" class="draw-canvas"></canvas>
     <div class="macts"><button class="btn-q" id="drawCancel">Cancelar</button><button class="btn" id="drawAdd">Añadir al post</button></div>
   </div>
 </div>
@@ -1012,6 +1017,29 @@ function goHome(){ appView='home'; closePanel(); render(); }
 function openGame(id){ const own=state.games.some(x=>x.id===id); state.currentGameId=id; currentTab='inicio'; rbView='draft'; rbVersionId=null; appView='game'; closePanel(); if(own) saveState(); render(); }
 function openGameTab(id,tab){ openGame(id); currentTab=tab; render(); }
 async function saveGame(g){ if(g && g.__shared) return saveSharedGame(g); state.updatedAt=Date.now(); try{ const ok=await Store.set('games-data', JSON.stringify(state)); updateSavedIndicator(); if(!ok&&!storageWarned){ storageWarned=true; toast('No se pudo guardar de forma persistente.','warn',6000); } }catch(e){} }
+async function saveLocal(){ state.updatedAt=Date.now(); try{ const ok=await Store.set('games-data', JSON.stringify(state)); updateSavedIndicator(); if(!ok&&!storageWarned){ storageWarned=true; toast('No se pudo guardar de forma persistente.','warn',6000); } }catch(e){} }
+function taskMoveSel(t, fromKind, fromGame){
+  const sel=document.createElement('select'); sel.className='tk-move'; sel.title='Cambiar de juego';
+  const games=state.games.slice().concat(sharedGames);
+  sel.innerHTML='<option value="general">General</option>'+games.map(g=>`<option value="${g.id}">${escapeHtml(g.name)}${(g.stage||'active')==='draft'?' (Draft)':''}</option>`).join('');
+  sel.value = (fromKind==='general') ? 'general' : (fromGame?fromGame.id:'general');
+  sel.onchange=async()=>{ await moveTask(t, fromKind, fromGame, sel.value); };
+  return sel;
+}
+async function moveTask(t, fromKind, fromGame, destVal){
+  if((fromKind==='general'?'general':(fromGame?fromGame.id:'general'))===destVal) return;
+  if(fromKind==='general'){ state.generalTasks=(state.generalTasks||[]).filter(x=>x.id!==t.id); }
+  else if(fromGame){ fromGame.tasks=(fromGame.tasks||[]).filter(x=>x.id!==t.id); }
+  let destName='General';
+  if(destVal==='general'){ state.generalTasks=state.generalTasks||[]; state.generalTasks.push(t); }
+  else { const g=allGames().find(x=>x.id===destVal); if(g){ g.tasks=g.tasks||[]; g.tasks.push(t); destName=g.name; } }
+  if(fromKind!=='general' && fromGame && fromGame.__shared) await saveSharedGame(fromGame);
+  const dg = destVal!=='general' ? allGames().find(x=>x.id===destVal) : null;
+  if(dg && dg.__shared) await saveSharedGame(dg);
+  await saveLocal();
+  toast('Tarea movida a '+destName+'.');
+  if(appView==='home') renderHomeHub(); else renderBoard();
+}
 function renderHomeTareas(host){
   host.innerHTML='';
   state.generalTasks=state.generalTasks||[];
@@ -1025,8 +1053,9 @@ function renderHomeTareas(host){
       const r=document.createElement('div'); r.className='tk-row';
       const cb=document.createElement('button'); cb.className='tk-cb'; cb.textContent='✓'; cb.title='Marcar como hecha'; cb.onclick=async()=>{ t.done=true; t.doneAt=Date.now(); await saveState(); renderHomeHub(); };
       const tx=document.createElement('span'); tx.className='tk-tx'; tx.textContent=t.text;
+      const mv=taskMoveSel(t,'general',null);
       const dl=document.createElement('button'); dl.className='tk-del'; dl.textContent='✕'; dl.title='Eliminar'; dl.onclick=async()=>{ state.generalTasks=state.generalTasks.filter(x=>x.id!==t.id); await saveState(); renderHomeHub(); };
-      r.appendChild(cb); r.appendChild(tx); r.appendChild(dl); blk.appendChild(r);
+      r.appendChild(cb); r.appendChild(tx); r.appendChild(mv); r.appendChild(dl); blk.appendChild(r);
     });
     host.appendChild(blk);
   }
@@ -1038,7 +1067,9 @@ function renderHomeTareas(host){
       const r=document.createElement('div'); r.className='tk-row';
       const cb=document.createElement('button'); cb.className='tk-cb'; cb.textContent='✓'; cb.title='Marcar como hecha'; cb.onclick=async()=>{ t.done=true; t.doneAt=Date.now(); await saveGame(g); renderHomeHub(); };
       const tx=document.createElement('span'); tx.className='tk-tx'; tx.textContent=t.text;
-      r.appendChild(cb); r.appendChild(tx); blk.appendChild(r);
+      const mv=taskMoveSel(t,'game',g);
+      const dl=document.createElement('button'); dl.className='tk-del'; dl.textContent='✕'; dl.title='Eliminar'; dl.onclick=async()=>{ g.tasks=g.tasks.filter(x=>x.id!==t.id); await saveGame(g); renderHomeHub(); };
+      r.appendChild(cb); r.appendChild(tx); r.appendChild(mv); r.appendChild(dl); blk.appendChild(r);
     });
     host.appendChild(blk);
   });
@@ -1097,8 +1128,8 @@ function buildQuickNote(){ const w=document.createElement('div'); w.className='h
   w.appendChild(inp); w.appendChild(sel); w.appendChild(bt); return w; }
 function buildQuickTask(){ const w=document.createElement('div'); w.className='home-note'; const inp=document.createElement('input'); inp.className='hn-in'; inp.placeholder='Nueva tarea pendiente… (imprimir, recortar, pegar…)';
   const games=state.games.slice().concat(sharedGames);
-  const sel=document.createElement('select'); sel.className='hn-sel'; sel.innerHTML = '<option value="general">→ General (sin juego)</option>'+games.map(g=>`<option value="${g.id}">→ ${escapeHtml(g.name)}${(g.stage||'active')==='draft'?' (Draft)':''}</option>`).join('');
-  const bt=document.createElement('button'); bt.className='btn hn-btn'; bt.textContent='Añadir';
+  const sel=document.createElement('select'); sel.className='hn-sel'; sel.innerHTML = '<option value="general">→ General</option>'+games.map(g=>`<option value="${g.id}">→ ${escapeHtml(g.name)}${(g.stage||'active')==='draft'?' (Draft)':''}</option>`).join('');
+  const bt=document.createElement('button'); bt.className='btn hn-btn'; bt.textContent='Guardar';
   const go=async()=>{ const txt=inp.value.trim(); if(!txt) return; const dest=sel.value;
     if(dest==='general'){ state.generalTasks=state.generalTasks||[]; state.generalTasks.push({ id:uid(), text:txt, done:false, createdAt:Date.now() }); await saveState(); toast('Tarea añadida a General.'); }
     else { const g=allGames().find(x=>x.id===dest); if(g){ g.tasks=g.tasks||[]; g.tasks.push({ id:uid(), text:txt, done:false, createdAt:Date.now() }); if(g.__shared) await saveSharedGame(g); else await saveState(); toast('Tarea añadida a '+g.name+'.'); } }
@@ -1366,7 +1397,7 @@ function renderTareas(g, host){
   comp.appendChild(inp); comp.appendChild(bt); host.appendChild(comp);
   const list=document.createElement('div'); list.className='tk-list';
   if(!g.tasks.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Sin tareas pendientes.<br>Apunta lo que haya que hacer para este juego.</p>'; list.appendChild(e); host.appendChild(list); return; }
-  const rowFor=(t)=>{ const r=document.createElement('div'); r.className='tk-row'+(t.done?' done':''); const cb=document.createElement('button'); cb.className='tk-cb'+(t.done?' on':''); cb.textContent='✓'; cb.title=t.done?'Marcar como pendiente':'Marcar como hecha'; cb.onclick=async()=>{ t.done=!t.done; t.doneAt=t.done?Date.now():null; await saveState(); renderBoard(); }; const tx=document.createElement('span'); tx.className='tk-tx'; tx.textContent=t.text; const dl=document.createElement('button'); dl.className='tk-del'; dl.textContent='✕'; dl.title='Eliminar'; dl.onclick=async()=>{ g.tasks=g.tasks.filter(x=>x.id!==t.id); await saveState(); renderBoard(); }; r.appendChild(cb); r.appendChild(tx); r.appendChild(dl); return r; };
+  const rowFor=(t)=>{ const r=document.createElement('div'); r.className='tk-row'+(t.done?' done':''); const cb=document.createElement('button'); cb.className='tk-cb'+(t.done?' on':''); cb.textContent='✓'; cb.title=t.done?'Marcar como pendiente':'Marcar como hecha'; cb.onclick=async()=>{ t.done=!t.done; t.doneAt=t.done?Date.now():null; await saveState(); renderBoard(); }; const tx=document.createElement('span'); tx.className='tk-tx'; tx.textContent=t.text; const mv=taskMoveSel(t,'game',g); const dl=document.createElement('button'); dl.className='tk-del'; dl.textContent='✕'; dl.title='Eliminar'; dl.onclick=async()=>{ g.tasks=g.tasks.filter(x=>x.id!==t.id); await saveState(); renderBoard(); }; r.appendChild(cb); r.appendChild(tx); r.appendChild(mv); r.appendChild(dl); return r; };
   const pend=g.tasks.filter(t=>!t.done), done=g.tasks.filter(t=>t.done);
   pend.forEach(t=>list.appendChild(rowFor(t)));
   if(done.length){ const h=document.createElement('div'); h.className='tk-donehdr'; h.textContent='Hechas ('+done.length+')'; list.appendChild(h); done.forEach(t=>list.appendChild(rowFor(t))); }
@@ -1536,7 +1567,8 @@ function renderBitacora(g, host){
   ta.addEventListener('paste', async(e)=>{ const items=(e.clipboardData&&e.clipboardData.items)||[]; let found=false; for(const it of items){ if(it.type&&it.type.indexOf('image')===0){ const f=it.getAsFile(); if(f){ found=true; try{ const d=await compressImage(f,1024,0.7); biPendingImgs.push(d); }catch(err){} } } } if(found){ e.preventDefault(); renderPrev(); } });
   const doPublish=async()=>{ const text=ta.value.replace(/\s+$/,''); if(!text && !biPendingImgs.length) return; g.posts=g.posts||[]; g.posts.push({ id:uid(), by:myAuthorId(), byName:myAuthorName(), text, images:biPendingImgs.slice(), createdAt:Date.now() }); biPendingImgs=[]; await saveState(); renderBoard(); };
   ta.addEventListener('keydown',(e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); doPublish(); } });
-  rowc.appendChild(attach); rowc.appendChild(draw); rowc.appendChild(fileIn); rowc.appendChild(ta); comp.appendChild(rowc);
+  const send=document.createElement('button'); send.className='bi-send'; send.textContent='Guardar'; send.title='Guardar nota'; send.onclick=doPublish;
+  rowc.appendChild(attach); rowc.appendChild(draw); rowc.appendChild(fileIn); rowc.appendChild(ta); rowc.appendChild(send); comp.appendChild(rowc);
   host.appendChild(comp);
   setTimeout(()=>{ const c=document.querySelector('.content'); if(c) c.scrollTop=c.scrollHeight; },0);
 }
