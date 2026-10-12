@@ -190,7 +190,7 @@
   .home-note{ display:flex; gap:8px; }
   .home-note .hn-in{ flex:1; background:var(--surface); border:1px solid var(--border); border-radius:9px; color:var(--text); font-size:13px; padding:9px 11px; }
   .home-note .hn-in:focus{ outline:none; border-color:var(--amber); }
-  .home-note .hn-sel{ background:var(--surface); border:1px solid var(--border); border-radius:9px; color:var(--muted); font-size:12px; padding:0 8px; max-width:150px; }
+  .home-note .hn-sel{ flex-shrink:0; width:150px; background:var(--surface); border:1px solid var(--border); border-radius:9px; color:var(--muted); font-size:12px; padding:0 8px; }
   .home-note .hn-btn{ flex-shrink:0; }
   .home-areas{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   .home-area{ position:relative; overflow:hidden; background:var(--surface); border:1px solid var(--border); border-radius:13px; padding:15px; cursor:pointer; transition:border-color .15s, transform .12s; }
