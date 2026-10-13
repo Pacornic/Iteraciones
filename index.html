@@ -1465,7 +1465,7 @@ function openChangeDetail(g,c){
   { const at=$('pAppToggle'); if(at) at.onclick=()=>{ commit(); c.appImpact=!c.appImpact; if(!c.appImpact){ c.appImplemented=false; if(c.section==='app_solo') c.section=''; } c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); }; }
   { const pa=$('pApp'); if(pa) pa.onclick=()=>{ commit(); c.appImplemented=true; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); }; }
   { const pu=$('pAppUndo'); if(pu) pu.onclick=()=>{ commit(); c.appImplemented=false; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); }; }
-  $('pSave').onclick=async()=>{ commit(); c.updatedAt=Date.now(); await saveState(); closePanel(); renderBoard(); toast('Cambios guardados.'); };
+  $('pSave').onclick=async()=>{ commit(); c.updatedAt=Date.now(); closePanel(); renderBoard(); toast('Cambios guardados.'); try{ await saveState(); }catch(e){ toast('No se pudo guardar: '+(e.message||e),'warn',6000); } };
   $('pDel').onclick=async()=>{ const ok=await confirmDialog(`¿Eliminar "${c.title}"?`); if(!ok) return; g.changes=g.changes.filter(x=>x.id!==c.id); await saveState(); closePanel(); renderBoard(); toast('Idea eliminada.'); };
 }
 function closePanel(){ $('panel').classList.remove('open'); }
@@ -1483,7 +1483,7 @@ async function saveChange(){
   const idea=$('cmIdea').value.replace(/\s+$/,''), note=$('cmNote').value.trim(), section=$('cmSection').value||'';
   if(editingChangeId){ const c=changeById(g,editingChangeId); c.title=title; c.idea=idea; c.note=note; c.section=section; c.updatedAt=Date.now(); toast('Idea actualizada.'); }
   else { const now=Date.now(); g.changes.push({ id:uid(), title, idea, note, state:'porprobar', section, implemented:false, createdAt:now, updatedAt:now }); toast('Idea añadida.'); }
-  await saveState(); closeChangeModal(); renderBoard();
+  closeChangeModal(); renderBoard(); try{ await saveState(); }catch(e){ toast('No se pudo guardar: '+(e.message||e),'warn',6000); }
 }
 function closeChangeModal(){ $('chgModal').style.display='none'; editingChangeId=null; restoreFocus(); }
 
