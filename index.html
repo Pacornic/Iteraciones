@@ -1585,13 +1585,14 @@ function renderBitacora(g, host){
 }
 function openImg(src){ $('imgModalImg').src=src; $('imgModal').style.display='flex'; }
 function closeImg(){ $('imgModal').style.display='none'; $('imgModalImg').src=''; }
-let drawCtx=null, drawing=false, drawColor='#1f1a13', drawDone=null, drawStack=[];
+let drawCtx=null, drawing=false, drawColor='#1f1a13', drawDone=null, drawStack=[], drawLineW=3;
 function updateDrawSw(){ document.querySelectorAll('.draw-sw').forEach(s=>s.classList.toggle('on', s.dataset.c===drawColor)); }
 function updateDrawUndo(){ const b=$('drawUndo'); if(b) b.disabled = drawStack.length===0; }
 function pushDrawState(){ const cv=$('drawCanvas'); if(!drawCtx) return; try{ drawStack.push(drawCtx.getImageData(0,0,cv.width,cv.height)); if(drawStack.length>40) drawStack.shift(); }catch(_){} updateDrawUndo(); }
 function undoDraw(){ if(!drawCtx||!drawStack.length) return; const img=drawStack.pop(); try{ drawCtx.putImageData(img,0,0); }catch(_){} updateDrawUndo(); }
 function clearDraw(){ const cv=$('drawCanvas'); if(!drawCtx) return; pushDrawState(); drawCtx.fillStyle='#ffffff'; drawCtx.fillRect(0,0,cv.width,cv.height); }
-function openDraw(onDone){ drawDone=onDone; lastFocused=document.activeElement; const cv=$('drawCanvas'); drawCtx=cv.getContext('2d'); drawStack=[]; drawCtx.fillStyle='#ffffff'; drawCtx.fillRect(0,0,cv.width,cv.height); drawColor='#1f1a13'; updateDrawSw(); updateDrawUndo(); $('drawModal').style.display='flex'; }
+function sizeDrawCanvas(){ const cv=$('drawCanvas'); if(!cv) return; const vw=window.innerWidth, vh=window.innerHeight; const mobile=vw<=560; let dispW, dispH; if(mobile){ dispW=Math.round(vw*0.98-28); dispH=Math.round(vh*0.66); } else { dispW=Math.round(Math.min(960, vw*0.96-44)); dispH=Math.round(Math.min(dispW*0.68, vh*0.66)); } cv.style.width=dispW+'px'; cv.style.height=dispH+'px'; const dpr=Math.min(window.devicePixelRatio||1, 2); drawLineW=3*dpr; cv.width=Math.round(dispW*dpr); cv.height=Math.round(dispH*dpr); if(drawCtx){ drawCtx.fillStyle='#ffffff'; drawCtx.fillRect(0,0,cv.width,cv.height); } }
+function openDraw(onDone){ drawDone=onDone; lastFocused=document.activeElement; const cv=$('drawCanvas'); drawCtx=cv.getContext('2d'); drawStack=[]; $('drawModal').style.display='flex'; sizeDrawCanvas(); drawColor='#1f1a13'; updateDrawSw(); updateDrawUndo(); }
 function closeDraw(){ $('drawModal').style.display='none'; drawDone=null; restoreFocus(); }
 function drawPos(e){ const cv=$('drawCanvas'); const r=cv.getBoundingClientRect(); return { x:(e.clientX-r.left)*(cv.width/r.width), y:(e.clientY-r.top)*(cv.height/r.height) }; }
 
@@ -1765,7 +1766,7 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(menuEl){ close
   if($('panel').classList.contains('open')){ closePanel(); return; } } });
 [['chgModal',closeChangeModal],['implModal',closeImplModal],['svModal',closeSaveModal],['secModal',closeSectionModal],['frModal',closeFairModal],['setModal',closeSettings],['reqModal',closeRequests],['recModal',closeRecovery],['shareModal',closeShareModal],['imgModal',closeImg],['drawModal',closeDraw],['gameModal',closeGameModal],['cfModal',()=>resolveConfirm(false)]].forEach(([id,fn])=>{ $(id).addEventListener('mousedown',e=>{ if(e.target.id===id) fn(); }); });
 $('imgModalImg').onclick=closeImg;
-{ const cv=$('drawCanvas'); if(cv){ cv.addEventListener('pointerdown',e=>{ if(!drawCtx) return; pushDrawState(); drawing=true; try{ cv.setPointerCapture(e.pointerId); }catch(_){} const p=drawPos(e); drawCtx.strokeStyle=drawColor; drawCtx.lineWidth=3; drawCtx.lineCap='round'; drawCtx.lineJoin='round'; drawCtx.beginPath(); drawCtx.moveTo(p.x,p.y); }); cv.addEventListener('pointermove',e=>{ if(!drawing||!drawCtx) return; const p=drawPos(e); drawCtx.lineTo(p.x,p.y); drawCtx.stroke(); }); cv.addEventListener('pointerup',()=>{ drawing=false; }); cv.addEventListener('pointerleave',()=>{ drawing=false; }); } }
+{ const cv=$('drawCanvas'); if(cv){ cv.addEventListener('pointerdown',e=>{ if(!drawCtx) return; pushDrawState(); drawing=true; try{ cv.setPointerCapture(e.pointerId); }catch(_){} const p=drawPos(e); drawCtx.strokeStyle=drawColor; drawCtx.lineWidth=drawLineW; drawCtx.lineCap='round'; drawCtx.lineJoin='round'; drawCtx.beginPath(); drawCtx.moveTo(p.x,p.y); }); cv.addEventListener('pointermove',e=>{ if(!drawing||!drawCtx) return; const p=drawPos(e); drawCtx.lineTo(p.x,p.y); drawCtx.stroke(); }); cv.addEventListener('pointerup',()=>{ drawing=false; }); cv.addEventListener('pointerleave',()=>{ drawing=false; }); } }
 document.querySelectorAll('.draw-sw').forEach(s=>{ s.onclick=()=>{ drawColor=s.dataset.c; updateDrawSw(); }; });
 $('drawUndo').onclick=undoDraw;
 $('drawClear').onclick=clearDraw;
