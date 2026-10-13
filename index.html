@@ -1026,11 +1026,13 @@ function openGame(id){ const own=state.games.some(x=>x.id===id); state.currentGa
 function openGameTab(id,tab){ openGame(id); currentTab=tab; render(); }
 async function saveGame(g){ if(g && g.__shared) return saveSharedGame(g); state.updatedAt=Date.now(); try{ const ok=await Store.set('games-data', JSON.stringify(state)); updateSavedIndicator(); if(!ok&&!storageWarned){ storageWarned=true; toast('No se pudo guardar de forma persistente.','warn',6000); } }catch(e){} }
 async function saveLocal(){ state.updatedAt=Date.now(); try{ const ok=await Store.set('games-data', JSON.stringify(state)); updateSavedIndicator(); if(!ok&&!storageWarned){ storageWarned=true; toast('No se pudo guardar de forma persistente.','warn',6000); } }catch(e){} }
-function sortedGamesForPick(){ const games=state.games.slice().concat(sharedGames); const rank=g=>((g.stage||'active')==='draft'?1:0); return games.sort((a,b)=> (rank(a)-rank(b)) || String(a.name||'').localeCompare(String(b.name||''),'es',{sensitivity:'base'})); }
+function gameStageRank(g){ const s=g.__shared?'active':(g.stage||'active'); return s==='paused'?2:(s==='draft'?1:0); }
+function gamePickSuffix(g){ const s=g.__shared?'active':(g.stage||'active'); return s==='paused'?' (en pausa)':(s==='draft'?' (Draft)':''); }
+function sortedGamesForPick(){ const games=state.games.slice().concat(sharedGames); return games.sort((a,b)=> (gameStageRank(a)-gameStageRank(b)) || String(a.name||'').localeCompare(String(b.name||''),'es',{sensitivity:'base'})); }
 function taskMoveSel(t, fromKind, fromGame){
   const sel=document.createElement('select'); sel.className='tk-move'; sel.title='Cambiar de juego';
   const games=sortedGamesForPick();
-  sel.innerHTML='<option value="general">General</option>'+games.map(g=>`<option value="${g.id}">${escapeHtml(g.name)}${(g.stage||'active')==='draft'?' (Draft)':''}</option>`).join('');
+  sel.innerHTML='<option value="general">General</option>'+games.map(g=>`<option value="${g.id}">${escapeHtml(g.name)}${gamePickSuffix(g)}</option>`).join('');
   sel.value = (fromKind==='general') ? 'general' : (fromGame?fromGame.id:'general');
   sel.onchange=async()=>{ await moveTask(t, fromKind, fromGame, sel.value); };
   return sel;
@@ -1137,7 +1139,7 @@ function buildQuickNote(){ const w=document.createElement('div'); w.className='h
   w.appendChild(inp); w.appendChild(sel); w.appendChild(bt); return w; }
 function buildQuickTask(){ const w=document.createElement('div'); w.className='home-note'; const inp=document.createElement('input'); inp.className='hn-in'; inp.placeholder='Nueva tarea pendiente… (imprimir, recortar, pegar…)';
   const games=sortedGamesForPick();
-  const sel=document.createElement('select'); sel.className='hn-sel'; sel.innerHTML = '<option value="general">→ General</option>'+games.map(g=>`<option value="${g.id}">→ ${escapeHtml(g.name)}${(g.stage||'active')==='draft'?' (Draft)':''}</option>`).join('');
+  const sel=document.createElement('select'); sel.className='hn-sel'; sel.innerHTML = '<option value="general">→ General</option>'+games.map(g=>`<option value="${g.id}">→ ${escapeHtml(g.name)}${gamePickSuffix(g)}</option>`).join('');
   const bt=document.createElement('button'); bt.className='btn hn-btn'; bt.textContent='Guardar';
   const go=async()=>{ const txt=inp.value.trim(); if(!txt) return; const dest=sel.value;
     if(dest==='general'){ state.generalTasks=state.generalTasks||[]; state.generalTasks.push({ id:uid(), text:txt, done:false, createdAt:Date.now() }); await saveState(); toast('Tarea añadida a General.'); }
