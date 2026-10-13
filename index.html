@@ -56,8 +56,9 @@
   .draw-tools{ display:flex; align-items:center; gap:9px; margin-bottom:10px; }
   .draw-sw{ width:22px; height:22px; border-radius:50%; cursor:pointer; border:2px solid transparent; box-shadow:0 0 0 1px rgba(255,255,255,0.1); }
   .draw-sw.on{ border-color:#fff; }
-  .draw-canvas{ width:100%; height:auto; background:#fff; border:1px solid var(--border); border-radius:8px; touch-action:none; cursor:crosshair; display:block; }
-  @media(max-width:560px){ .draw-modal{ width:98vw !important; max-width:98vw !important; padding:14px; } }
+  .draw-canvas{ width:100%; max-width:100%; height:auto; background:#fff; border:1px solid var(--border); border-radius:8px; touch-action:none; cursor:crosshair; display:block; margin:0 auto; }
+  .draw-modal{ overflow-x:hidden; }
+  @media(max-width:560px){ .draw-modal{ width:94vw !important; max-width:94vw !important; padding:14px; } }
   .bi-feed{ display:flex; flex-direction:column; gap:16px; padding-bottom:6px; }
   .bi-msg{ display:flex; gap:10px; }
   .bi-av{ width:30px; height:30px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:#0d1117; font-weight:600; }
@@ -1591,7 +1592,12 @@ function updateDrawUndo(){ const b=$('drawUndo'); if(b) b.disabled = drawStack.l
 function pushDrawState(){ const cv=$('drawCanvas'); if(!drawCtx) return; try{ drawStack.push(drawCtx.getImageData(0,0,cv.width,cv.height)); if(drawStack.length>40) drawStack.shift(); }catch(_){} updateDrawUndo(); }
 function undoDraw(){ if(!drawCtx||!drawStack.length) return; const img=drawStack.pop(); try{ drawCtx.putImageData(img,0,0); }catch(_){} updateDrawUndo(); }
 function clearDraw(){ const cv=$('drawCanvas'); if(!drawCtx) return; pushDrawState(); drawCtx.fillStyle='#ffffff'; drawCtx.fillRect(0,0,cv.width,cv.height); }
-function sizeDrawCanvas(){ const cv=$('drawCanvas'); if(!cv) return; const vw=window.innerWidth, vh=window.innerHeight; const mobile=vw<=560; let dispW, dispH; if(mobile){ dispW=Math.round(vw*0.98-28); dispH=Math.round(vh*0.66); } else { dispW=Math.round(Math.min(960, vw*0.96-44)); dispH=Math.round(Math.min(dispW*0.68, vh*0.66)); } cv.style.width=dispW+'px'; cv.style.height=dispH+'px'; const dpr=Math.min(window.devicePixelRatio||1, 2); drawLineW=3*dpr; cv.width=Math.round(dispW*dpr); cv.height=Math.round(dispH*dpr); if(drawCtx){ drawCtx.fillStyle='#ffffff'; drawCtx.fillRect(0,0,cv.width,cv.height); } }
+function sizeDrawCanvas(){ const cv=$('drawCanvas'); if(!cv) return; const vw=window.innerWidth, vh=window.innerHeight; const touch=('ontouchstart' in window)||navigator.maxTouchPoints>0; const mobile=Math.min(vw,vh)<=560 || (touch && Math.min(vw,vh)<=820); const pad=mobile?14:22;
+  // Caja disponible dentro del modal (ancho un poco reducido en móvil para que quede centrado y sin desbordar)
+  const wFactor=mobile?0.90:0.96; const availW=Math.round(Math.min(1000, vw*wFactor))-2*pad-6;
+  const chrome=mobile?140:170; const availH=Math.max(150, Math.round(vh*0.90)-chrome);
+  const dispW=Math.max(140, availW); const dispH=availH;
+  cv.style.width=dispW+'px'; cv.style.height=dispH+'px'; const dpr=Math.min(window.devicePixelRatio||1, 2); drawLineW=3*dpr; cv.width=Math.round(dispW*dpr); cv.height=Math.round(dispH*dpr); if(drawCtx){ drawCtx.fillStyle='#ffffff'; drawCtx.fillRect(0,0,cv.width,cv.height); } }
 function openDraw(onDone){ drawDone=onDone; lastFocused=document.activeElement; const cv=$('drawCanvas'); drawCtx=cv.getContext('2d'); drawStack=[]; $('drawModal').style.display='flex'; sizeDrawCanvas(); drawColor='#1f1a13'; updateDrawSw(); updateDrawUndo(); }
 function closeDraw(){ $('drawModal').style.display='none'; drawDone=null; restoreFocus(); }
 function drawPos(e){ const cv=$('drawCanvas'); const r=cv.getBoundingClientRect(); return { x:(e.clientX-r.left)*(cv.width/r.width), y:(e.clientY-r.top)*(cv.height/r.height) }; }
