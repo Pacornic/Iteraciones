@@ -430,6 +430,8 @@
   .btn-app:hover{ filter:brightness(1.06); }
   .btn-rule{ background:var(--blue); border:none; color:#08222e; font-weight:600; }
   .btn-rule:hover{ filter:brightness(1.06); }
+  .btn-rule.done, .btn-rule:disabled{ background:var(--surface); color:var(--faint); border:1px solid var(--border); cursor:default; filter:none; }
+  .rule-tag{ font-size:13px; color:#8fd3b6; } .rule-tag.dirty{ color:var(--amber); }
 
   /* modal */
   .ov{ position:fixed; inset:0; background:rgba(8,11,15,0.62); display:flex; align-items:center; justify-content:center; z-index:100; padding:16px; }
@@ -1425,7 +1427,7 @@ function renderHome(g, host){
 
   if(!g.changes.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML=`<p>Aún no hay ideas en esta versión.<br>Añade lo primero que quieras probar.</p>`; host.appendChild(e); return; }
   const byDate=(a,b)=>(b.updatedAt||b.createdAt)-(a.updatedAt||a.createdAt); const byState=s=>g.changes.filter(c=>c.state===s).sort(byDate);
-  renderGroup(host, 'Pendiente', [...byState('porprobar'), ...byState('aparcada')], g);
+  renderGroup(host, 'Pendiente', [...byState('aparcada'), ...byState('porprobar')], g);
   renderGroup(host, 'Resuelto', byState('funciona'), g);
   renderGroup(host, 'Descartado', byState('descartada'), g);
 }
@@ -1443,6 +1445,7 @@ function changeRow(g,c){
   return row;
 }
 
+function ideaSig(c){ return (c.title||'')+'\u0001'+(c.idea||'')+'\u0001'+(c.note||'')+'\u0001'+(c.section||''); }
 function openChangeDetail(g,c){
   const p=$('panel'), b=$('panelBody');
   const stateBtns='<div class="states">'+STATES.map(([k,l])=>`<button class="st s-${k} ${c.state===k?'on':''}" data-s="${k}">${l}</button>`).join('')+'</div>';
@@ -1453,7 +1456,7 @@ function openChangeDetail(g,c){
     <div class="field"><label>Idea</label><textarea id="cdIdea" style="min-height:96px;"></textarea></div>
     <div class="field"><label>Notas</label><textarea id="cdNote" style="min-height:70px;"></textarea></div>
     <div class="field"><label>Apunta a (apartado del reglamento)</label><select id="cdSection"></select></div>
-    ${c.implemented?`<div class="field"><label>Reglamento</label><div style="font-size:13px;color:#f0cf92;">✓ Llevado al borrador${c.implementedSection?' · '+escapeHtml(RB_TITLE[c.implementedSection]||c.implementedSection):''}</div></div>`:''}
+    ${c.implemented?`<div class="field"><label>Reglamento</label><div class="rule-tag" id="implStatus">✓ En el reglamento${c.implementedSection?' · '+escapeHtml(RB_TITLE[c.implementedSection]||c.implementedSection):''}</div></div>`:''}
     <div class="pactions">
       ${c.appImpact&&!c.appImplemented?`<button class="btn-app" id="pApp">Marcar como implementada en la app</button>`:''}
       ${c.state==='funciona'&&c.section!=='app_solo'?`<button class="btn-rule" id="pImpl">Llevar al reglamento</button>`:''}
@@ -1463,6 +1466,11 @@ function openChangeDetail(g,c){
   p.classList.add('open');
   $('cdTitle').value=c.title||''; $('cdIdea').value=c.idea||''; $('cdNote').value=c.note||''; $('cdSection').innerHTML=cmSectionOptions(c.section||'', c.appImpact);
   const commit=()=>{ const t=$('cdTitle').value.trim(); if(t) c.title=t; c.idea=$('cdIdea').value.replace(/\s+$/,''); c.note=$('cdNote').value.replace(/\s+$/,''); c.section=$('cdSection').value||''; };
+  if(c.implemented && c.implementedSig==null) c.implementedSig=ideaSig(c);
+  const sigNow=()=>((($('cdTitle').value.trim())||'')+'\u0001'+$('cdIdea').value.replace(/\s+$/,'')+'\u0001'+$('cdNote').value.replace(/\s+$/,'')+'\u0001'+($('cdSection').value||''));
+  const refreshImpl=()=>{ const btn=$('pImpl'); const dirty = !c.implemented || sigNow()!==c.implementedSig; if(btn){ btn.disabled = c.implemented && !dirty; btn.textContent = c.implemented ? (dirty?'Actualizar reglamento':'✓ Ya está en el reglamento') : 'Llevar al reglamento'; btn.classList.toggle('done', c.implemented && !dirty); } const st=$('implStatus'); if(st){ const base='✓ En el reglamento'+(c.implementedSection?' · '+(RB_TITLE[c.implementedSection]||c.implementedSection):''); st.textContent = base + ((c.implemented&&dirty)?' · con cambios sin llevar':''); st.classList.toggle('dirty', c.implemented&&dirty); } };
+  ['cdTitle','cdIdea','cdNote'].forEach(id=>{ const el=$(id); if(el) el.addEventListener('input', refreshImpl); });
+  refreshImpl();
   $('cdSection').onchange=()=>{ commit(); openChangeDetail(g,c); };
   b.querySelectorAll('.st').forEach(x=>x.onclick=()=>{ commit(); c.state=x.dataset.s; c.updatedAt=Date.now(); saveState(); renderBoard(); openChangeDetail(g,c); });
   { const pi=$('pImpl'); if(pi) pi.onclick=()=>{ commit(); c.updatedAt=Date.now(); saveState(); openImplModal(g,c); }; }
@@ -1503,7 +1511,7 @@ function removeBlock(content, block){ if(!block) return content; return content.
 async function saveImpl(){ const {g,c}=implRef||{}; if(!c) return; const key=$('imSection').value; const text=$('imText').value.replace(/\s+$/,''); if(!text){ $('imText').focus(); return; }
   if(c.implemented && c.implementedSection){ const prev=g.rulebook.sections.find(s=>s.key===c.implementedSection); if(prev) prev.content=removeBlock(prev.content, c.implementedText); g.pendingChanges=g.pendingChanges.filter(p=>p.changeId!==c.id); }
   const sec=g.rulebook.sections.find(s=>s.key===key); if(sec){ sec.content = sec.content.trim()?(sec.content.replace(/\s+$/,'')+'\n\n'+text):text; }
-  c.implemented=true; c.implementedSection=key; c.implementedText=text; c.section=key; c.updatedAt=Date.now(); if(c.state!=='funciona') c.state='funciona';
+  c.implemented=true; c.implementedSection=key; c.implementedText=text; c.section=key; c.updatedAt=Date.now(); if(c.state!=='funciona') c.state='funciona'; c.implementedSig=ideaSig(c);
   g.pendingChanges.push({ id:uid(), sectionKey:key, changeId:c.id, changeTitle:c.title });
   await saveState(); $('implModal').style.display='none'; implRef=null; restoreFocus(); renderBoard(); toast(`Llevado a «${RB_TITLE[key]}» (pendiente de consolidar).`);
 }
