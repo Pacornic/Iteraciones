@@ -1700,8 +1700,18 @@ function openSharedMenu(anchor,g){ closeMenu(); const owner=(g.__owner||'').toLo
 let sharedRenameRef=null;
 function openSharedEditMenu(anchor,g){ closeMenu(); const m=document.createElement('div'); m.className='menu'; m.setAttribute('role','menu'); m.innerHTML=`<button data-a="rename">✎ Renombrar</button>`; document.body.appendChild(m); const r=anchor.getBoundingClientRect(); m.style.top=(r.bottom+6)+'px'; m.style.left=Math.max(8,Math.min(r.left,window.innerWidth-180))+'px'; menuEl=m; m.querySelectorAll('button').forEach(b=>b.onclick=()=>{ closeMenu(); renameSharedGame(g); }); m.querySelector('button').focus(); }
 function renameSharedGame(g){ sharedRenameRef=g; editingGameId=null; lastFocused=document.activeElement; $('gmTitle').textContent='Renombrar proyecto'; $('gmHint').textContent='Cambia el nombre (lo verán todos los que tienen acceso).'; $('gmSave').textContent='Guardar'; $('gmName').value=g.name||''; $('gameModal').style.display='flex'; $('gmName').focus(); }
-async function shareGame(id){ const g=state.games.find(x=>x.id===id); if(!g) return; if(Store.backend!=='supabase'){ toast('Compartir requiere sesión en la nube.','warn',5000); return; } try{ const data=gameData(g); const row=await Store.createSharedGame(data); state.games=state.games.filter(x=>x.id!==id); await saveState(); await reloadSharedGames(); const sg=sharedGames.find(x=>x.__sharedId===row.id); toast('«'+g.name+'» ahora es un proyecto compartido.'); render(); if(sg) openShareModal(sg); }catch(e){ toast('No se pudo compartir: '+(e.message||e),'warn',6000); } }
-async function unshareGame(g){ const ok=await confirmDialog(`¿Dejar de compartir «${g.name}»? Volverá a ser un juego privado tuyo y los invitados dejarán de verlo.`, { okLabel:'Dejar de compartir', danger:false }); if(!ok) return; try{ const data=gameData(g); data.stage='active'; state.games.push(data); await Store.deleteSharedGame(g.__sharedId); await saveState(); await reloadSharedGames(); render(); toast('Vuelve a ser privado.'); }catch(e){ toast('Error: '+(e.message||e),'warn',6000); } }
+async function shareGame(id){ const g=state.games.find(x=>x.id===id); if(!g) return; if(Store.backend!=='supabase'){ toast('Compartir requiere sesión en la nube.','warn',5000); return; } try{ const data=gameData(g); data.preShareStage=g.stage||'active'; data.stage='active'; const row=await Store.createSharedGame(data); state.games=state.games.filter(x=>x.id!==id); await saveLocal(); await reloadSharedGames(); const sg=sharedGames.find(x=>x.__sharedId===row.id); toast('«'+g.name+'» ahora es un proyecto compartido.'); render(); if(sg) openShareModal(sg); }catch(e){ toast('No se pudo compartir: '+(e.message||e),'warn',6000); } }
+async function unshareGame(g){ const ok=await confirmDialog(`¿Dejar de compartir «${g.name}»? Volverá a ser un juego privado tuyo y los invitados dejarán de verlo.`, { okLabel:'Dejar de compartir', danger:false }); if(!ok) return; try{
+  const data=gameData(g); data.stage=data.preShareStage||'active'; delete data.preShareStage;
+  // Fusiona cualquier copia local previa con el mismo id (sin perder tareas/ideas/posts) y reemplaza.
+  const stale=state.games.filter(x=>x.id===data.id);
+  if(stale.length){ const merge=k=>{ const arr=data[k]=data[k]||[]; const have=new Set(arr.map(i=>i&&i.id)); stale.forEach(e=>(e[k]||[]).forEach(it=>{ if(it&&it.id&&!have.has(it.id)){ arr.push(it); have.add(it.id);} })); }; ['tasks','changes','posts'].forEach(merge); }
+  state.games=state.games.filter(x=>x.id!==data.id);
+  state.games.push(data);
+  await saveLocal();
+  await Store.deleteSharedGame(g.__sharedId);
+  await reloadSharedGames(); render(); toast('Vuelve a ser privado.');
+}catch(e){ toast('Error: '+(e.message||e),'warn',6000); } }
 async function leaveSharedGame(g){ const ok=await confirmDialog(`¿Salir del proyecto «${g.name}»? Dejará de aparecer en tu dashboard.`, { okLabel:'Salir', danger:false }); if(!ok) return; try{ await Store.leaveGame(g.__sharedId); await reloadSharedGames(); render(); toast('Has salido del proyecto.'); }catch(e){ toast('Error: '+(e.message||e),'warn',6000); } }
 let shareRef=null, shareSugTimer=null;
 function openShareModal(g){ shareRef=g; lastFocused=document.activeElement; const owner=(g.__owner||'').toLowerCase()===(Store.email||'').toLowerCase(); $('shTitle').textContent='Compartir · '+(g.name||'proyecto'); $('shInput').value=''; $('shSug').innerHTML=''; $('shMsg').textContent=''; $('shMsg').style.color='var(--muted)'; $('shInput').disabled=!owner; $('shInput').placeholder=owner?'@usuario':'Solo el dueño puede invitar'; $('shareModal').style.display='flex'; renderShareMembers(g); if(owner) $('shInput').focus(); }
@@ -1788,14 +1798,48 @@ $('drawCancel').onclick=closeDraw;
 $('drawAdd').onclick=()=>{ const cv=$('drawCanvas'); let url=null; try{ url=cv.toDataURL('image/jpeg',0.85); }catch(e){} if(url && drawDone) drawDone(url); closeDraw(); };
 
 async function bootApp(){ await loadState(); if(normalizeStructures()) await saveState();
+  if(dedupeLocalIds()) await saveLocal();
   render(); updateBackend(); updateSavedIndicator();
   if(Store.backend==='supabase'){
     await Store.upsertProfile();
     await Promise.allSettled([ Store.checkAdmin(), reloadDirectory(), reloadSharedGames(), reloadInvites(), reloadSentInvites(), reloadAnnouncements() ]);
+    await reconcileSharedDuplicates();
     render(); updateBackend();
   }
   if(window.__kaizenRecovery){ window.__kaizenRecovery=false; openRecovery(); } else if(Store.backend==='supabase'){ await ensureUsername(); } }
-async function refreshCloud(){ if(Store.backend!=='supabase') return; await Promise.allSettled([ Store.checkAdmin(), reloadDirectory(), reloadSharedGames(), reloadInvites(), reloadSentInvites(), reloadAnnouncements() ]); render(); updateBackend(); }
+// Si hay varios juegos privados con el MISMO id (duplicado), fusiona su contenido único
+// (tareas, ideas, posts) en el más completo y elimina los demás. No pierde nada.
+function dedupeLocalIds(){
+  const score=g=>((g.tasks||[]).length+(g.changes||[]).length+(g.posts||[]).length+(g.rulebookVersions||[]).length);
+  const groups=new Map(); state.games.forEach(g=>{ const a=groups.get(g.id)||[]; a.push(g); groups.set(g.id,a); });
+  let changed=false;
+  groups.forEach(arr=>{ if(arr.length<2) return; arr.sort((a,b)=>score(b)-score(a)); const base=arr[0];
+    const merge=(k)=>{ const x=base[k]=base[k]||[]; const have=new Set(x.map(i=>i&&i.id)); arr.slice(1).forEach(g=>(g[k]||[]).forEach(it=>{ if(it&&it.id&&!have.has(it.id)){ x.push(it); have.add(it.id);} })); };
+    ['tasks','changes','posts'].forEach(merge);
+    const rm=new Set(arr.slice(1)); state.games=state.games.filter(g=>!rm.has(g)); changed=true;
+  });
+  return changed;
+}
+// Si un juego existe como privado y como compartido (mismo id), fusiona el contenido
+// único del privado dentro del compartido y luego elimina la copia privada. Nunca borra
+// la privada si no pudo guardar la fusión (así no se pierde nada).
+async function reconcileSharedDuplicates(){
+  if(!(sharedGames&&sharedGames.length)) return false;
+  let changedLocal=false;
+  for(const sg of sharedGames.slice()){
+    const idx=state.games.findIndex(g=>g.id===sg.id);
+    if(idx<0) continue;
+    const lg=state.games[idx];
+    let sharedChanged=false;
+    const mergeById=(key)=>{ const arr=sg[key]=sg[key]||[]; const have=new Set(arr.map(x=>x&&x.id)); (lg[key]||[]).forEach(it=>{ if(it&&it.id&&!have.has(it.id)){ arr.push(it); have.add(it.id); sharedChanged=true; } }); };
+    mergeById('tasks'); mergeById('changes'); mergeById('posts');
+    if(sharedChanged){ try{ await saveSharedGame(sg); }catch(e){ continue; } }
+    state.games.splice(idx,1); changedLocal=true;
+  }
+  if(changedLocal) await saveLocal();
+  return changedLocal;
+}
+async function refreshCloud(){ if(Store.backend!=='supabase') return; await Promise.allSettled([ Store.checkAdmin(), reloadDirectory(), reloadSharedGames(), reloadInvites(), reloadSentInvites(), reloadAnnouncements() ]); await reconcileSharedDuplicates(); render(); updateBackend(); }
 async function ensureUsername(){ if(Store.backend!=='supabase' || Store.username) return; const want=(Store.requestedUsername||'').trim(); if(want && /^[a-zA-Z0-9_]{3,20}$/.test(want)){ try{ if(await Store.usernameAvailable(want)){ await Store.setUsername(want); updateHello(); return; } }catch(e){} } openNickGate(); }
 (function setupPTR(){
   const scroller=$('portada'); if(!scroller) return;
