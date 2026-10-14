@@ -1390,7 +1390,7 @@ function renderBoard(){
   if(!g){ $('title').textContent='Sin juegos'; $('gameMenuBtn').style.display='none'; tabs.innerHTML=''; wrap.innerHTML=`<div class="empty"><p>Añade un juego para empezar.</p></div>`; return; }
   $('title').textContent=g.name; $('gameMenuBtn').style.display='inline-block'; { const bh=$('backHome'); if(bh) bh.textContent='← Diseño'; }
   tabs.innerHTML='';
-  [['inicio','Ideas'],['bitacora','Board'],['tareas','Tareas'],['reglas','Reglas'],['proto','Proto']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(currentTab===k?' on':''); b.textContent=l; b.onclick=()=>{ currentTab=k; if(k==='reglas'){ rbView='draft'; rbVersionId=null; } closePanel(); renderBoard(); }; tabs.appendChild(b); });
+  [['inicio','Ideas'],['tareas','Tareas'],['bitacora','Board'],['reglas','Reglas'],['proto','Proto']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(currentTab===k?' on':''); b.textContent=l; b.onclick=()=>{ currentTab=k; if(k==='reglas'){ rbView='draft'; rbVersionId=null; } closePanel(); renderBoard(); }; tabs.appendChild(b); });
   wrap.innerHTML=''; wrap.className='wrap'+(currentTab==='proto'?' wide':'');
   if(g.__shared){ const info=document.createElement('div'); info.className='shared-info';
     const mine=(Store.email||'').toLowerCase();
