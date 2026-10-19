@@ -1074,7 +1074,7 @@ function renderHomeTareas(host){
     host.appendChild(blk);
   }
   allGames().filter(g=>(g.tasks||[]).some(t=>!t.done)).sort(byRecent).forEach(g=>{
-    const pend=(g.tasks||[]).filter(t=>!t.done);
+    const pend=(g.tasks||[]).filter(t=>!t.done).sort((a,b)=>((b.createdAt||0)-(a.createdAt||0)));
     const blk=document.createElement('div'); blk.className='ht-blk';
     const hd=document.createElement('button'); hd.className='ht-game'; hd.innerHTML=`<b style="background:${g.color||'#e8a33d'}"></b>${escapeHtml(g.name)}<span class="ht-n">${pend.length}</span>`; hd.title='Abrir tareas de '+g.name; hd.onclick=()=>openGameTab(g.id,'tareas'); blk.appendChild(hd);
     pend.forEach(t=>{
@@ -1141,7 +1141,7 @@ function buildQuickNote(){ const w=document.createElement('div'); w.className='h
   bt.onclick=go; inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } });
   w.appendChild(inp); w.appendChild(sel); w.appendChild(bt); return w; }
 function buildQuickTask(){ const w=document.createElement('div'); w.className='home-note'; const inp=document.createElement('input'); inp.className='hn-in'; inp.placeholder='Nueva tarea pendiente… (imprimir, recortar, pegar…)';
-  const games=sortedGamesForPick();
+  const games=sortedGamesForPick().filter(g=>g.__shared||((g.stage||'active')==='active'));
   const sel=document.createElement('select'); sel.className='hn-sel'; sel.innerHTML = '<option value="general">→ General</option>'+games.map(g=>`<option value="${g.id}">→ ${escapeHtml(g.name)}${gamePickSuffix(g)}</option>`).join('');
   const bt=document.createElement('button'); bt.className='btn hn-btn'; bt.textContent='Guardar';
   const go=async()=>{ const txt=inp.value.trim(); if(!txt) return; const dest=sel.value;
@@ -1412,7 +1412,8 @@ function renderTareas(g, host){
   const list=document.createElement('div'); list.className='tk-list';
   if(!g.tasks.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Sin tareas pendientes.<br>Apunta lo que haya que hacer para este juego.</p>'; list.appendChild(e); host.appendChild(list); return; }
   const rowFor=(t)=>{ const r=document.createElement('div'); r.className='tk-row'+(t.done?' done':''); const cb=document.createElement('button'); cb.className='tk-cb'+(t.done?' on':''); cb.textContent='✓'; cb.title=t.done?'Marcar como pendiente':'Marcar como hecha'; cb.onclick=async()=>{ t.done=!t.done; t.doneAt=t.done?Date.now():null; await saveState(); renderBoard(); }; const tx=document.createElement('span'); tx.className='tk-tx'; tx.textContent=t.text; const mv=taskMoveSel(t,'game',g); const dl=document.createElement('button'); dl.className='tk-del'; dl.textContent='✕'; dl.title='Eliminar'; dl.onclick=async()=>{ g.tasks=g.tasks.filter(x=>x.id!==t.id); await saveState(); renderBoard(); }; r.appendChild(cb); r.appendChild(tx); r.appendChild(mv); r.appendChild(dl); return r; };
-  const pend=g.tasks.filter(t=>!t.done), done=g.tasks.filter(t=>t.done);
+  const recent=(a,b)=>((b.createdAt||0)-(a.createdAt||0));
+  const pend=g.tasks.filter(t=>!t.done).sort(recent), done=g.tasks.filter(t=>t.done).sort((a,b)=>((b.doneAt||b.createdAt||0)-(a.doneAt||a.createdAt||0)));
   pend.forEach(t=>list.appendChild(rowFor(t)));
   if(done.length){ const h=document.createElement('div'); h.className='tk-donehdr'; h.textContent='Hechas ('+done.length+')'; list.appendChild(h); done.forEach(t=>list.appendChild(rowFor(t))); }
   host.appendChild(list);
@@ -1842,13 +1843,16 @@ async function reconcileSharedDuplicates(){
 async function refreshCloud(){ if(Store.backend!=='supabase') return; await Promise.allSettled([ Store.checkAdmin(), reloadDirectory(), reloadSharedGames(), reloadInvites(), reloadSentInvites(), reloadAnnouncements() ]); await reconcileSharedDuplicates(); render(); updateBackend(); }
 async function ensureUsername(){ if(Store.backend!=='supabase' || Store.username) return; const want=(Store.requestedUsername||'').trim(); if(want && /^[a-zA-Z0-9_]{3,20}$/.test(want)){ try{ if(await Store.usernameAvailable(want)){ await Store.setUsername(want); updateHello(); return; } }catch(e){} } openNickGate(); }
 (function setupPTR(){
-  const scroller=$('portada'); if(!scroller) return;
   const ind=document.createElement('div'); ind.className='ptr'; ind.innerHTML='<span class="ptr-i">↓</span>'; document.body.appendChild(ind);
   const icon=ind.querySelector('.ptr-i'); const TH=70; let startY=0, pulling=false, ready=false, active=false;
   const reset=()=>{ ind.style.transform='translateX(-50%) translateY(-60px)'; ind.classList.remove('on','spin'); icon.textContent='↓'; };
-  scroller.addEventListener('touchstart',e=>{ if(active||e.touches.length!==1){ pulling=false; return; } if(scroller.scrollTop>0){ pulling=false; return; } startY=e.touches[0].clientY; pulling=true; ready=false; },{passive:true});
-  scroller.addEventListener('touchmove',e=>{ if(!pulling||active) return; const dy=e.touches[0].clientY-startY; if(dy<=0){ reset(); return; } const d=Math.min(dy*0.5,96); ind.style.transform=`translateX(-50%) translateY(${d-60}px)`; ready=dy>TH; ind.classList.toggle('on',ready); },{passive:true});
-  scroller.addEventListener('touchend',async()=>{ if(!pulling||active){ pulling=false; return; } pulling=false; if(!ready){ reset(); return; } active=true; ind.classList.add('spin','on'); icon.textContent='⟳'; ind.style.transform='translateX(-50%) translateY(16px)'; try{ await refreshCloud(); toast('Actualizado.'); }catch(_){} reset(); active=false; });
+  const attach=(scroller)=>{ if(!scroller) return;
+    scroller.addEventListener('touchstart',e=>{ if(active||e.touches.length!==1){ pulling=false; return; } if(scroller.scrollTop>0){ pulling=false; return; } startY=e.touches[0].clientY; pulling=true; ready=false; },{passive:true});
+    scroller.addEventListener('touchmove',e=>{ if(!pulling||active) return; const dy=e.touches[0].clientY-startY; if(dy<=0){ reset(); return; } const d=Math.min(dy*0.5,96); ind.style.transform=`translateX(-50%) translateY(${d-60}px)`; ready=dy>TH; ind.classList.toggle('on',ready); },{passive:true});
+    scroller.addEventListener('touchend',async()=>{ if(!pulling||active){ pulling=false; return; } pulling=false; if(!ready){ reset(); return; } active=true; ind.classList.add('spin','on'); icon.textContent='⟳'; ind.style.transform='translateX(-50%) translateY(16px)'; try{ await refreshCloud(); toast('Actualizado.'); }catch(_){} reset(); active=false; });
+  };
+  attach($('portada'));
+  attach(document.querySelector('.content'));
 })();
 (async function init(){ await Store.init(); if(Store.ready()){ bootApp(); } else { updateBackend(); showAuthGate(); } })();
 </script>
