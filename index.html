@@ -2,8 +2,14 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Kaizen — Iteration Design Manager</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#151b23">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kaizen">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -932,6 +938,28 @@ async function refreshRequestsBadge(){ const b=$('reqBtn'); if(!b||Store.backend
 async function doChangePassword(){ const p1=$('setPw1').value, p2=$('setPw2').value; const msg=$('setMsg'); if(!p1||p1.length<6){ msg.style.color='var(--brick)'; msg.textContent='La contraseña debe tener al menos 6 caracteres.'; $('setPw1').focus(); return; } if(p1!==p2){ msg.style.color='var(--brick)'; msg.textContent='Las contraseñas no coinciden.'; $('setPw2').focus(); return; } msg.style.color='var(--muted)'; msg.textContent='Actualizando…'; try{ await Store.changePassword(p1); msg.style.color='var(--teal)'; msg.textContent='Contraseña actualizada.'; $('setPw1').value=''; $('setPw2').value=''; toast('Contraseña cambiada.'); }catch(e){ msg.style.color='var(--brick)'; msg.textContent='Error: '+(e.message||e); } }
 
 async function loadState(){
+  if(Store.backend==='supabase'){
+    const cache=readStateCache();
+    // Sin conexión: usa la copia local directamente.
+    if(isOffline() && cache){ state=cache.data; if(typeof state.preloadVersion!=='number') state.preloadVersion=PRELOAD_VERSION; normalizeStructures(); return; }
+    try{
+      const res=await Store.get('games-data');
+      if(res&&res.value){
+        const cloud=JSON.parse(res.value);
+        // Si hay cambios locales sin sincronizar y son más nuevos, gana la copia local (y se subirá).
+        if(isDirty() && cache && (cache.t||0) > (cloud.updatedAt||0)){ state=cache.data; }
+        else { state=cloud; setDirty(false); }
+        if(typeof state.preloadVersion!=='number') state.preloadVersion=PRELOAD_VERSION;
+        if(normalizeStructures()) await saveState(); else writeStateCache();
+        return;
+      }
+      // Nube vacía pero hay copia local pendiente: consérvala.
+      if(cache && isDirty()){ state=cache.data; normalizeStructures(); return; }
+    }catch(e){ if(cache){ state=cache.data; if(typeof state.preloadVersion!=='number') state.preloadVersion=PRELOAD_VERSION; normalizeStructures(); return; } }
+    state={ games:[], currentGameId:null, preloadVersion:PRELOAD_VERSION };
+    await saveState();
+    return;
+  }
   try{ const res=await Store.get('games-data'); if(res&&res.value){ state=JSON.parse(res.value); if(typeof state.preloadVersion!=='number') state.preloadVersion=PRELOAD_VERSION; if(normalizeStructures()) await saveState(); return; } }catch(e){}
   // Cuenta nueva/vacía: arranca SIN juegos de ejemplo. Cada usuario crea los suyos.
   state={ games:[], currentGameId:null, preloadVersion:PRELOAD_VERSION };
@@ -1002,7 +1030,27 @@ async function declineInviteUI(iv){ try{ await Store.declineInvite(iv.id); }catc
 function gameData(g){ const c={}; Object.keys(g||{}).forEach(k=>{ if(!k.startsWith('__')) c[k]=g[k]; }); return c; }
 async function reloadSharedGames(){ if(Store.backend!=='supabase'){ sharedGames=[]; return; } try{ const rows=await Store.listSharedGames(); sharedGames=rows.map(r=>{ const g=Object.assign({}, r.data||{}); if(!g.id) g.id='shared_'+r.id; g.__shared=true; g.__sharedId=r.id; g.__rev=r.rev; g.__owner=r.owner_email; g.__members=r.members||[]; g.__updatedBy=r.updated_by; g.__updatedByName=r.updated_by_name; g.__updatedAt=r.updated_at; return g; }); }catch(e){ sharedGames=[]; } }
 async function saveSharedGame(g){ try{ const res=await Store.updateSharedGame(g.__sharedId, gameData(g), g.__rev); if(res.conflict){ toast('Otro usuario guardó cambios antes; recargo la versión más reciente.','warn',6000); await reloadSharedGames(); render(); return false; } g.__rev=res.rev; g.__updatedAt=res.updated_at; g.__updatedBy=Store.email; g.__updatedByName=Store.name; updateSavedIndicator(); return true; }catch(e){ if(!storageWarned){ storageWarned=true; toast('No se pudo guardar el juego compartido: '+(e.message||e),'warn',6000); } return false; } }
-async function saveState(){ if(appView==='game'){ const cg=currentGame(); if(cg && cg.__shared) return saveSharedGame(cg); } state.updatedAt=Date.now(); try{ const ok=await Store.set('games-data', JSON.stringify(state)); updateSavedIndicator(); if(!ok&&!storageWarned){ storageWarned=true; toast('No se pudo guardar de forma persistente.','warn',6000); } }catch(e){ if(!storageWarned){ storageWarned=true; toast('No se pudo guardar: '+(e.message||e),'warn',6000); } } }
+async function saveState(){ if(appView==='game'){ const cg=currentGame(); if(cg && cg.__shared) return saveSharedGame(cg); } return persistState(); }
+/* ---- Capa offline: copia local de los datos privados + sincronización simple ---- */
+function cacheKey(){ return 'kaizen-cache-'+(Store.userId||Store.email||'anon'); }
+function writeStateCache(){ try{ localStorage.setItem(cacheKey(), JSON.stringify({ t:state.updatedAt||Date.now(), data:state })); }catch(e){} }
+function readStateCache(){ try{ const raw=localStorage.getItem(cacheKey()); if(!raw) return null; const o=JSON.parse(raw); return (o&&o.data)?o:null; }catch(e){ return null; } }
+function setDirty(v){ try{ if(v) localStorage.setItem('kaizen-dirty', cacheKey()); else if(localStorage.getItem('kaizen-dirty')===cacheKey()) localStorage.removeItem('kaizen-dirty'); }catch(e){} }
+function isDirty(){ try{ return localStorage.getItem('kaizen-dirty')===cacheKey(); }catch(e){ return false; } }
+function isOffline(){ return navigator.onLine===false; }
+async function persistState(){
+  state.updatedAt=Date.now();
+  writeStateCache();
+  if(Store.backend==='supabase'){
+    if(isOffline()){ setDirty(true); updateSavedIndicator(); return true; }
+    try{ const ok=await Store.set('games-data', JSON.stringify(state)); setDirty(!ok); updateSavedIndicator(); if(!ok&&!storageWarned){ storageWarned=true; toast('No se pudo guardar en la nube; guardado en el dispositivo.','warn',5000); } return true; }
+    catch(e){ setDirty(true); updateSavedIndicator(); return true; }
+  }
+  try{ const ok=await Store.set('games-data', JSON.stringify(state)); updateSavedIndicator(); if(!ok&&!storageWarned){ storageWarned=true; toast('No se pudo guardar de forma persistente.','warn',6000); } return ok; }
+  catch(e){ if(!storageWarned){ storageWarned=true; toast('No se pudo guardar: '+(e.message||e),'warn',6000); } return false; }
+}
+async function syncPending(){ if(Store.backend!=='supabase' || !isDirty() || isOffline()) return; try{ const ok=await Store.set('games-data', JSON.stringify(state)); if(ok){ setDirty(false); updateSavedIndicator(); toast('Cambios sin conexión sincronizados.'); } }catch(e){} }
+window.addEventListener('online', ()=>{ syncPending(); });
 
 /* ---------- Export / Import ---------- */
 function exportData(){ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`kaizen-${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); toast('Copia exportada.'); }
@@ -1028,7 +1076,7 @@ function goHome(){ appView='home'; closePanel(); render(); }
 function openGame(id){ const own=state.games.some(x=>x.id===id); state.currentGameId=id; currentTab='inicio'; rbView='draft'; rbVersionId=null; appView='game'; closePanel(); if(own) saveState(); render(); }
 function openGameTab(id,tab){ openGame(id); currentTab=tab; render(); }
 async function saveGame(g){ if(g && g.__shared) return saveSharedGame(g); state.updatedAt=Date.now(); try{ const ok=await Store.set('games-data', JSON.stringify(state)); updateSavedIndicator(); if(!ok&&!storageWarned){ storageWarned=true; toast('No se pudo guardar de forma persistente.','warn',6000); } }catch(e){} }
-async function saveLocal(){ state.updatedAt=Date.now(); try{ const ok=await Store.set('games-data', JSON.stringify(state)); updateSavedIndicator(); if(!ok&&!storageWarned){ storageWarned=true; toast('No se pudo guardar de forma persistente.','warn',6000); } }catch(e){} }
+async function saveLocal(){ return persistState(); }
 function gameStageRank(g){ const s=g.__shared?'active':(g.stage||'active'); return s==='paused'?2:(s==='draft'?1:0); }
 function gamePickSuffix(g){ const s=g.__shared?'active':(g.stage||'active'); return s==='paused'?' (en pausa)':(s==='draft'?' (Draft)':''); }
 function sortedGamesForPick(){ const games=state.games.slice().concat(sharedGames); return games.sort((a,b)=> (gameStageRank(a)-gameStageRank(b)) || String(a.name||'').localeCompare(String(b.name||''),'es',{sensitivity:'base'})); }
@@ -1801,13 +1849,14 @@ $('drawAdd').onclick=()=>{ const cv=$('drawCanvas'); let url=null; try{ url=cv.t
 async function bootApp(){ await loadState(); if(normalizeStructures()) await saveState();
   if(dedupeLocalIds()) await saveLocal();
   render(); updateBackend(); updateSavedIndicator();
-  if(Store.backend==='supabase'){
-    await Store.upsertProfile();
+  if(Store.backend==='supabase' && !isOffline()){
+    try{ await Store.upsertProfile(); }catch(e){}
     await Promise.allSettled([ Store.checkAdmin(), reloadDirectory(), reloadSharedGames(), reloadInvites(), reloadSentInvites(), reloadAnnouncements() ]);
     await reconcileSharedDuplicates();
+    await syncPending();
     render(); updateBackend();
   }
-  if(window.__kaizenRecovery){ window.__kaizenRecovery=false; openRecovery(); } else if(Store.backend==='supabase'){ await ensureUsername(); } }
+  if(window.__kaizenRecovery){ window.__kaizenRecovery=false; openRecovery(); } else if(Store.backend==='supabase' && !isOffline()){ await ensureUsername(); } }
 // Si hay varios juegos privados con el MISMO id (duplicado), fusiona su contenido único
 // (tareas, ideas, posts) en el más completo y elimina los demás. No pierde nada.
 function dedupeLocalIds(){
@@ -1854,6 +1903,7 @@ async function ensureUsername(){ if(Store.backend!=='supabase' || Store.username
   attach($('portada'));
   attach(document.querySelector('.content'));
 })();
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
 (async function init(){ await Store.init(); if(Store.ready()){ bootApp(); } else { updateBackend(); showAuthGate(); } })();
 </script>
 </body>
