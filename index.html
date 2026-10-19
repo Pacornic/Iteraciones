@@ -1904,7 +1904,16 @@ async function ensureUsername(){ if(Store.backend!=='supabase' || Store.username
   attach($('portada'));
   attach(document.querySelector('.content'));
 })();
-if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>{
+  let refreshing=false; const hadController=!!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(refreshing||!hadController) return; refreshing=true; location.reload(); });
+  navigator.serviceWorker.register('sw.js').then(reg=>{
+    reg.update();
+    // Comprueba si hay versión nueva cada vez que la app vuelve a primer plano.
+    document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') reg.update(); });
+    setInterval(()=>reg.update(), 60*60*1000);
+  }).catch(()=>{});
+}); }
 (async function init(){ await Store.init(); if(Store.ready()){ bootApp(); } else { updateBackend(); showAuthGate(); } })();
 </script>
 </body>
