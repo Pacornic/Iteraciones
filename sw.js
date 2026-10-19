@@ -1,10 +1,10 @@
-/* Kaizen service worker — actualización automática sin versiones.
-   Estrategia:
-   - Mismo origen (index.html, config.js, iconos, manifest): RED PRIMERO.
-     Con internet siempre sirve lo último y refresca la caché; sin internet usa la copia cacheada.
-   - Librerías de CDN (supabase-js, pinada a @2): CACHÉ PRIMERO (inmutables).
-   - Llamadas a Supabase (datos): nunca se cachean; offline, la app usa su copia local.
-   No hay número de versión que tocar: los cambios se recogen solos al abrir con internet. */
+/* Kaizen service worker — abre offline de forma fiable y se actualiza solo (sin versiones).
+   Estrategia para los archivos de la app (mismo origen): "stale-while-revalidate":
+     - Sirve AL INSTANTE la copia cacheada (por eso abre siempre, incluso sin red).
+     - En paralelo, si hay internet, descarga la versión nueva y actualiza la caché
+       para la próxima apertura. Así los cambios se recogen solos (a la siguiente vez).
+   CDN (librerías inmutables): caché primero.
+   Datos de Supabase: nunca se cachean; offline, la app usa su copia local. */
 const CACHE = 'kaizen';
 const CORE = [
   './', './index.html', './config.js', './manifest.webmanifest',
@@ -37,10 +37,10 @@ self.addEventListener('fetch', (e) => {
   // Datos de Supabase: siempre a la red (nunca cachear).
   if (url.hostname.endsWith('supabase.co')) return;
 
-  // CDN (librerías inmutables): caché primero, con respaldo de red.
+  // CDN u otros orígenes (librerías): caché primero, red como respaldo.
   if (url.origin !== self.location.origin) {
     e.respondWith((async () => {
-      const cached = await caches.match(req);
+      const cached = await caches.match(req, { ignoreSearch: true });
       if (cached) return cached;
       try {
         const net = await fetch(req);
@@ -51,20 +51,25 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Mismo origen (la app): RED PRIMERO, caché como respaldo offline.
+  // Mismo origen (la app): caché primero + refresco en segundo plano.
   e.respondWith((async () => {
-    try {
-      const net = await fetch(req);
-      if (net && net.status === 200) {
-        const c = await caches.open(CACHE);
-        try { c.put(req, net.clone()); } catch (_) {}
-      }
+    const cache = await caches.open(CACHE);
+    const cached = await cache.match(req, { ignoreSearch: true });
+    const fromNet = fetch(req).then((net) => {
+      if (net && net.status === 200) { try { cache.put(req, net.clone()); } catch (_) {} }
       return net;
-    } catch (_) {
-      const cached = await caches.match(req);
-      if (cached) return cached;
-      if (req.mode === 'navigate') return (await caches.match('./index.html')) || Response.error();
-      return Response.error();
+    }).catch(() => null);
+
+    if (cached) { e.waitUntil(fromNet); return cached; }
+
+    const net = await fromNet;
+    if (net) return net;
+    // Sin caché y sin red: para una navegación, devuelve el shell cacheado.
+    if (req.mode === 'navigate') {
+      return (await cache.match('./index.html', { ignoreSearch: true }))
+          || (await cache.match('./', { ignoreSearch: true }))
+          || Response.error();
     }
+    return Response.error();
   })());
 });
