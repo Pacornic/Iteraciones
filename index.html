@@ -945,28 +945,35 @@ async function approveReq(r){ let res; try{ res=await Store.approveSignup(r); }c
 async function refreshRequestsBadge(){ const b=$('reqBtn'); if(!b||Store.backend!=='supabase') return; let reqN=0; if(Store.admin){ try{ const rows=await Store.listSignupRequests(); reqN=rows.filter(x=>x.status==='pending').length; }catch(e){} } const invN=myInvites.length; const annN=unreadAnn(); const total=reqN+invN+annN; const show=(Store.admin||invN>0||annN>0); b.style.display=show?'inline-flex':'none'; b.classList.toggle('has-new', total>0); b.textContent='✉'+(total?(' '+total):''); b.title='Buzón'+(total?(' ('+total+')'):''); }
 async function doChangePassword(){ const p1=$('setPw1').value, p2=$('setPw2').value; const msg=$('setMsg'); if(!p1||p1.length<6){ msg.style.color='var(--brick)'; msg.textContent='La contraseña debe tener al menos 6 caracteres.'; $('setPw1').focus(); return; } if(p1!==p2){ msg.style.color='var(--brick)'; msg.textContent='Las contraseñas no coinciden.'; $('setPw2').focus(); return; } msg.style.color='var(--muted)'; msg.textContent='Actualizando…'; try{ await Store.changePassword(p1); msg.style.color='var(--teal)'; msg.textContent='Contraseña actualizada.'; $('setPw1').value=''; $('setPw2').value=''; toast('Contraseña cambiada.'); }catch(e){ msg.style.color='var(--brick)'; msg.textContent='Error: '+(e.message||e); } }
 
+function withTimeout(p, ms){ return Promise.race([ p, new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')), ms)) ]); }
 async function loadState(){
   if(Store.backend==='supabase'){
     const cache=readStateCache();
-    // Sin conexión: usa la copia local directamente.
-    if(isOffline() && cache){ state=cache.data; if(typeof state.preloadVersion!=='number') state.preloadVersion=PRELOAD_VERSION; normalizeStructures(); return; }
+    // 1) Si hay copia local, la cargamos YA (así la app siempre tiene datos, con o sin red).
+    if(cache){ state=cache.data; if(typeof state.preloadVersion!=='number') state.preloadVersion=PRELOAD_VERSION; normalizeStructures(); }
+    // Vía rápida: sin conexión y con copia local -> abrir ya, sin esperar a la nube.
+    if(cache && isOffline()) return;
+    // 2) Intentamos la nube con límite de tiempo; si falla/tarda, nos quedamos con la copia local.
     try{
-      const res=await Store.get('games-data');
+      const res=await withTimeout(Store.get('games-data'), 5000);
       if(res&&res.value){
         const cloud=JSON.parse(res.value);
-        // Si hay cambios locales sin sincronizar y son más nuevos, gana la copia local (y se subirá).
-        if(isDirty() && cache && (cache.t||0) > (cloud.updatedAt||0)){ state=cache.data; }
-        else { state=cloud; setDirty(false); }
+        // Si hay cambios locales sin sincronizar y más nuevos, gana la copia local (se subirá luego).
+        if(!(isDirty() && cache && (cache.t||0) > (cloud.updatedAt||0))){ state=cloud; setDirty(false); }
         if(typeof state.preloadVersion!=='number') state.preloadVersion=PRELOAD_VERSION;
         if(normalizeStructures()) await saveState(); else writeStateCache();
         return;
       }
-      // Nube vacía pero hay copia local pendiente: consérvala.
-      if(cache && isDirty()){ state=cache.data; normalizeStructures(); return; }
-    }catch(e){ if(cache){ state=cache.data; if(typeof state.preloadVersion!=='number') state.preloadVersion=PRELOAD_VERSION; normalizeStructures(); return; } }
-    state={ games:[], currentGameId:null, preloadVersion:PRELOAD_VERSION };
-    await saveState();
-    return;
+      // Nube accesible pero vacía: si no había copia local, cuenta nueva.
+      if(!cache){ state={ games:[], currentGameId:null, preloadVersion:PRELOAD_VERSION }; await saveState(); }
+      return;
+    }catch(e){
+      // Sin conexión o la nube tardó demasiado: si ya cargamos la copia local, seguimos con ella.
+      if(cache) return;
+      state={ games:[], currentGameId:null, preloadVersion:PRELOAD_VERSION };
+      try{ await saveState(); }catch(_){}
+      return;
+    }
   }
   try{ const res=await Store.get('games-data'); if(res&&res.value){ state=JSON.parse(res.value); if(typeof state.preloadVersion!=='number') state.preloadVersion=PRELOAD_VERSION; if(normalizeStructures()) await saveState(); return; } }catch(e){}
   // Cuenta nueva/vacía: arranca SIN juegos de ejemplo. Cada usuario crea los suyos.
