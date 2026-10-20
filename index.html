@@ -362,8 +362,12 @@
   .vhead .vact{ display:flex; align-items:center; gap:14px; margin-top:14px; }
 
   .grouph{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--faint); margin:24px 0 4px; }
-  .chg{ display:flex; align-items:center; gap:12px; padding:12px 4px; border-top:1px solid var(--line); cursor:pointer; }
+  .chg{ display:flex; align-items:center; gap:12px; padding:12px 4px 12px 11px; border-top:1px solid var(--line); border-left:3px solid transparent; cursor:pointer; }
   .chg:hover{ background:rgba(255,255,255,0.02); }
+  .chg.st-porprobar{ border-left-color:rgba(232,163,61,0.55); }
+  .chg.st-aparcada{ border-left-color:rgba(102,182,223,0.65); }
+  .chg.st-funciona{ border-left-color:rgba(87,179,148,0.5); }
+  .chg.st-descartada{ border-left-color:rgba(255,255,255,0.07); }
   .chg .ico{ font-family:'IBM Plex Mono',monospace; width:16px; text-align:center; flex-shrink:0; }
   .chg .t{ flex:1; font-size:14.5px; }
   .chg.done .t{ color:var(--muted); }
@@ -1265,16 +1269,16 @@ function renderDesignPortada(){
     myInvites.forEach(iv=>{ const it=document.createElement('div'); it.className='inv-row'; it.innerHTML=`<span class="inv-t">${escapeHtml(iv.game_name||'Proyecto')}</span><span class="inv-from">de ${escapeHtml(iv.inviter_email||'')}</span>`; const acts=document.createElement('div'); acts.className='inv-acts'; const ac=document.createElement('button'); ac.className='btn-app rqb'; ac.textContent='Aceptar'; ac.onclick=()=>acceptInviteUI(iv); const dc=document.createElement('button'); dc.className='btn-q rqb'; dc.textContent='Rechazar'; dc.onclick=()=>declineInviteUI(iv); acts.appendChild(ac); acts.appendChild(dc); it.appendChild(acts); b.appendChild(it); });
     inner.appendChild(b); }
   const stg=g=>g.stage||'active';
-  const active=state.games.filter(g=>stg(g)==='active').sort(byRecent), drafts=state.games.filter(g=>stg(g)==='draft').sort(byRecent), paused=state.games.filter(g=>stg(g)==='paused').sort(byRecent);
-  const sg=sharedGames.slice().sort(byRecent);
+  const drafts=state.games.filter(g=>stg(g)==='draft').sort(byRecent), paused=state.games.filter(g=>stg(g)==='paused').sort(byRecent);
+  // Activos = propios activos + compartidos, todos juntos y ordenados por más reciente.
+  const activeAll=state.games.filter(g=>stg(g)==='active').concat(sharedGames||[]).sort(byRecent);
   const row=document.createElement('div'); row.className='pt-secrow';
-  const sec=document.createElement('span'); sec.className='pt-sec'; sec.textContent='Diseño · '+(active.length+sg.length)+' activo(s)'; row.appendChild(sec);
+  const sec=document.createElement('span'); sec.className='pt-sec'; sec.textContent='Diseño · '+activeAll.length+' activo(s)'; row.appendChild(sec);
   const add=document.createElement('button'); add.className='btn'; add.textContent='＋ Nuevo juego'; add.onclick=()=>openGameModal(false); row.appendChild(add);
   inner.appendChild(row);
   const grid=document.createElement('div'); grid.className='pt-grid';
-  active.forEach(g=>grid.appendChild(gameCard(g)));
-  sg.forEach(g=>grid.appendChild(gameCard(g)));
-  if(!active.length && !sg.length){ const nw=document.createElement('button'); nw.className='pt-new'; nw.textContent=state.games.length?'No hay juegos activos':'＋ Crea tu primer juego'; nw.onclick=()=>openGameModal(false); grid.appendChild(nw); }
+  activeAll.forEach(g=>grid.appendChild(gameCard(g)));
+  if(!activeAll.length){ const nw=document.createElement('button'); nw.className='pt-new'; nw.textContent=state.games.length?'No hay juegos activos':'＋ Crea tu primer juego'; nw.onclick=()=>openGameModal(false); grid.appendChild(nw); }
   inner.appendChild(grid);
 
   { const hr=document.createElement('hr'); hr.className='pt-sep'; inner.appendChild(hr);
@@ -1490,10 +1494,11 @@ function renderHome(g, host){
   vh.appendChild(act); host.appendChild(vh);
 
   if(!g.changes.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML=`<p>Aún no hay ideas en esta versión.<br>Añade lo primero que quieras probar.</p>`; host.appendChild(e); return; }
-  const byDate=(a,b)=>(b.updatedAt||b.createdAt)-(a.updatedAt||a.createdAt); const byState=s=>g.changes.filter(c=>c.state===s).sort(byDate);
-  renderGroup(host, 'Pendiente', [...byState('aparcada'), ...byState('porprobar')], g);
-  renderGroup(host, 'Resuelto', byState('funciona'), g);
-  renderGroup(host, 'Descartado', byState('descartada'), g);
+  const byDate=(a,b)=>(b.updatedAt||b.createdAt)-(a.updatedAt||a.createdAt); const byStates=(...ss)=>g.changes.filter(c=>ss.includes(c.state)).sort(byDate);
+  // Pendiente = Testing + Por probar, ordenadas por lo más tocado recientemente (sin separar por estado).
+  renderGroup(host, 'Pendiente', byStates('aparcada','porprobar'), g);
+  renderGroup(host, 'Resuelto', byStates('funciona'), g);
+  renderGroup(host, 'Descartado', byStates('descartada'), g);
 }
 function renderGroup(host, label, items, g){
   if(!items.length) return;
@@ -1501,7 +1506,7 @@ function renderGroup(host, label, items, g){
   items.forEach(c=>host.appendChild(changeRow(g,c)));
 }
 function changeRow(g,c){
-  const row=document.createElement('div'); row.className='chg'+(c.state==='funciona'?' done':'')+(c.state==='descartada'?' dropped':''); row.setAttribute('role','button'); row.setAttribute('tabindex','0');
+  const row=document.createElement('div'); row.className='chg st-'+c.state+(c.state==='funciona'?' done':'')+(c.state==='descartada'?' dropped':''); row.setAttribute('role','button'); row.setAttribute('tabindex','0');
   const ico = c.state==='funciona'?'✓':(c.state==='descartada'?'✕':(c.state==='aparcada'?'❯':'○'));
   const appTag = c.appImpact ? (c.appImplemented?'<span class="impl-tag app">✓ en app</span>':'<span class="impl-tag pending" title="Pendiente de implementar en la app">⚙ app</span>') : '';
   row.innerHTML=`<span class="ico">${ico}</span><span class="t">${escapeHtml(c.title)}</span>${c.implemented?'<span class="impl-tag">✓ en reglas</span>':''}${appTag}<span class="pill p-${c.state}">${STATE_TITLE[c.state]}</span><span class="chg-date">${fmtWhen(c.updatedAt||c.createdAt)}</span>`;
