@@ -355,7 +355,21 @@
   .edst-interesado{ background:var(--amber-dim); color:#f0c078; } .edst-conversando{ background:rgba(102,182,223,0.16); color:#a6d6ee; }
   .edst-propuesta{ background:rgba(181,138,223,0.18); color:#cbb3ef; }
   .edst-firmado{ background:var(--teal-dim); color:#8fd3b6; } .edst-descartado{ background:var(--surface-2); color:var(--faint); }
+  .edst-proto_dejado{ background:var(--teal-dim); color:#8fd3b6; } .edst-enviado{ background:rgba(102,182,223,0.16); color:#a6d6ee; } .edst-negociando{ background:rgba(181,138,223,0.18); color:#cbb3ef; }
   .st.edst{ font-size:11.5px; }
+  .st.edst.on.edst-proto_dejado{ background:var(--teal); color:#08231c; border-color:transparent; }
+  .st.edst.on.edst-enviado{ background:var(--blue); color:#08222e; border-color:transparent; }
+  .st.edst.on.edst-negociando{ background:#b58adf; color:#1c0f2b; border-color:transparent; }
+  .ed-next{ background:var(--amber-dim); border:1px solid rgba(232,163,61,0.3); border-radius:9px; padding:10px 12px; margin:0 0 14px; }
+  .ed-next-h{ font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.7px; text-transform:uppercase; color:#f0c078; margin-bottom:6px; }
+  .ed-next .ap-in{ width:100%; }
+  .ed-dl-row{ display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  .ed-dl-l{ font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.6px; color:var(--faint); }
+  .ed-dl-row .ap-in{ width:auto; flex:none; }
+  .ed-dl-badge{ font-family:'IBM Plex Mono',monospace; font-size:10px; padding:2px 8px; border-radius:20px; background:var(--surface-2); color:var(--muted); white-space:nowrap; }
+  .ed-dl-badge.soon{ background:var(--amber-dim); color:#f0c078; } .ed-dl-badge.over{ background:rgba(217,99,74,0.2); color:#e0937f; }
+  .ed-tablewrap{ overflow-x:auto; }
+  .ed-table .ed-c3{ color:var(--text); font-size:12.5px; } .ed-nonext{ color:var(--faint); }
   .st.edst.on.edst-interesado{ background:var(--amber); color:#2a1c06; border-color:transparent; }
   .st.edst.on.edst-conversando{ background:var(--blue); color:#08222e; border-color:transparent; }
   .st.edst.on.edst-propuesta{ background:#b58adf; color:#1c0f2b; border-color:transparent; }
@@ -1066,7 +1080,7 @@ function normalizeStructures(){
   (state.fairs||[]).forEach(f=>{ (f.appointments||[]).forEach(a=>{ (a.games||[]).forEach(e=>{ if(e.estado==='proto'){ e.estado='interesado'; if(!Array.isArray(e.follow)) e.follow=[]; if(!e.follow.includes('proto')) e.follow.push('proto'); ch=true; } if(e.estado==='no'){ e.estado='descartado'; ch=true; } if(Array.isArray(e.follow) && e.follow.includes('dejar')){ e.follow=e.follow.filter(x=>x!=='dejar'); if(e.estado!=='proto_dejado') e.estado='proto_dejado'; ch=true; } if(!Array.isArray(e.follow)){ e.follow=[]; ch=true; } }); }); });
   if(!Array.isArray(state.editorials)){ state.editorials=[]; ch=true; }
   // Backfill: crear seguimientos para citas ya marcadas 'interesado' o 'proto_dejado'.
-  (state.fairs||[]).forEach(f=>{ (f.appointments||[]).forEach(a=>{ (a.games||[]).forEach(e=>{ if((e.estado==='interesado'||e.estado==='proto_dejado') && e.gameId){ const k=(a.editorial||'').trim().toLowerCase()+'\u0001'+e.gameId; if(!state.editorials.some(x=>((x.editorial||'').trim().toLowerCase()+'\u0001'+(x.gameId||''))===k)){ const seed='Feria «'+(f.name||'')+'» · '+(FAIR_STATE_TITLE[e.estado]||e.estado)+((e.feedback||'').trim()?(' — '+e.feedback.trim()):''); state.editorials.push({ id:uid(), editorial:(a.editorial||'').trim(), gameId:e.gameId, gameName:e.gameName||'—', status:(e.estado==='proto_dejado'?'conversando':'interesado'), createdAt:Date.now(), updates:[{ id:uid(), text:seed, createdAt:Date.now(), fromFair:true }] }); ch=true; } } }); }); });
+  (state.fairs||[]).forEach(f=>{ (f.appointments||[]).forEach(a=>{ (a.games||[]).forEach(e=>{ if((e.estado==='interesado'||e.estado==='proto_dejado') && e.gameId){ const k=(a.editorial||'').trim().toLowerCase()+'\u0001'+e.gameId; if(!state.editorials.some(x=>((x.editorial||'').trim().toLowerCase()+'\u0001'+(x.gameId||''))===k)){ const seed='Feria «'+(f.name||'')+'» · '+(FAIR_STATE_TITLE[e.estado]||e.estado)+((e.feedback||'').trim()?(' — '+e.feedback.trim()):''); state.editorials.push({ id:uid(), editorial:(a.editorial||'').trim(), gameId:e.gameId, gameName:e.gameName||'—', status:(e.estado==='proto_dejado'?'proto_dejado':'interesado'), nextStep:'', deadline:'', createdAt:Date.now(), updates:[{ id:uid(), text:seed, createdAt:Date.now(), fromFair:true }] }); ch=true; } } }); }); });
   return ch;
 }
 let storageWarned=false;
@@ -1406,15 +1420,18 @@ function renderEditorialesPortada(){
   const primary = ent => edSub==='juego' ? (ent.gameName||gameNameById(ent.gameId)||'—') : (ent.editorial||'—');
   const secondary = ent => edSub==='juego' ? (ent.editorial||'—') : (ent.gameName||gameNameById(ent.gameId)||'—');
   ents.sort((a,b)=> primary(a).localeCompare(primary(b),'es',{sensitivity:'base'}) || (edLastUpdate(b)-edLastUpdate(a)));
+  const wrap=document.createElement('div'); wrap.className='ed-tablewrap';
   const table=document.createElement('table'); table.className='ed-table';
-  table.innerHTML=`<thead><tr><th>${edSub==='juego'?'Juego':'Editorial'}</th><th>${edSub==='juego'?'Editorial':'Juego'}</th><th>Estado</th><th>Última</th></tr></thead>`;
+  table.innerHTML=`<thead><tr><th>${edSub==='juego'?'Juego':'Editorial'}</th><th>${edSub==='juego'?'Editorial':'Juego'}</th><th>Estado</th><th>Siguiente paso</th></tr></thead>`;
   const tb=document.createElement('tbody');
   ents.forEach(ent=>{ const tr=document.createElement('tr'); tr.setAttribute('role','button'); tr.setAttribute('tabindex','0');
-    const nUp=(ent.updates||[]).length;
-    tr.innerHTML=`<td class="ed-c1">${escapeHtml(primary(ent))}</td><td class="ed-c2">${escapeHtml(secondary(ent))}</td><td><span class="edchip edst-${ent.status}">${ED_STATE_TITLE[ent.status]||ent.status}</span></td><td class="ed-c4">${escapeHtml(fmtWhen(edLastUpdate(ent)))}${nUp?` · ${nUp}`:''}</td>`;
+    const dl=edDeadlineInfo(ent);
+    const nextTxt = (ent.nextStep||'').trim() ? escapeHtml(ent.nextStep.trim()) : '<span class="ed-nonext">—</span>';
+    const dlBadge = dl?` <span class="ed-dl-badge ${dl.cls}">${escapeHtml(dl.txt)}</span>` : (ent.deadline?` <span class="ed-dl-badge">${escapeHtml(fmtWhen(new Date(ent.deadline+'T00:00').getTime()))}</span>`:'');
+    tr.innerHTML=`<td class="ed-c1">${escapeHtml(primary(ent))}</td><td class="ed-c2">${escapeHtml(secondary(ent))}</td><td><span class="edchip edst-${ent.status}">${ED_STATE_TITLE[ent.status]||ent.status}</span></td><td class="ed-c3">${nextTxt}${dlBadge}</td>`;
     const open=()=>openEditorialDetail(ent); tr.onclick=open; tr.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
     tb.appendChild(tr); });
-  table.appendChild(tb); inner.appendChild(table);
+  table.appendChild(tb); wrap.appendChild(table); inner.appendChild(wrap);
   host.appendChild(inner);
 }
 function openNewEditorial(){
@@ -1432,19 +1449,25 @@ let edRef=null;
 function openEditorialDetail(ent){
   edRef=ent; const p=$('panel'), b=$('panelBody');
   const updates=(ent.updates||[]).slice().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  const dl=edDeadlineInfo(ent);
   b.innerHTML=`<label class="cd-label">Editorial</label><input class="cd-title" id="edEd" value="${escapeHtml(ent.editorial||'')}">
     <div class="cd-meta">Juego: ${escapeHtml(ent.gameName||gameNameById(ent.gameId)||'—')}</div>
     <div class="field"><label>Estado</label><div class="states">${ED_STATES.map(([k,l])=>`<button class="st edst edst-${k} ${ent.status===k?'on':''}" data-s="${k}">${l}</button>`).join('')}</div></div>
-    <div class="field"><label>Seguimiento (log)</label><div id="edTimeline">${updates.length?updates.map(u=>`<div class="ed-up"><div class="ed-up-t">${u.fromFair?'<span class="ed-tag">feria</span> ':''}${escapeHtml(u.text||'')}</div><div class="ed-up-d">${escapeHtml(fmtWhen(u.createdAt))}<button class="ed-up-x" data-id="${u.id}" title="Eliminar">✕</button></div></div>`).join(''):'<div style="font-size:12.5px;color:var(--faint);">Sin entradas todavía.</div>'}</div></div>
-    <div class="field"><label>Añadir entrada</label><textarea id="edNote" style="min-height:70px;" placeholder="p. ej. Enviado proto el 3/11; quedamos en feedback en 2 semanas…"></textarea><div style="margin-top:6px;"><button class="btn" id="edAdd">Añadir al log</button></div></div>
+    <div class="ed-next"><div class="ed-next-h">▶ Siguiente paso</div><input class="ap-in" id="edNext" placeholder="p. ej. Esperar feedback de las reglas" value="${escapeHtml(ent.nextStep||'')}">
+      <div class="ed-dl-row"><label class="ed-dl-l">Fecha límite</label><input class="ap-in" id="edDeadline" type="date" value="${escapeHtml(ent.deadline||'')}">${dl?`<span class="ed-dl-badge ${dl.cls}">${escapeHtml(dl.txt)}</span>`:''}</div></div>
+    <div class="field"><label>Iteraciones</label><div id="edTimeline">${updates.length?updates.map(u=>`<div class="ed-up"><div class="ed-up-t">${u.fromFair?'<span class="ed-tag">feria</span> ':''}${escapeHtml(u.text||'')}</div><div class="ed-up-d">${escapeHtml(fmtWhen(u.createdAt))}<button class="ed-up-x" data-id="${u.id}" title="Eliminar">✕</button></div></div>`).join(''):'<div style="font-size:12.5px;color:var(--faint);">Sin iteraciones todavía.</div>'}</div></div>
+    <div class="field"><label>Añadir iteración / comentario</label><textarea id="edNote" style="min-height:70px;" placeholder="p. ej. Enviado proto el 3/11; quedamos en feedback en 2 semanas…"></textarea><div style="margin-top:6px;"><button class="btn" id="edAdd">Añadir al log</button></div></div>
     <div class="pactions"><button class="btn-danger" id="edDel">Eliminar seguimiento</button></div>`;
   p.classList.add('open');
   b.querySelectorAll('.edst').forEach(btn=>btn.onclick=async()=>{ ent.status=btn.dataset.s; await saveLocal(); openEditorialDetail(ent); if(appView==='editoriales') renderEditorialesPortada(); });
   $('edEd').onchange=async()=>{ ent.editorial=$('edEd').value.trim(); await saveLocal(); };
+  $('edNext').onchange=async()=>{ ent.nextStep=$('edNext').value.trim(); await saveLocal(); if(appView==='editoriales') renderEditorialesPortada(); };
+  $('edDeadline').onchange=async()=>{ ent.deadline=$('edDeadline').value||''; await saveLocal(); openEditorialDetail(ent); if(appView==='editoriales') renderEditorialesPortada(); };
   $('edAdd').onclick=async()=>{ const t=$('edNote').value.replace(/\s+$/,''); if(!t) return; ent.updates=ent.updates||[]; ent.updates.push({ id:uid(), text:t, createdAt:Date.now() }); $('edNote').value=''; await saveLocal(); openEditorialDetail(ent); if(appView==='editoriales') renderEditorialesPortada(); };
   b.querySelectorAll('.ed-up-x').forEach(x=>x.onclick=async()=>{ const id=x.dataset.id; ent.updates=(ent.updates||[]).filter(u=>u.id!==id); await saveLocal(); openEditorialDetail(ent); });
   $('edDel').onclick=async()=>{ const ok=await confirmDialog('¿Eliminar este seguimiento con la editorial?'); if(!ok) return; state.editorials=(state.editorials||[]).filter(x=>x.id!==ent.id); await saveLocal(); closePanel(); if(appView==='editoriales') renderEditorialesPortada(); toast('Seguimiento eliminado.'); };
 }
+function edDeadlineInfo(ent){ if(!ent.deadline) return null; if(ent.status==='firmado'||ent.status==='descartado') return null; const today=new Date(); today.setHours(0,0,0,0); const d=new Date(ent.deadline+'T00:00'); if(isNaN(d.getTime())) return null; const diff=Math.round((d-today)/86400000); if(diff<0) return {cls:'over', txt:'vencida ('+(-diff)+'d)'}; if(diff===0) return {cls:'soon', txt:'hoy'}; if(diff<=7) return {cls:'soon', txt:'en '+diff+'d'}; return {cls:'', txt:'en '+diff+'d'}; }
 
 /* ---------- Ferias ---------- */
 function currentFair(){ return (state.fairs||[]).find(f=>f.id===currentFairId); }
@@ -1453,18 +1476,20 @@ function allGames(){ return state.games.concat(sharedGames||[]); }
 function gameNameById(id){ const g=allGames().find(x=>x.id===id); return g?g.name:null; }
 /* ---------- Editoriales (seguimiento tras feria) ---------- */
 function edKey(editorial,gameId){ return (editorial||'').trim().toLowerCase()+'\u0001'+(gameId||''); }
-function ensureEditorialEntry(editorial, gameId, gameName, seedText){
+function ensureEditorialEntry(editorial, gameId, gameName, seedText, initialStatus){
   state.editorials=state.editorials||[];
   const k=edKey(editorial,gameId);
   let ent=state.editorials.find(x=>edKey(x.editorial,x.gameId)===k);
-  if(!ent){ ent={ id:uid(), editorial:(editorial||'').trim(), gameId, gameName:gameName||gameNameById(gameId)||'—', status:'interesado', createdAt:Date.now(), updates:[] };
+  if(!ent){ ent={ id:uid(), editorial:(editorial||'').trim(), gameId, gameName:gameName||gameNameById(gameId)||'—', status:initialStatus||'interesado', nextStep:'', deadline:'', createdAt:Date.now(), updates:[] };
     if(seedText){ ent.updates.push({ id:uid(), text:seedText, createdAt:Date.now(), fromFair:true }); }
     state.editorials.push(ent); }
   return ent;
 }
 function seedFromAppt(f,a,e){ return 'Feria «'+(f?f.name:'')+'» · '+(FAIR_STATE_TITLE[e.estado]||e.estado)+((e.feedback||'').trim()?(' — '+e.feedback.trim()):''); }
-const ED_STATES=[['interesado','Interesado'],['conversando','En conversaciones'],['propuesta','Propuesta'],['firmado','Firmado'],['descartado','Descartado']];
+const ED_STATES=[['interesado','Interesado'],['proto_dejado','Proto dejado'],['enviado','Enviado · esperando'],['negociando','Negociando'],['firmado','Firmado'],['descartado','Descartado']];
 const ED_STATE_TITLE=Object.fromEntries(ED_STATES.map(([k,t])=>[k,t]));
+// compat estados antiguos
+ED_STATE_TITLE.conversando='Negociando'; ED_STATE_TITLE.propuesta='Negociando';
 // Crea/actualiza/borra tareas automáticas según el seguimiento de una editorial interesada.
 function syncAutoTask(g, e, key, text){
   g.tasks=g.tasks||[]; let changed=false;
@@ -1478,12 +1503,13 @@ function syncAutoTask(g, e, key, text){
   }
   return changed;
 }
-function applyFollowTask(e){
+function applyFollowTask(e, editorial){
   const g=allGames().find(x=>x.id===e.gameId); if(!g) return;
   const follow=e.follow||[];
+  const suf=(editorial||'').trim()?(' a '+editorial.trim()):'';
   const sends=follow.filter(k=>['proto','pnp','reglas','video','sellsheet'].includes(k));
-  const sendText=sends.length?('Enviar '+sends.map(k=>SEND_LABEL[k]).join(' + ')):'';
-  const agendarText=follow.includes('agendar')?'Agendar TTS':'';
+  const sendText=sends.length?('Enviar '+sends.map(k=>SEND_LABEL[k]).join(' + ')+suf):'';
+  const agendarText=follow.includes('agendar')?('Agendar TTS'+suf):'';
   let changed=false;
   if(syncAutoTask(g,e,'taskId',sendText)) changed=true;
   if(syncAutoTask(g,e,'taskAgendarId',agendarText)) changed=true;
@@ -1602,10 +1628,10 @@ function openApptDetail(f, a, isNew){
   { let dp='',hh='',mn=''; const m=String(a.when||'').match(/^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2}))?/); if(m){ dp=m[1]; hh=m[2]||''; mn=m[3]||''; } $('apDate').value=dp; $('apHour').value=hh; const ms=$('apMin'); if(mn && !Array.from(ms.options).some(o=>o.value===mn)){ const o=document.createElement('option'); o.value=mn; o.textContent=mn; ms.appendChild(o); } ms.value=mn; }
   const commit=()=>{ a.editorial=$('apEd').value.trim(); const d=$('apDate').value, hh=$('apHour').value, mn=$('apMin').value; const t=(hh!==''||mn!=='')?((hh||'00')+':'+(mn||'00')):''; a.when = d ? (t? d+'T'+t : d) : ''; a.place=$('apPlace').value.trim(); a.contact=$('apContact').value.trim(); b.querySelectorAll('.ag-fb').forEach(x=>{ const i=+x.dataset.i; if(a.games[i]) a.games[i].feedback=x.value.replace(/\s+$/,''); }); };
   b.querySelectorAll('.fst').forEach(btn=>btn.onclick=()=>{ commit(); const i=+btn.dataset.i; const e=a.games[i]; if(e){ e.estado=btn.dataset.e;
-      if(e.estado==='interesado'){ e.follow=e.follow||[]; ensureEditorialEntry(a.editorial, e.gameId, e.gameName, seedFromAppt(f,a,e)); applyFollowTask(e); }
-      else { e.follow=[]; applyFollowTask(e); if(e.estado==='proto_dejado'){ ensureEditorialEntry(a.editorial, e.gameId, e.gameName, seedFromAppt(f,a,e)); } }
+      if(e.estado==='interesado'){ e.follow=e.follow||[]; ensureEditorialEntry(a.editorial, e.gameId, e.gameName, seedFromAppt(f,a,e), 'interesado'); applyFollowTask(e, a.editorial); }
+      else { e.follow=[]; applyFollowTask(e, a.editorial); if(e.estado==='proto_dejado'){ ensureEditorialEntry(a.editorial, e.gameId, e.gameName, seedFromAppt(f,a,e), 'proto_dejado'); } }
     } saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
-  b.querySelectorAll('.ag-fl').forEach(chk=>chk.onchange=()=>{ commit(); const i=+chk.dataset.i, k=chk.dataset.k; const e=a.games[i]; if(!e) return; e.follow=e.follow||[]; if(chk.checked){ if(!e.follow.includes(k)) e.follow.push(k); } else { e.follow=e.follow.filter(x=>x!==k); } ensureEditorialEntry(a.editorial, e.gameId, e.gameName, seedFromAppt(f,a,e)); applyFollowTask(e); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
+  b.querySelectorAll('.ag-fl').forEach(chk=>chk.onchange=()=>{ commit(); const i=+chk.dataset.i, k=chk.dataset.k; const e=a.games[i]; if(!e) return; e.follow=e.follow||[]; if(chk.checked){ if(!e.follow.includes(k)) e.follow.push(k); } else { e.follow=e.follow.filter(x=>x!==k); } ensureEditorialEntry(a.editorial, e.gameId, e.gameName, seedFromAppt(f,a,e)); applyFollowTask(e, a.editorial); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
   b.querySelectorAll('.ag-rm').forEach(btn=>btn.onclick=()=>{ commit(); const i=+btn.dataset.i; a.games.splice(i,1); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
   { const sel=$('apAddG'); if(sel) sel.onchange=()=>{ const id=sel.value; if(!id) return; commit(); a.games.push({ gameId:id, gameName:gameNameById(id), estado:'pendiente', feedback:'' }); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); }; }
   $('apSave').onclick=async()=>{ commit(); if(!a.editorial){ $('apEd').focus(); toast('Pon el nombre de la editorial.','warn'); return; } const conflicts=apptConflicts(f,a); if(conflicts.length){ const ms=apptMs(a.when); const overlap=conflicts.some(c=>apptMs(c.when)===ms); const list=conflicts.map(c=>`${c.editorial||'(sin editorial)'} (${fmtAppt(c.when)})`).join('; '); const ok=await confirmDialog(`${overlap?'Esta cita se solapa con':'Esta cita queda a menos de 30 min de'}: ${list}. ¿Guardar igualmente?`, { okLabel:'Guardar igualmente', danger:false }); if(!ok) return; } await saveAppt(f,a); closePanel(); renderFairBoard(); toast('Cita guardada.'); };
