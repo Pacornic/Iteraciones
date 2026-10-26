@@ -1205,6 +1205,7 @@ function byRecent(a,b){ return recentOf(b)-recentOf(a); }
 function goHome(){ appView='home'; closePanel(); render(); }
 function openGame(id){ const own=state.games.some(x=>x.id===id); state.currentGameId=id; currentTab='inicio'; rbView='draft'; rbVersionId=null; appView='game'; closePanel(); if(own) saveState(); render(); }
 function openGameTab(id,tab){ openGame(id); currentTab=tab; render(); }
+function goGameEditorials(gameId){ edSub='juego'; edGroupKey=gameId; edEntryId=null; appView='editoriales'; closePanel(); render(); }
 async function saveGame(g){ if(g && g.__shared) return saveSharedGame(g); state.updatedAt=Date.now(); try{ const ok=await Store.set('games-data', JSON.stringify(state)); updateSavedIndicator(); if(!ok&&!storageWarned){ storageWarned=true; toast('No se pudo guardar de forma persistente.','warn',6000); } }catch(e){} }
 async function saveLocal(){ return persistState(); }
 function gameStageRank(g){ const s=g.__shared?'active':(g.stage||'active'); return s==='paused'?2:(s==='draft'?1:0); }
@@ -1518,6 +1519,8 @@ function renderEdDetailPage(){
   const logRows = updates.map(u=>{ const d=edDirOf(u); return `<tr class="dir-${d}"><td class="lg-date">${escapeHtml(fmtWhen(u.createdAt))}</td><td class="lg-dir"><button class="ed-dir-chip dir-${d}" data-id="${u.id}" title="Cambiar quién">${ED_DIR_SHORT[d]}</button>${u.fromFair?' <span class="ed-tag">feria</span>':''}</td><td class="lg-txt">${escapeHtml(u.text||'')}</td><td class="lg-x"><button class="ed-up-x" data-id="${u.id}" title="Eliminar">✕</button></td></tr>`; }).join('');
   const logHtml = updates.length ? `<table class="ed-logtable"><thead><tr><th>Fecha</th><th>Quién</th><th>Comentario</th><th></th></tr></thead><tbody>${logRows}</tbody></table>` : '<div style="font-size:12.5px;color:var(--faint);">Sin iteraciones todavía.</div>';
   const header=document.createElement('div'); header.className='pt-secrow'; header.innerHTML=`<span class="gname" style="${chipStyle(gcolor)};font-family:'Fraunces',serif;font-size:19px;padding:4px 14px;">${escapeHtml(ent.gameName||gameNameById(ent.gameId)||'—')}</span><span style="color:var(--faint);">·</span><span style="font-size:15px;color:var(--muted);">${escapeHtml(ent.editorial||'—')}</span>`;
+  const goIdeas=document.createElement('button'); goIdeas.className='btn-q'; goIdeas.style.marginLeft='auto'; goIdeas.textContent='Ideas del juego →'; goIdeas.title='Ir a las ideas de '+(ent.gameName||'este juego'); goIdeas.onclick=()=>{ if(allGames().some(x=>x.id===ent.gameId)) openGameTab(ent.gameId,'inicio'); else toast('El juego ya no existe.','warn'); };
+  header.appendChild(goIdeas);
   inner.appendChild(header);
   const body=document.createElement('div');
   body.innerHTML=`
@@ -1767,6 +1770,7 @@ function renderHome(g, host){
   const act=document.createElement('div'); act.className='vact';
   const add=document.createElement('button'); add.className='btn'; add.textContent='＋ Añadir idea'; add.onclick=()=>openChangeModal(null);
   act.appendChild(add);
+  { const edN=(state.editorials||[]).filter(e=>e.gameId===g.id).length; const edb=document.createElement('button'); edb.className='btn-q'; edb.textContent='Editoriales'+(edN?(' ('+edN+')'):''); edb.title='Seguimiento con editoriales de este juego'; edb.onclick=()=>goGameEditorials(g.id); act.appendChild(edb); }
   vh.appendChild(act); host.appendChild(vh);
 
   if(!g.changes.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML=`<p>Aún no hay ideas en esta versión.<br>Añade lo primero que quieras probar.</p>`; host.appendChild(e); return; }
