@@ -1206,7 +1206,7 @@ function goHome(){ appView='home'; closePanel(); render(); }
 function openGame(id){ const own=state.games.some(x=>x.id===id); state.currentGameId=id; currentTab='inicio'; rbView='draft'; rbVersionId=null; appView='game'; closePanel(); if(own) saveState(); render(); }
 function openGameTab(id,tab){ openGame(id); currentTab=tab; render(); }
 function goGameEditorials(gameId){ edSub='juego'; edGroupKey=gameId; edEntryId=null; appView='editoriales'; closePanel(); render(); }
-async function saveGame(g){ if(g && g.__shared) return saveSharedGame(g); state.updatedAt=Date.now(); try{ const ok=await Store.set('games-data', JSON.stringify(state)); updateSavedIndicator(); if(!ok&&!storageWarned){ storageWarned=true; toast('No se pudo guardar de forma persistente.','warn',6000); } }catch(e){} }
+async function persistGame(g){ if(g && g.__shared) return saveSharedGame(g); state.updatedAt=Date.now(); try{ const ok=await Store.set('games-data', JSON.stringify(state)); updateSavedIndicator(); if(!ok&&!storageWarned){ storageWarned=true; toast('No se pudo guardar de forma persistente.','warn',6000); } }catch(e){} }
 async function saveLocal(){ return persistState(); }
 function gameStageRank(g){ const s=g.__shared?'active':(g.stage||'active'); return s==='paused'?2:(s==='draft'?1:0); }
 function gamePickSuffix(g){ const s=g.__shared?'active':(g.stage||'active'); return s==='paused'?' (en pausa)':(s==='draft'?' (Draft)':''); }
@@ -1258,10 +1258,10 @@ function renderHomeTareas(host){
     const hd=document.createElement('button'); hd.className='ht-game'; hd.innerHTML=`<b style="background:${g.color||'#e8a33d'}"></b>${escapeHtml(g.name)}<span class="ht-n">${pend.length}</span>`; hd.title='Abrir tareas de '+g.name; hd.onclick=()=>openGameTab(g.id,'tareas'); blk.appendChild(hd);
     pend.forEach(t=>{
       const r=document.createElement('div'); r.className='tk-row';
-      const cb=document.createElement('button'); cb.className='tk-cb'; cb.textContent='✓'; cb.title='Marcar como hecha'; cb.onclick=async()=>{ t.done=true; t.doneAt=Date.now(); await saveGame(g); renderHomeHub(); };
+      const cb=document.createElement('button'); cb.className='tk-cb'; cb.textContent='✓'; cb.title='Marcar como hecha'; cb.onclick=async()=>{ t.done=true; t.doneAt=Date.now(); await persistGame(g); renderHomeHub(); };
       const tx=document.createElement('span'); tx.className='tk-tx'; tx.textContent=t.text;
       const mv=taskMoveSel(t,'game',g);
-      const dl=document.createElement('button'); dl.className='tk-del'; dl.textContent='✕'; dl.title='Eliminar'; dl.onclick=async()=>{ g.tasks=g.tasks.filter(x=>x.id!==t.id); await saveGame(g); renderHomeHub(); };
+      const dl=document.createElement('button'); dl.className='tk-del'; dl.textContent='✕'; dl.title='Eliminar'; dl.onclick=async()=>{ g.tasks=g.tasks.filter(x=>x.id!==t.id); await persistGame(g); renderHomeHub(); };
       r.appendChild(cb); r.appendChild(tx); r.appendChild(mv); r.appendChild(dl); blk.appendChild(r);
     });
     host.appendChild(blk);
@@ -1708,7 +1708,10 @@ function openApptDetail(f, a, isNew){
   b.querySelectorAll('.ag-fl').forEach(chk=>chk.onchange=()=>{ commit(); const i=+chk.dataset.i, k=chk.dataset.k; const e=a.games[i]; if(!e) return; e.follow=e.follow||[]; if(chk.checked){ if(!e.follow.includes(k)) e.follow.push(k); } else { e.follow=e.follow.filter(x=>x!==k); } ensureEditorialEntry(a.editorial, e.gameId, e.gameName, seedFromAppt(f,a,e), e.estado==='proto_dejado'?'proto_dejado':'interesado'); applyFollowTask(e, a.editorial); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
   b.querySelectorAll('.ag-rm').forEach(btn=>btn.onclick=()=>{ commit(); const i=+btn.dataset.i; a.games.splice(i,1); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
   { const sel=$('apAddG'); if(sel) sel.onchange=()=>{ const id=sel.value; if(!id) return; commit(); a.games.push({ gameId:id, gameName:gameNameById(id), estado:'pendiente', feedback:'' }); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); }; }
-  $('apSave').onclick=async()=>{ commit(); if(!a.editorial){ $('apEd').focus(); toast('Pon el nombre de la editorial.','warn'); return; } const conflicts=apptConflicts(f,a); if(conflicts.length){ const ms=apptMs(a.when); const overlap=conflicts.some(c=>apptMs(c.when)===ms); const list=conflicts.map(c=>`${c.editorial||'(sin editorial)'} (${fmtAppt(c.when)})`).join('; '); const ok=await confirmDialog(`${overlap?'Esta cita se solapa con':'Esta cita queda a menos de 30 min de'}: ${list}. ¿Guardar igualmente?`, { okLabel:'Guardar igualmente', danger:false }); if(!ok) return; } await saveAppt(f,a); closePanel(); renderFairBoard(); toast('Cita guardada.'); };
+  $('apSave').onclick=async()=>{ commit(); if(!a.editorial){ $('apEd').focus(); toast('Pon el nombre de la editorial.','warn'); return; }
+    // Reaplica las tareas de seguimiento con la editorial actual (por si se escribió después de marcar).
+    (a.games||[]).forEach(e=>{ if(e.estado==='interesado'||e.estado==='proto_dejado'){ (state.editorials||[]).forEach(x=>{ if(x.gameId===e.gameId && !(x.editorial||'').trim() && a.editorial){ x.editorial=a.editorial; } }); applyFollowTask(e, a.editorial); ensureEditorialEntry(a.editorial, e.gameId, e.gameName, seedFromAppt(f,a,e), e.estado); } });
+    const conflicts=apptConflicts(f,a); if(conflicts.length){ const ms=apptMs(a.when); const overlap=conflicts.some(c=>apptMs(c.when)===ms); const list=conflicts.map(c=>`${c.editorial||'(sin editorial)'} (${fmtAppt(c.when)})`).join('; '); const ok=await confirmDialog(`${overlap?'Esta cita se solapa con':'Esta cita queda a menos de 30 min de'}: ${list}. ¿Guardar igualmente?`, { okLabel:'Guardar igualmente', danger:false }); if(!ok) return; } await saveAppt(f,a); closePanel(); renderFairBoard(); toast('Cita guardada.'); };
   $('apDel').onclick=async()=>{ if(a._new){ closePanel(); return; } const ok=await confirmDialog(`¿Eliminar la cita con "${a.editorial||'esta editorial'}"?`); if(!ok) return; f.appointments=f.appointments.filter(x=>x.id!==a.id); await saveState(); closePanel(); renderFairBoard(); toast('Cita eliminada.'); };
 }
 let editingFairId=null;
