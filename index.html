@@ -316,6 +316,8 @@
   .f-no{ background:rgba(217,99,74,0.16); color:#e0937f; }
   .f-interesado{ background:var(--amber-dim); color:#f0c078; }
   .f-proto{ background:var(--teal-dim); color:#8fd3b6; }
+  .f-proto_dejado{ background:var(--teal-dim); color:#8fd3b6; }
+  .f-descartado{ background:rgba(217,99,74,0.16); color:#e0937f; }
   .agenda-day{ font-family:'Fraunces',serif; font-size:14.5px; color:var(--text); margin:22px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
   .agenda-day:first-of-type{ margin-top:4px; }
   .apcard{ position:relative; overflow:hidden; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px 12px 18px; margin-bottom:10px; cursor:pointer; }
@@ -342,10 +344,12 @@
   .fst.on.f-no{ background:var(--brick); color:#2a0f0a; border-color:transparent; font-weight:600; }
   .fst.on.f-interesado{ background:var(--amber); color:#2a1c06; border-color:transparent; font-weight:600; }
   .fst.on.f-proto{ background:var(--teal); color:#08231c; border-color:transparent; font-weight:600; }
-  .ag-follow{ margin-top:9px; padding:8px 10px; background:var(--amber-dim); border:1px solid rgba(232,163,61,0.35); border-radius:8px; }
-  .ag-follow-h{ font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.8px; text-transform:uppercase; color:#f0c078; margin-bottom:6px; }
-  .fchk{ display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--text); margin:3px 12px 3px 0; cursor:pointer; }
-  .fchk input{ accent-color:var(--amber); }
+  .fst.on.f-proto_dejado{ background:var(--teal); color:#08231c; border-color:transparent; font-weight:600; }
+  .fst.on.f-descartado{ background:var(--brick); color:#2a0f0a; border-color:transparent; font-weight:600; }
+  .ag-follow{ margin-top:9px; padding:10px 12px; background:var(--amber-dim); border:1px solid rgba(232,163,61,0.35); border-radius:8px; display:flex; flex-direction:column; gap:2px; }
+  .ag-follow-h{ font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.8px; text-transform:uppercase; color:#f0c078; margin-bottom:4px; }
+  .fchk{ display:flex; align-items:center; gap:9px; font-size:13px; color:var(--text); padding:5px 0; cursor:pointer; }
+  .fchk input{ width:17px; height:17px; flex:none; margin:0; accent-color:var(--amber); cursor:pointer; }
   .edchip{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; padding:3px 8px; border-radius:20px; white-space:nowrap; }
   .edst-interesado{ background:var(--amber-dim); color:#f0c078; } .edst-conversando{ background:rgba(102,182,223,0.16); color:#a6d6ee; }
   .edst-propuesta{ background:rgba(181,138,223,0.18); color:#cbb3ef; }
@@ -356,6 +360,15 @@
   .st.edst.on.edst-propuesta{ background:#b58adf; color:#1c0f2b; border-color:transparent; }
   .st.edst.on.edst-firmado{ background:var(--teal); color:#08231c; border-color:transparent; }
   .st.edst.on.edst-descartado{ background:var(--brick); color:#2a0f0a; border-color:transparent; }
+  .ed-table{ width:100%; border-collapse:collapse; font-size:13px; }
+  .ed-table th{ text-align:left; font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.6px; text-transform:uppercase; color:var(--faint); font-weight:500; padding:0 10px 8px; border-bottom:1px solid var(--line); }
+  .ed-table td{ padding:11px 10px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  .ed-table tbody tr{ cursor:pointer; }
+  .ed-table tbody tr:hover{ background:rgba(255,255,255,0.02); }
+  .ed-table .ed-c1{ font-weight:600; color:var(--text); }
+  .ed-table .ed-c2{ color:var(--muted); }
+  .ed-table .ed-c4{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint); white-space:nowrap; }
+  .ed-tag{ font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.5px; text-transform:uppercase; background:rgba(102,182,223,0.16); color:#a6d6ee; padding:1px 6px; border-radius:10px; margin-right:4px; }
   .ed-up{ border-top:1px solid var(--line); padding:8px 0; }
   .ed-up:first-child{ border-top:none; }
   .ed-up-t{ font-size:13px; color:var(--text); white-space:pre-wrap; word-break:break-word; }
@@ -773,11 +786,11 @@ const RB_PLACEHOLDER = Object.fromEntries(RB_SECTIONS.map(([k,,p])=>[k,p]));
 function makeRulebook(c){ return { sections: RB_SECTIONS.map(([k,t])=>({ key:k, title:t, content:(c&&c[k])||'' })) }; }
 const STATES = [['porprobar','Por probar'],['aparcada','Testing'],['funciona','OK'],['descartada','Descartada']];
 const STATE_TITLE = Object.fromEntries(STATES.map(([k,t])=>[k,t]));
-const FAIR_STATES = [['pendiente','Pendiente'],['interesado','Interesado'],['no','No interesado']];
+const FAIR_STATES = [['pendiente','Pendiente'],['proto_dejado','Proto dejado'],['interesado','Interesado'],['descartado','Descartado']];
 const FAIR_STATE_TITLE = Object.fromEntries(FAIR_STATES.map(([k,t])=>[k,t]));
-const FAIR_STATE_RANK = { interesado:0, pendiente:1, no:2 };
-// Opciones de seguimiento cuando una editorial está 'interesado'. 'dejar' no genera tarea.
-const FOLLOW_OPTS = [['dejar','Proto dejado'],['proto','Enviar proto'],['pnp','Enviar PNP'],['reglas','Enviar reglas'],['video','Enviar vídeo'],['sellsheet','Enviar SellSheet']];
+const FAIR_STATE_RANK = { proto_dejado:0, interesado:1, pendiente:2, descartado:3 };
+// Opciones de seguimiento cuando una editorial está 'interesado'.
+const FOLLOW_OPTS = [['proto','Enviar proto'],['pnp','Enviar PNP'],['reglas','Enviar reglas'],['video','Enviar vídeo'],['sellsheet','Enviar SellSheet'],['agendar','Agendar TTS']];
 const SEND_LABEL = { proto:'Proto', pnp:'PNP', reglas:'Reglas', video:'Vídeo', sellsheet:'SellSheet' };
 const STATE_COLOR = { porprobar:'var(--violet)', funciona:'var(--teal)', descartada:'var(--brick)', aparcada:'var(--blue)' };
 const OLD_OUTCOME = { pendiente:'porprobar', funciona:'funciona', falla:'descartada', genera:'aparcada' };
@@ -1049,8 +1062,10 @@ function normalizeStructures(){
     g.changes.forEach(c=>{ if(c.idea===undefined){ c.idea=c.sectionText||c.issue||c.note||''; ch=true; } if('issue' in c){ delete c.issue; ch=true; } if('sectionText' in c){ delete c.sectionText; ch=true; } if(c.appImpact===undefined){ c.appImpact=!!c.appImplemented; ch=true; } });
   });
   // Ferias: migrar estados antiguos de cita y asegurar 'follow'.
-  (state.fairs||[]).forEach(f=>{ (f.appointments||[]).forEach(a=>{ (a.games||[]).forEach(e=>{ if(e.estado==='proto'){ e.estado='interesado'; if(!Array.isArray(e.follow)) e.follow=[]; if(!e.follow.includes('proto')) e.follow.push('proto'); ch=true; } if(!Array.isArray(e.follow)){ e.follow=[]; ch=true; } }); }); });
+  (state.fairs||[]).forEach(f=>{ (f.appointments||[]).forEach(a=>{ (a.games||[]).forEach(e=>{ if(e.estado==='proto'){ e.estado='interesado'; if(!Array.isArray(e.follow)) e.follow=[]; if(!e.follow.includes('proto')) e.follow.push('proto'); ch=true; } if(e.estado==='no'){ e.estado='descartado'; ch=true; } if(Array.isArray(e.follow) && e.follow.includes('dejar')){ e.follow=e.follow.filter(x=>x!=='dejar'); if(e.estado!=='proto_dejado') e.estado='proto_dejado'; ch=true; } if(!Array.isArray(e.follow)){ e.follow=[]; ch=true; } }); }); });
   if(!Array.isArray(state.editorials)){ state.editorials=[]; ch=true; }
+  // Backfill: crear seguimientos para citas ya marcadas 'interesado' o 'proto_dejado'.
+  (state.fairs||[]).forEach(f=>{ (f.appointments||[]).forEach(a=>{ (a.games||[]).forEach(e=>{ if((e.estado==='interesado'||e.estado==='proto_dejado') && e.gameId){ const k=(a.editorial||'').trim().toLowerCase()+'\u0001'+e.gameId; if(!state.editorials.some(x=>((x.editorial||'').trim().toLowerCase()+'\u0001'+(x.gameId||''))===k)){ const seed='Feria «'+(f.name||'')+'» · '+(FAIR_STATE_TITLE[e.estado]||e.estado)+((e.feedback||'').trim()?(' — '+e.feedback.trim()):''); state.editorials.push({ id:uid(), editorial:(a.editorial||'').trim(), gameId:e.gameId, gameName:e.gameName||'—', status:(e.estado==='proto_dejado'?'conversando':'interesado'), createdAt:Date.now(), updates:[{ id:uid(), text:seed, createdAt:Date.now(), fromFair:true }] }); ch=true; } } }); }); });
   return ch;
 }
 let storageWarned=false;
@@ -1378,43 +1393,49 @@ function renderEditorialesPortada(){
   const host=$('portada'); host.innerHTML='';
   const inner=document.createElement('div'); inner.className='pt-inner';
   ptBack(inner,'← Inicio',goHome);
+  const ents=(state.editorials||[]).slice();
   const row=document.createElement('div'); row.className='pt-secrow';
-  const sec=document.createElement('span'); sec.className='pt-sec'; sec.textContent='Editoriales'; row.appendChild(sec); inner.appendChild(row);
-  const tabs=document.createElement('div'); tabs.className='tabs'; tabs.style.padding='0 0 6px';
+  const sec=document.createElement('span'); sec.className='pt-sec'; sec.textContent='Editoriales · '+ents.length; row.appendChild(sec);
+  const add=document.createElement('button'); add.className='btn'; add.textContent='＋ Nuevo seguimiento'; add.onclick=()=>openNewEditorial(); row.appendChild(add);
+  inner.appendChild(row);
+  const tabs=document.createElement('div'); tabs.className='tabs'; tabs.style.padding='0 0 10px';
   [['juego','Por juego'],['editorial','Por editorial']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(edSub===k?' on':''); b.textContent=l; b.onclick=()=>{ edSub=k; renderEditorialesPortada(); }; tabs.appendChild(b); });
   inner.appendChild(tabs);
-  const ents=(state.editorials||[]).slice();
-  if(!ents.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Aún no hay seguimientos.<br>Marca una editorial como «Interesado» en una cita de feria y aparecerá aquí.</p>'; inner.appendChild(e); host.appendChild(inner); return; }
-  const grid=document.createElement('div'); grid.className='pt-grid';
-  const groups=new Map();
-  ents.forEach(ent=>{ const key = edSub==='juego' ? (ent.gameId||('name:'+ent.gameName)) : (ent.editorial||'').trim().toLowerCase();
-    if(!groups.has(key)) groups.set(key,[]); groups.get(key).push(ent); });
-  groups.forEach(list=>{
-    list.sort((a,b)=>edLastUpdate(b)-edLastUpdate(a));
-    const headName = edSub==='juego' ? (list[0].gameName||gameNameById(list[0].gameId)||'—') : (list[0].editorial||'—');
-    const color = edSub==='juego' ? (((state.games.find(x=>x.id===list[0].gameId)||{}).color)||colorFor(headName)) : colorFor(headName);
-    const card=document.createElement('div'); card.className='gcard'; card.style.setProperty('--sp', color);
-    const top=document.createElement('div'); top.className='gtop'; top.innerHTML=`<span class="gname" style="${chipStyle(color)}">${escapeHtml(headName)}</span><span class="gsum">${list.length} seguimiento(s)</span>`; card.appendChild(top);
-    list.forEach(ent=>{ const r=document.createElement('div'); r.className='er'; r.setAttribute('role','button'); r.setAttribute('tabindex','0');
-      const sub = edSub==='juego' ? (ent.editorial||'—') : (ent.gameName||gameNameById(ent.gameId)||'—');
-      const nUp=(ent.updates||[]).length;
-      r.innerHTML=`<span class="ed" style="${chipStyle(edSub==='juego'?colorFor(sub):(((state.games.find(x=>x.id===ent.gameId)||{}).color)||colorFor(sub)))}">${escapeHtml(sub)}</span><span class="edchip edst-${ent.status}">${ED_STATE_TITLE[ent.status]||ent.status}</span><span class="er-meta">${nUp?(nUp+' nota(s) · '):''}${escapeHtml(fmtWhen(edLastUpdate(ent)))}</span>`;
-      const open=()=>openEditorialDetail(ent); r.onclick=open; r.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
-      card.appendChild(r); });
-    grid.appendChild(card);
-  });
-  inner.appendChild(grid);
+  if(!ents.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Aún no hay seguimientos.<br>Marca una editorial como «Interesado» o «Proto dejado» en una cita de feria, o crea uno con «＋ Nuevo seguimiento».</p>'; inner.appendChild(e); host.appendChild(inner); return; }
+  const primary = ent => edSub==='juego' ? (ent.gameName||gameNameById(ent.gameId)||'—') : (ent.editorial||'—');
+  const secondary = ent => edSub==='juego' ? (ent.editorial||'—') : (ent.gameName||gameNameById(ent.gameId)||'—');
+  ents.sort((a,b)=> primary(a).localeCompare(primary(b),'es',{sensitivity:'base'}) || (edLastUpdate(b)-edLastUpdate(a)));
+  const table=document.createElement('table'); table.className='ed-table';
+  table.innerHTML=`<thead><tr><th>${edSub==='juego'?'Juego':'Editorial'}</th><th>${edSub==='juego'?'Editorial':'Juego'}</th><th>Estado</th><th>Última</th></tr></thead>`;
+  const tb=document.createElement('tbody');
+  ents.forEach(ent=>{ const tr=document.createElement('tr'); tr.setAttribute('role','button'); tr.setAttribute('tabindex','0');
+    const nUp=(ent.updates||[]).length;
+    tr.innerHTML=`<td class="ed-c1">${escapeHtml(primary(ent))}</td><td class="ed-c2">${escapeHtml(secondary(ent))}</td><td><span class="edchip edst-${ent.status}">${ED_STATE_TITLE[ent.status]||ent.status}</span></td><td class="ed-c4">${escapeHtml(fmtWhen(edLastUpdate(ent)))}${nUp?` · ${nUp}`:''}</td>`;
+    const open=()=>openEditorialDetail(ent); tr.onclick=open; tr.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
+    tb.appendChild(tr); });
+  table.appendChild(tb); inner.appendChild(table);
   host.appendChild(inner);
+}
+function openNewEditorial(){
+  const p=$('panel'), b=$('panelBody');
+  const games=allGames().filter(g=>g.__shared||((g.stage||'active')!=='draft')).slice().sort((x,y)=>String(x.name||'').localeCompare(String(y.name||''),'es',{sensitivity:'base'}));
+  b.innerHTML=`<label class="cd-label">Nuevo seguimiento</label>
+    <div class="field"><label>Editorial</label><input class="ap-in" id="neEd" placeholder="Nombre de la editorial…"></div>
+    <div class="field"><label>Juego</label><select class="ap-in" id="neG">${games.map(g=>`<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('')}</select></div>
+    <div class="field"><label>Primera nota (opcional)</label><textarea id="neNote" style="min-height:60px;" placeholder="Cómo surgió el contacto, feedback inicial…"></textarea></div>
+    <div class="pactions"><button class="btn" id="neCreate">Crear seguimiento</button></div>`;
+  p.classList.add('open'); setTimeout(()=>{ const x=$('neEd'); if(x) x.focus(); },0);
+  $('neCreate').onclick=async()=>{ const ed=$('neEd').value.trim(); const gid=$('neG').value; if(!ed){ $('neEd').focus(); toast('Pon el nombre de la editorial.','warn'); return; } if(!gid){ toast('Elige un juego.','warn'); return; } const gname=gameNameById(gid)||'—'; const ent=ensureEditorialEntry(ed, gid, gname); const note=$('neNote').value.replace(/\s+$/,''); if(note){ ent.updates=ent.updates||[]; ent.updates.push({ id:uid(), text:note, createdAt:Date.now() }); } await saveLocal(); openEditorialDetail(ent); if(appView==='editoriales') renderEditorialesPortada(); toast('Seguimiento creado.'); };
 }
 let edRef=null;
 function openEditorialDetail(ent){
   edRef=ent; const p=$('panel'), b=$('panelBody');
-  const updates=(ent.updates||[]).slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  const updates=(ent.updates||[]).slice().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
   b.innerHTML=`<label class="cd-label">Editorial</label><input class="cd-title" id="edEd" value="${escapeHtml(ent.editorial||'')}">
     <div class="cd-meta">Juego: ${escapeHtml(ent.gameName||gameNameById(ent.gameId)||'—')}</div>
     <div class="field"><label>Estado</label><div class="states">${ED_STATES.map(([k,l])=>`<button class="st edst edst-${k} ${ent.status===k?'on':''}" data-s="${k}">${l}</button>`).join('')}</div></div>
-    <div class="field"><label>Añadir nota de seguimiento</label><textarea id="edNote" style="min-height:70px;" placeholder="p. ej. Enviado proto el 3/11; quedamos en feedback en 2 semanas…"></textarea><div style="margin-top:6px;"><button class="btn" id="edAdd">Añadir nota</button></div></div>
-    <div class="field"><label>Historial</label><div id="edTimeline">${updates.length?updates.map(u=>`<div class="ed-up"><div class="ed-up-t">${escapeHtml(u.text||'')}</div><div class="ed-up-d">${escapeHtml(fmtWhen(u.createdAt))}<button class="ed-up-x" data-id="${u.id}" title="Eliminar">✕</button></div></div>`).join(''):'<div style="font-size:12.5px;color:var(--faint);">Sin notas todavía.</div>'}</div></div>
+    <div class="field"><label>Seguimiento (log)</label><div id="edTimeline">${updates.length?updates.map(u=>`<div class="ed-up"><div class="ed-up-t">${u.fromFair?'<span class="ed-tag">feria</span> ':''}${escapeHtml(u.text||'')}</div><div class="ed-up-d">${escapeHtml(fmtWhen(u.createdAt))}<button class="ed-up-x" data-id="${u.id}" title="Eliminar">✕</button></div></div>`).join(''):'<div style="font-size:12.5px;color:var(--faint);">Sin entradas todavía.</div>'}</div></div>
+    <div class="field"><label>Añadir entrada</label><textarea id="edNote" style="min-height:70px;" placeholder="p. ej. Enviado proto el 3/11; quedamos en feedback en 2 semanas…"></textarea><div style="margin-top:6px;"><button class="btn" id="edAdd">Añadir al log</button></div></div>
     <div class="pactions"><button class="btn-danger" id="edDel">Eliminar seguimiento</button></div>`;
   p.classList.add('open');
   b.querySelectorAll('.edst').forEach(btn=>btn.onclick=async()=>{ ent.status=btn.dataset.s; await saveLocal(); openEditorialDetail(ent); if(appView==='editoriales') renderEditorialesPortada(); });
@@ -1431,30 +1452,41 @@ function allGames(){ return state.games.concat(sharedGames||[]); }
 function gameNameById(id){ const g=allGames().find(x=>x.id===id); return g?g.name:null; }
 /* ---------- Editoriales (seguimiento tras feria) ---------- */
 function edKey(editorial,gameId){ return (editorial||'').trim().toLowerCase()+'\u0001'+(gameId||''); }
-function ensureEditorialEntry(editorial, gameId, gameName){
+function ensureEditorialEntry(editorial, gameId, gameName, seedText){
   state.editorials=state.editorials||[];
   const k=edKey(editorial,gameId);
   let ent=state.editorials.find(x=>edKey(x.editorial,x.gameId)===k);
-  if(!ent){ ent={ id:uid(), editorial:(editorial||'').trim(), gameId, gameName:gameName||gameNameById(gameId)||'—', status:'interesado', createdAt:Date.now(), updates:[] }; state.editorials.push(ent); }
+  if(!ent){ ent={ id:uid(), editorial:(editorial||'').trim(), gameId, gameName:gameName||gameNameById(gameId)||'—', status:'interesado', createdAt:Date.now(), updates:[] };
+    if(seedText){ ent.updates.push({ id:uid(), text:seedText, createdAt:Date.now(), fromFair:true }); }
+    state.editorials.push(ent); }
   return ent;
 }
+function seedFromAppt(f,a,e){ return 'Feria «'+(f?f.name:'')+'» · '+(FAIR_STATE_TITLE[e.estado]||e.estado)+((e.feedback||'').trim()?(' — '+e.feedback.trim()):''); }
 const ED_STATES=[['interesado','Interesado'],['conversando','En conversaciones'],['propuesta','Propuesta'],['firmado','Firmado'],['descartado','Descartado']];
 const ED_STATE_TITLE=Object.fromEntries(ED_STATES.map(([k,t])=>[k,t]));
-// Crea/actualiza/borra la tarea automática de envío para una editorial interesada.
+// Crea/actualiza/borra tareas automáticas según el seguimiento de una editorial interesada.
+function syncAutoTask(g, e, key, text){
+  g.tasks=g.tasks||[]; let changed=false;
+  if(text){
+    let t = e[key] ? g.tasks.find(x=>x.id===e[key]) : null;
+    if(t){ if(t.text!==text){ t.text=text; changed=true; } } else { t={ id:uid(), text, done:false, createdAt:Date.now() }; g.tasks.push(t); e[key]=t.id; changed=true; }
+  } else if(e[key]){
+    const t=g.tasks.find(x=>x.id===e[key]);
+    if(t && !t.done){ g.tasks=g.tasks.filter(x=>x.id!==e[key]); changed=true; }
+    e[key]=null;
+  }
+  return changed;
+}
 function applyFollowTask(e){
   const g=allGames().find(x=>x.id===e.gameId); if(!g) return;
-  const sends=(e.follow||[]).filter(k=>k!=='dejar');
-  if(sends.length){
-    const text='Enviar '+sends.map(k=>SEND_LABEL[k]).join(' + ');
-    g.tasks=g.tasks||[];
-    let t = e.taskId ? g.tasks.find(x=>x.id===e.taskId) : null;
-    if(t){ t.text=text; t.done=false; } else { t={ id:uid(), text, done:false, createdAt:Date.now() }; g.tasks.push(t); e.taskId=t.id; }
-    if(g.__shared) saveSharedGame(g); else saveLocal();
-  } else if(e.taskId){
-    const t=(g.tasks||[]).find(x=>x.id===e.taskId);
-    if(t && !t.done){ g.tasks=g.tasks.filter(x=>x.id!==e.taskId); if(g.__shared) saveSharedGame(g); else saveLocal(); }
-    e.taskId=null;
-  }
+  const follow=e.follow||[];
+  const sends=follow.filter(k=>['proto','pnp','reglas','video','sellsheet'].includes(k));
+  const sendText=sends.length?('Enviar '+sends.map(k=>SEND_LABEL[k]).join(' + ')):'';
+  const agendarText=follow.includes('agendar')?'Agendar TTS':'';
+  let changed=false;
+  if(syncAutoTask(g,e,'taskId',sendText)) changed=true;
+  if(syncAutoTask(g,e,'taskAgendarId',agendarText)) changed=true;
+  if(changed){ if(g.__shared) saveSharedGame(g); else saveLocal(); }
 }
 function fmtAppt(v){ if(!v) return ''; const dateOnly=/^\d{4}-\d{2}-\d{2}$/.test(v); const d=new Date(dateOnly?v+'T00:00':v); if(isNaN(d.getTime())) return v; const opt=dateOnly?{ weekday:'short', day:'numeric', month:'short' }:{ weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }; let s=d.toLocaleString('es-ES',opt); return s.charAt(0).toUpperCase()+s.slice(1); }
 function hourOptions(){ let o='<option value="">--</option>'; for(let h=0;h<24;h++){ const v=String(h).padStart(2,'0'); o+=`<option value="${v}">${v}</option>`; } return o; }
@@ -1568,8 +1600,11 @@ function openApptDetail(f, a, isNew){
   $('apEd').value=a.editorial||''; $('apPlace').value=a.place||''; $('apContact').value=a.contact||'';
   { let dp='',hh='',mn=''; const m=String(a.when||'').match(/^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2}))?/); if(m){ dp=m[1]; hh=m[2]||''; mn=m[3]||''; } $('apDate').value=dp; $('apHour').value=hh; const ms=$('apMin'); if(mn && !Array.from(ms.options).some(o=>o.value===mn)){ const o=document.createElement('option'); o.value=mn; o.textContent=mn; ms.appendChild(o); } ms.value=mn; }
   const commit=()=>{ a.editorial=$('apEd').value.trim(); const d=$('apDate').value, hh=$('apHour').value, mn=$('apMin').value; const t=(hh!==''||mn!=='')?((hh||'00')+':'+(mn||'00')):''; a.when = d ? (t? d+'T'+t : d) : ''; a.place=$('apPlace').value.trim(); a.contact=$('apContact').value.trim(); b.querySelectorAll('.ag-fb').forEach(x=>{ const i=+x.dataset.i; if(a.games[i]) a.games[i].feedback=x.value.replace(/\s+$/,''); }); };
-  b.querySelectorAll('.fst').forEach(btn=>btn.onclick=()=>{ commit(); const i=+btn.dataset.i; const e=a.games[i]; if(e){ e.estado=btn.dataset.e; if(e.estado==='interesado'){ e.follow=e.follow||[]; ensureEditorialEntry(a.editorial, e.gameId, e.gameName); applyFollowTask(e); } else if(e.taskId){ applyFollowTask(Object.assign({}, e, {follow:[]})); e.taskId=null; } } saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
-  b.querySelectorAll('.ag-fl').forEach(chk=>chk.onchange=()=>{ commit(); const i=+chk.dataset.i, k=chk.dataset.k; const e=a.games[i]; if(!e) return; e.follow=e.follow||[]; if(chk.checked){ if(!e.follow.includes(k)) e.follow.push(k); } else { e.follow=e.follow.filter(x=>x!==k); } ensureEditorialEntry(a.editorial, e.gameId, e.gameName); applyFollowTask(e); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
+  b.querySelectorAll('.fst').forEach(btn=>btn.onclick=()=>{ commit(); const i=+btn.dataset.i; const e=a.games[i]; if(e){ e.estado=btn.dataset.e;
+      if(e.estado==='interesado'){ e.follow=e.follow||[]; ensureEditorialEntry(a.editorial, e.gameId, e.gameName, seedFromAppt(f,a,e)); applyFollowTask(e); }
+      else { e.follow=[]; applyFollowTask(e); if(e.estado==='proto_dejado'){ ensureEditorialEntry(a.editorial, e.gameId, e.gameName, seedFromAppt(f,a,e)); } }
+    } saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
+  b.querySelectorAll('.ag-fl').forEach(chk=>chk.onchange=()=>{ commit(); const i=+chk.dataset.i, k=chk.dataset.k; const e=a.games[i]; if(!e) return; e.follow=e.follow||[]; if(chk.checked){ if(!e.follow.includes(k)) e.follow.push(k); } else { e.follow=e.follow.filter(x=>x!==k); } ensureEditorialEntry(a.editorial, e.gameId, e.gameName, seedFromAppt(f,a,e)); applyFollowTask(e); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
   b.querySelectorAll('.ag-rm').forEach(btn=>btn.onclick=()=>{ commit(); const i=+btn.dataset.i; a.games.splice(i,1); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
   { const sel=$('apAddG'); if(sel) sel.onchange=()=>{ const id=sel.value; if(!id) return; commit(); a.games.push({ gameId:id, gameName:gameNameById(id), estado:'pendiente', feedback:'' }); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); }; }
   $('apSave').onclick=async()=>{ commit(); if(!a.editorial){ $('apEd').focus(); toast('Pon el nombre de la editorial.','warn'); return; } const conflicts=apptConflicts(f,a); if(conflicts.length){ const ms=apptMs(a.when); const overlap=conflicts.some(c=>apptMs(c.when)===ms); const list=conflicts.map(c=>`${c.editorial||'(sin editorial)'} (${fmtAppt(c.when)})`).join('; '); const ok=await confirmDialog(`${overlap?'Esta cita se solapa con':'Esta cita queda a menos de 30 min de'}: ${list}. ¿Guardar igualmente?`, { okLabel:'Guardar igualmente', danger:false }); if(!ok) return; } await saveAppt(f,a); closePanel(); renderFairBoard(); toast('Cita guardada.'); };
