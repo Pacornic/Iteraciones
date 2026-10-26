@@ -180,8 +180,8 @@
   body.view-game .sidebar{ display:none; }
   body.view-game .game-select-mobile{ display:none; }
   body.view-home .backhome{ display:none; }
-  .pt-back{ background:none; border:none; color:var(--blue); cursor:pointer; font-size:13px; padding:0; margin-bottom:18px; }
-  .pt-back:hover{ text-decoration:underline; }
+  .pt-back{ display:inline-flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border); color:var(--blue); cursor:pointer; font-size:13px; font-weight:600; padding:8px 14px; border-radius:9px; margin-bottom:18px; transition:border-color .12s, background .12s; }
+  .pt-back:hover{ border-color:var(--blue); background:rgba(102,182,223,0.1); }
   .area-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; }
   .area-card{ position:relative; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:22px 22px 20px 26px; cursor:pointer; overflow:hidden; transition:border-color .15s, transform .12s; }
   .area-card::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:6px; background:var(--spine,var(--amber)); }
@@ -384,11 +384,31 @@
   .ed-table .ed-c2{ color:var(--muted); }
   .ed-table .ed-c4{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint); white-space:nowrap; }
   .ed-tag{ font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.5px; text-transform:uppercase; background:rgba(102,182,223,0.16); color:#a6d6ee; padding:1px 6px; border-radius:10px; margin-right:4px; }
-  .ed-up{ border-top:1px solid var(--line); padding:8px 0; }
-  .ed-up:first-child{ border-top:none; }
+  .ed-log{ display:flex; flex-direction:column; gap:8px; }
+  .ed-up{ border:1px solid var(--border); border-radius:10px; padding:8px 11px; max-width:90%; }
+  .ed-up.dir-out{ align-self:flex-end; background:var(--amber-dim); border-color:rgba(232,163,61,0.35); }
+  .ed-up.dir-in{ align-self:flex-start; background:rgba(102,182,223,0.12); border-color:rgba(102,182,223,0.35); }
+  .ed-up.dir-note{ align-self:stretch; background:var(--surface); }
+  .ed-up-head{ display:flex; align-items:center; gap:7px; margin-bottom:4px; }
+  .ed-dir-chip{ font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.3px; padding:2px 8px; border-radius:10px; border:none; cursor:pointer; background:var(--surface-2); color:var(--muted); }
+  .ed-dir-chip.dir-out{ background:var(--amber); color:#2a1c06; } .ed-dir-chip.dir-in{ background:var(--blue); color:#08222e; } .ed-dir-chip.dir-note{ background:var(--surface-3,#28323f); color:var(--muted); }
+  .ed-up-d{ font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--faint); margin-left:auto; }
   .ed-up-t{ font-size:13px; color:var(--text); white-space:pre-wrap; word-break:break-word; }
-  .ed-up-d{ display:flex; align-items:center; gap:8px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--faint); margin-top:3px; }
-  .ed-up-x{ background:none; border:none; color:var(--faint); cursor:pointer; font-size:10px; margin-left:auto; } .ed-up-x:hover{ color:var(--brick); }
+  .ed-up-x{ background:none; border:none; color:var(--faint); cursor:pointer; font-size:10px; } .ed-up-x:hover{ color:var(--brick); }
+  .ed-logtable{ width:100%; border-collapse:collapse; font-size:13px; }
+  .ed-logtable th{ text-align:left; font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.5px; text-transform:uppercase; color:var(--faint); font-weight:500; padding:0 8px 6px; border-bottom:1px solid var(--line); }
+  .ed-logtable td{ padding:8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .ed-logtable .lg-date{ font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--faint); white-space:nowrap; }
+  .ed-logtable .lg-dir{ white-space:nowrap; }
+  .ed-logtable .lg-txt{ color:var(--text); white-space:pre-wrap; word-break:break-word; width:100%; }
+  .ed-logtable .lg-x{ text-align:right; }
+  .ed-dir-pickrow{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:7px; }
+  .ed-dir-pick{ border:1px solid var(--border); background:none; color:var(--muted); font-size:11px; padding:4px 9px; border-radius:7px; cursor:pointer; }
+  .ed-dir-pick.on.dir-out{ background:var(--amber); color:#2a1c06; border-color:transparent; font-weight:600; }
+  .ed-dir-pick.on.dir-in{ background:var(--blue); color:#08222e; border-color:transparent; font-weight:600; }
+  .ed-dir-pick.on.dir-note{ background:var(--surface-3,#28323f); color:var(--text); border-color:transparent; font-weight:600; }
+  .ed-addbtn{ margin-left:auto; }
+  .ed-table tr.ed-closed td{ opacity:.6; }
   .agenda-day.agenda-done{ color:var(--faint); }
 
   .btn{ background:var(--amber); border:none; color:#1a1206; font-weight:600; padding:9px 15px; border-radius:8px; cursor:pointer; font-size:13px; }
@@ -1419,19 +1439,27 @@ function renderEditorialesPortada(){
   if(!ents.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Aún no hay seguimientos.<br>Marca una editorial como «Interesado» o «Proto dejado» en una cita de feria, o crea uno con «＋ Nuevo seguimiento».</p>'; inner.appendChild(e); host.appendChild(inner); return; }
   const primary = ent => edSub==='juego' ? (ent.gameName||gameNameById(ent.gameId)||'—') : (ent.editorial||'—');
   const secondary = ent => edSub==='juego' ? (ent.editorial||'—') : (ent.gameName||gameNameById(ent.gameId)||'—');
-  ents.sort((a,b)=> primary(a).localeCompare(primary(b),'es',{sensitivity:'base'}) || (edLastUpdate(b)-edLastUpdate(a)));
-  const wrap=document.createElement('div'); wrap.className='ed-tablewrap';
-  const table=document.createElement('table'); table.className='ed-table';
-  table.innerHTML=`<thead><tr><th>${edSub==='juego'?'Juego':'Editorial'}</th><th>${edSub==='juego'?'Editorial':'Juego'}</th><th>Estado</th><th>Siguiente paso</th></tr></thead>`;
-  const tb=document.createElement('tbody');
-  ents.forEach(ent=>{ const tr=document.createElement('tr'); tr.setAttribute('role','button'); tr.setAttribute('tabindex','0');
-    const dl=edDeadlineInfo(ent);
-    const nextTxt = (ent.nextStep||'').trim() ? escapeHtml(ent.nextStep.trim()) : '<span class="ed-nonext">—</span>';
-    const dlBadge = dl?` <span class="ed-dl-badge ${dl.cls}">${escapeHtml(dl.txt)}</span>` : (ent.deadline?` <span class="ed-dl-badge">${escapeHtml(fmtWhen(new Date(ent.deadline+'T00:00').getTime()))}</span>`:'');
-    tr.innerHTML=`<td class="ed-c1">${escapeHtml(primary(ent))}</td><td class="ed-c2">${escapeHtml(secondary(ent))}</td><td><span class="edchip edst-${ent.status}">${ED_STATE_TITLE[ent.status]||ent.status}</span></td><td class="ed-c3">${nextTxt}${dlBadge}</td>`;
-    const open=()=>openEditorialDetail(ent); tr.onclick=open; tr.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
-    tb.appendChild(tr); });
-  table.appendChild(tb); wrap.appendChild(table); inner.appendChild(wrap);
+  const active=ents.filter(e=>e.status!=='firmado'&&e.status!=='descartado');
+  const closed=ents.filter(e=>e.status==='firmado'||e.status==='descartado');
+  const sortFn=(a,b)=> primary(a).localeCompare(primary(b),'es',{sensitivity:'base'}) || (edLastUpdate(b)-edLastUpdate(a));
+  active.sort(sortFn); closed.sort((a,b)=>edLastUpdate(b)-edLastUpdate(a));
+  const buildTable=(list, closedView)=>{
+    const wrap=document.createElement('div'); wrap.className='ed-tablewrap';
+    const table=document.createElement('table'); table.className='ed-table';
+    table.innerHTML=`<thead><tr><th>${edSub==='juego'?'Juego':'Editorial'}</th><th>${edSub==='juego'?'Editorial':'Juego'}</th>${closedView?'<th>Estado</th>':'<th>Siguiente paso</th>'}</tr></thead>`;
+    const tb=document.createElement('tbody');
+    list.forEach(ent=>{ const tr=document.createElement('tr'+''); tr.setAttribute('role','button'); tr.setAttribute('tabindex','0'); if(closedView) tr.className='ed-closed';
+      let last;
+      if(closedView){ last=`<td><span class="edchip edst-${ent.status}">${ED_STATE_TITLE[ent.status]||ent.status}</span></td>`; }
+      else { const dl=edDeadlineInfo(ent); const nextTxt=(ent.nextStep||'').trim()?escapeHtml(ent.nextStep.trim()):'<span class="ed-nonext">—</span>'; const dlBadge=dl?` <span class="ed-dl-badge ${dl.cls}">${escapeHtml(dl.txt)}</span>`:(ent.deadline?` <span class="ed-dl-badge">${escapeHtml(fmtWhen(new Date(ent.deadline+'T00:00').getTime()))}</span>`:''); last=`<td class="ed-c3">${nextTxt}${dlBadge}</td>`; }
+      tr.innerHTML=`<td class="ed-c1">${escapeHtml(primary(ent))}</td><td class="ed-c2">${escapeHtml(secondary(ent))}</td>${last}`;
+      const open=()=>openEditorialDetail(ent); tr.onclick=open; tr.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
+      tb.appendChild(tr); });
+    table.appendChild(tb); wrap.appendChild(table); return wrap;
+  };
+  const ah=document.createElement('div'); ah.className='pt-sec'; ah.style.margin='4px 0 6px'; ah.textContent='Activos · '+active.length; inner.appendChild(ah);
+  if(active.length) inner.appendChild(buildTable(active,false)); else { const e=document.createElement('div'); e.className='home-empty'; e.textContent='Sin seguimientos activos.'; inner.appendChild(e); }
+  if(closed.length){ const hr=document.createElement('hr'); hr.className='pt-sep'; inner.appendChild(hr); const ch=document.createElement('div'); ch.className='pt-sec'; ch.style.margin='4px 0 6px'; ch.textContent='Cerrados · '+closed.length; inner.appendChild(ch); inner.appendChild(buildTable(closed,true)); }
   host.appendChild(inner);
 }
 function openNewEditorial(){
@@ -1445,25 +1473,33 @@ function openNewEditorial(){
   p.classList.add('open'); setTimeout(()=>{ const x=$('neEd'); if(x) x.focus(); },0);
   $('neCreate').onclick=async()=>{ const ed=$('neEd').value.trim(); const gid=$('neG').value; if(!ed){ $('neEd').focus(); toast('Pon el nombre de la editorial.','warn'); return; } if(!gid){ toast('Elige un juego.','warn'); return; } const gname=gameNameById(gid)||'—'; const ent=ensureEditorialEntry(ed, gid, gname); const note=$('neNote').value.replace(/\s+$/,''); if(note){ ent.updates=ent.updates||[]; ent.updates.push({ id:uid(), text:note, createdAt:Date.now() }); } await saveLocal(); openEditorialDetail(ent); if(appView==='editoriales') renderEditorialesPortada(); toast('Seguimiento creado.'); };
 }
-let edRef=null;
+let edRef=null, edNewDir='out';
+const ED_DIR=[['out','Yo → editorial'],['in','Editorial → yo'],['note','Nota']];
+const ED_DIR_SHORT={ out:'Yo →', in:'← Editorial', note:'Nota' };
+function edDirOf(u){ return u.dir || (u.fromFair?'note':'note'); }
 function openEditorialDetail(ent){
   edRef=ent; const p=$('panel'), b=$('panelBody');
-  const updates=(ent.updates||[]).slice().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  const updates=(ent.updates||[]).slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)); // más reciente arriba
   const dl=edDeadlineInfo(ent);
+  const logRows = updates.map(u=>{ const d=edDirOf(u); return `<tr class="dir-${d}"><td class="lg-date">${escapeHtml(fmtWhen(u.createdAt))}</td><td class="lg-dir"><button class="ed-dir-chip dir-${d}" data-id="${u.id}" title="Cambiar quién">${ED_DIR_SHORT[d]}</button>${u.fromFair?' <span class="ed-tag">feria</span>':''}</td><td class="lg-txt">${escapeHtml(u.text||'')}</td><td class="lg-x"><button class="ed-up-x" data-id="${u.id}" title="Eliminar">✕</button></td></tr>`; }).join('');
+  const logHtml = updates.length ? `<table class="ed-logtable"><thead><tr><th>Fecha</th><th>Quién</th><th>Comentario</th><th></th></tr></thead><tbody>${logRows}</tbody></table>` : '<div style="font-size:12.5px;color:var(--faint);">Sin iteraciones todavía.</div>';
   b.innerHTML=`<label class="cd-label">Editorial</label><input class="cd-title" id="edEd" value="${escapeHtml(ent.editorial||'')}">
     <div class="cd-meta">Juego: ${escapeHtml(ent.gameName||gameNameById(ent.gameId)||'—')}</div>
     <div class="field"><label>Estado</label><div class="states">${ED_STATES.map(([k,l])=>`<button class="st edst edst-${k} ${ent.status===k?'on':''}" data-s="${k}">${l}</button>`).join('')}</div></div>
     <div class="ed-next"><div class="ed-next-h">▶ Siguiente paso</div><input class="ap-in" id="edNext" placeholder="p. ej. Esperar feedback de las reglas" value="${escapeHtml(ent.nextStep||'')}">
       <div class="ed-dl-row"><label class="ed-dl-l">Fecha límite</label><input class="ap-in" id="edDeadline" type="date" value="${escapeHtml(ent.deadline||'')}">${dl?`<span class="ed-dl-badge ${dl.cls}">${escapeHtml(dl.txt)}</span>`:''}</div></div>
-    <div class="field"><label>Iteraciones</label><div id="edTimeline">${updates.length?updates.map(u=>`<div class="ed-up"><div class="ed-up-t">${u.fromFair?'<span class="ed-tag">feria</span> ':''}${escapeHtml(u.text||'')}</div><div class="ed-up-d">${escapeHtml(fmtWhen(u.createdAt))}<button class="ed-up-x" data-id="${u.id}" title="Eliminar">✕</button></div></div>`).join(''):'<div style="font-size:12.5px;color:var(--faint);">Sin iteraciones todavía.</div>'}</div></div>
-    <div class="field"><label>Añadir iteración / comentario</label><textarea id="edNote" style="min-height:70px;" placeholder="p. ej. Enviado proto el 3/11; quedamos en feedback en 2 semanas…"></textarea><div style="margin-top:6px;"><button class="btn" id="edAdd">Añadir al log</button></div></div>
+    <div class="field"><label>Añadir iteración</label><textarea id="edNote" style="min-height:62px;" placeholder="Comentario… (qué envío, qué me responden, acuerdos…)"></textarea>
+      <div class="ed-dir-pickrow">${ED_DIR.map(([k,l])=>`<button class="ed-dir-pick ${edNewDir===k?'on':''} dir-${k}" data-d="${k}">${l}</button>`).join('')}<button class="btn ed-addbtn" id="edAdd">Añadir al log</button></div></div>
+    <div class="field"><label>Historial de iteraciones</label><div id="edTimeline" class="ed-tablewrap">${logHtml}</div></div>
     <div class="pactions"><button class="btn-danger" id="edDel">Eliminar seguimiento</button></div>`;
   p.classList.add('open');
   b.querySelectorAll('.edst').forEach(btn=>btn.onclick=async()=>{ ent.status=btn.dataset.s; await saveLocal(); openEditorialDetail(ent); if(appView==='editoriales') renderEditorialesPortada(); });
   $('edEd').onchange=async()=>{ ent.editorial=$('edEd').value.trim(); await saveLocal(); };
   $('edNext').onchange=async()=>{ ent.nextStep=$('edNext').value.trim(); await saveLocal(); if(appView==='editoriales') renderEditorialesPortada(); };
   $('edDeadline').onchange=async()=>{ ent.deadline=$('edDeadline').value||''; await saveLocal(); openEditorialDetail(ent); if(appView==='editoriales') renderEditorialesPortada(); };
-  $('edAdd').onclick=async()=>{ const t=$('edNote').value.replace(/\s+$/,''); if(!t) return; ent.updates=ent.updates||[]; ent.updates.push({ id:uid(), text:t, createdAt:Date.now() }); $('edNote').value=''; await saveLocal(); openEditorialDetail(ent); if(appView==='editoriales') renderEditorialesPortada(); };
+  b.querySelectorAll('.ed-dir-pick').forEach(btn=>btn.onclick=()=>{ edNewDir=btn.dataset.d; b.querySelectorAll('.ed-dir-pick').forEach(x=>x.classList.toggle('on', x.dataset.d===edNewDir)); });
+  $('edAdd').onclick=async()=>{ const t=$('edNote').value.replace(/\s+$/,''); if(!t) return; ent.updates=ent.updates||[]; ent.updates.push({ id:uid(), text:t, dir:edNewDir, createdAt:Date.now() }); $('edNote').value=''; await saveLocal(); openEditorialDetail(ent); if(appView==='editoriales') renderEditorialesPortada(); };
+  b.querySelectorAll('.ed-dir-chip').forEach(c=>c.onclick=async()=>{ const id=c.dataset.id; const u=(ent.updates||[]).find(x=>x.id===id); if(!u) return; const order=['out','in','note']; const cur=edDirOf(u); u.dir=order[(order.indexOf(cur)+1)%order.length]; await saveLocal(); openEditorialDetail(ent); });
   b.querySelectorAll('.ed-up-x').forEach(x=>x.onclick=async()=>{ const id=x.dataset.id; ent.updates=(ent.updates||[]).filter(u=>u.id!==id); await saveLocal(); openEditorialDetail(ent); });
   $('edDel').onclick=async()=>{ const ok=await confirmDialog('¿Eliminar este seguimiento con la editorial?'); if(!ok) return; state.editorials=(state.editorials||[]).filter(x=>x.id!==ent.id); await saveLocal(); closePanel(); if(appView==='editoriales') renderEditorialesPortada(); toast('Seguimiento eliminado.'); };
 }
