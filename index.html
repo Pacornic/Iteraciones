@@ -348,8 +348,9 @@
   .fst.on.f-descartado{ background:var(--brick); color:#2a0f0a; border-color:transparent; font-weight:600; }
   .ag-follow{ margin-top:9px; padding:10px 12px; background:var(--amber-dim); border:1px solid rgba(232,163,61,0.35); border-radius:8px; display:flex; flex-direction:column; gap:2px; }
   .ag-follow-h{ font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.8px; text-transform:uppercase; color:#f0c078; margin-bottom:4px; }
-  .fchk{ display:flex; align-items:center; gap:9px; font-size:13px; color:var(--text); padding:5px 0; cursor:pointer; }
-  .fchk input{ width:17px; height:17px; flex:none; margin:0; accent-color:var(--amber); cursor:pointer; }
+  .ag-follow label.fchk{ display:flex; align-items:center; gap:9px; font-family:'IBM Plex Sans',sans-serif; font-size:13px; text-transform:none; letter-spacing:0; color:var(--text); margin:0; padding:5px 0; cursor:pointer; }
+  .ag-follow .fchk input[type="checkbox"]{ width:17px; height:17px; flex:none; margin:0; padding:0; accent-color:var(--amber); cursor:pointer; }
+  .ag-follow .fchk span{ line-height:1.2; }
   .edchip{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; padding:3px 8px; border-radius:20px; white-space:nowrap; }
   .edst-interesado{ background:var(--amber-dim); color:#f0c078; } .edst-conversando{ background:rgba(102,182,223,0.16); color:#a6d6ee; }
   .edst-propuesta{ background:rgba(181,138,223,0.18); color:#cbb3ef; }
@@ -1582,7 +1583,7 @@ function openApptDetail(f, a, isNew){
   const gamesHtml=(a.games||[]).map((e,i)=>`<div class="ag-item">
       <div class="ag-h"><span class="ag-name">${escapeHtml(e.gameName||gameNameById(e.gameId)||'—')}</span><button class="ag-rm" data-i="${i}" title="Quitar juego">✕</button></div>
       <div class="fstates">${FAIR_STATES.map(([k,l])=>`<button class="fst f-${k}${e.estado===k?' on':''}" data-i="${i}" data-e="${k}">${l}</button>`).join('')}</div>
-      ${e.estado==='interesado'?`<div class="ag-follow"><div class="ag-follow-h">Seguimiento</div>${FOLLOW_OPTS.map(([k,l])=>`<label class="fchk"><input type="checkbox" class="ag-fl" data-i="${i}" data-k="${k}" ${(e.follow||[]).includes(k)?'checked':''}> ${escapeHtml(l)}</label>`).join('')}</div>`:''}
+      ${e.estado==='interesado'?`<div class="ag-follow"><div class="ag-follow-h">Pendiente</div>${FOLLOW_OPTS.map(([k,l])=>`<label class="fchk"><input type="checkbox" class="ag-fl" data-i="${i}" data-k="${k}" ${(e.follow||[]).includes(k)?'checked':''}> <span>${escapeHtml(l)}</span></label>`).join('')}</div>`:''}
       <textarea class="ag-fb" data-i="${i}" placeholder="Feedback…">${escapeHtml(e.feedback||'')}</textarea>
     </div>`).join('');
   b.innerHTML=`<label class="cd-label">Editorial</label><input class="cd-title" id="apEd" placeholder="Nombre de la editorial…">
