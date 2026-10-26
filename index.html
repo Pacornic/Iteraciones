@@ -1478,10 +1478,10 @@ function renderEdGroupPage(){
   const active=list.filter(e=>e.status!=='firmado'&&e.status!=='descartado').sort((a,b)=>edLastUpdate(b)-edLastUpdate(a));
   const closed=list.filter(e=>e.status==='firmado'||e.status==='descartado').sort((a,b)=>edLastUpdate(b)-edLastUpdate(a));
   const buildTable=(arr,closedView)=>{ const wrap=document.createElement('div'); wrap.className='ed-tablewrap'; const table=document.createElement('table'); table.className='ed-table';
-    table.innerHTML=`<thead><tr><th>${subLbl}</th><th>Estado</th>${closedView?'':'<th>Siguiente paso</th>'}</tr></thead>`; const tb=document.createElement('tbody');
+    table.innerHTML=`<thead><tr><th>${subLbl}</th><th>Estado</th><th>Última · iter.</th></tr></thead>`; const tb=document.createElement('tbody');
     arr.forEach(ent=>{ const tr=document.createElement('tr'); tr.setAttribute('role','button'); tr.setAttribute('tabindex','0'); if(closedView) tr.className='ed-closed';
-      const dl=edDeadlineInfo(ent); const nextTxt=(ent.nextStep||'').trim()?escapeHtml(ent.nextStep.trim()):'<span class="ed-nonext">—</span>'; const dlBadge=dl?` <span class="ed-dl-badge ${dl.cls}">${escapeHtml(dl.txt)}</span>`:(ent.deadline?` <span class="ed-dl-badge">${escapeHtml(fmtWhen(new Date(ent.deadline+'T00:00').getTime()))}</span>`:'');
-      tr.innerHTML=`<td class="ed-c1">${escapeHtml(edEntrySecondary(ent))}</td><td><span class="edchip edst-${ent.status}">${ED_STATE_TITLE[ent.status]||ent.status}</span></td>${closedView?'':`<td class="ed-c3">${nextTxt}${dlBadge}</td>`}`;
+      const nUp=(ent.updates||[]).length;
+      tr.innerHTML=`<td class="ed-c1">${escapeHtml(edEntrySecondary(ent))}</td><td><span class="edchip edst-${ent.status}">${ED_STATE_TITLE[ent.status]||ent.status}</span></td><td class="ed-c4">${escapeHtml(fmtWhen(edLastUpdate(ent)))}${nUp?(' · '+nUp):''}</td>`;
       const open=()=>{ edEntryId=ent.id; renderEditorialesPortada(); }; tr.onclick=open; tr.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
       tb.appendChild(tr); });
     table.appendChild(tb); wrap.appendChild(table); return wrap; };
@@ -1515,7 +1515,6 @@ function renderEdDetailPage(){
   ptBack(inner, backLabel, ()=>{ edEntryId=null; renderEditorialesPortada(); });
   const g=allGames().find(x=>x.id===ent.gameId); const gcolor=(g&&g.color)||colorFor(ent.gameName||'');
   const updates=(ent.updates||[]).slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-  const dl=edDeadlineInfo(ent);
   const logRows = updates.map(u=>{ const d=edDirOf(u); return `<tr class="dir-${d}"><td class="lg-date">${escapeHtml(fmtWhen(u.createdAt))}</td><td class="lg-dir"><button class="ed-dir-chip dir-${d}" data-id="${u.id}" title="Cambiar quién">${ED_DIR_SHORT[d]}</button>${u.fromFair?' <span class="ed-tag">feria</span>':''}</td><td class="lg-txt">${escapeHtml(u.text||'')}</td><td class="lg-x"><button class="ed-up-x" data-id="${u.id}" title="Eliminar">✕</button></td></tr>`; }).join('');
   const logHtml = updates.length ? `<table class="ed-logtable"><thead><tr><th>Fecha</th><th>Quién</th><th>Comentario</th><th></th></tr></thead><tbody>${logRows}</tbody></table>` : '<div style="font-size:12.5px;color:var(--faint);">Sin iteraciones todavía.</div>';
   const rel=edRelatedTasks(ent); const pendT=rel.filter(t=>!t.done), doneT=rel.filter(t=>t.done);
@@ -1526,8 +1525,6 @@ function renderEdDetailPage(){
   body.innerHTML=`
     <div class="field" style="margin-top:10px;"><label>Editorial</label><input class="ap-in" id="edEd" value="${escapeHtml(ent.editorial||'')}"></div>
     <div class="field"><label>Estado</label><div class="states">${ED_STATES.map(([k,l])=>`<button class="st edst edst-${k} ${ent.status===k?'on':''}" data-s="${k}">${l}</button>`).join('')}</div></div>
-    <div class="ed-next"><div class="ed-next-h">▶ Siguiente paso</div><input class="ap-in" id="edNext" placeholder="p. ej. Esperar feedback de las reglas" value="${escapeHtml(ent.nextStep||'')}">
-      <div class="ed-dl-row"><label class="ed-dl-l">Fecha límite</label><input class="ap-in" id="edDeadline" type="date" value="${escapeHtml(ent.deadline||'')}">${dl?`<span class="ed-dl-badge ${dl.cls}">${escapeHtml(dl.txt)}</span>`:''}</div></div>
     <div class="field"><label>Tareas pendientes (enlazadas con el juego)</label>
       <div class="tk-composer"><input class="tk-in" id="edTaskIn" placeholder="Nueva tarea para esta editorial…"><button class="btn tk-add" id="edTaskAdd">Añadir</button></div>
       <div class="tk-list">${pendT.length?pendT.map(taskRow).join(''):'<div class="home-empty" style="padding:6px 0;">Sin tareas pendientes.</div>'}${doneT.length?('<div class="tk-donehdr">Hechas ('+doneT.length+')</div>'+doneT.map(taskRow).join('')):''}</div></div>
@@ -1539,8 +1536,6 @@ function renderEdDetailPage(){
   const reRender=()=>{ renderEdDetailPage(); };
   body.querySelectorAll('.edst').forEach(btn=>btn.onclick=async()=>{ ent.status=btn.dataset.s; await saveLocal(); reRender(); });
   $('edEd').onchange=async()=>{ ent.editorial=$('edEd').value.trim(); await saveLocal(); };
-  $('edNext').onchange=async()=>{ ent.nextStep=$('edNext').value.trim(); await saveLocal(); };
-  $('edDeadline').onchange=async()=>{ ent.deadline=$('edDeadline').value||''; await saveLocal(); reRender(); };
   { const add=async()=>{ const v=$('edTaskIn').value.trim(); if(!v) return; const gg=allGames().find(x=>x.id===ent.gameId); if(!gg){ toast('El juego ya no existe.','warn'); return; } gg.tasks=gg.tasks||[]; gg.tasks.push({ id:uid(), text:v, done:false, createdAt:Date.now(), editorial:ent.editorial }); if(gg.__shared) await saveSharedGame(gg); else await saveLocal(); reRender(); }; $('edTaskAdd').onclick=add; $('edTaskIn').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); add(); } }); }
   body.querySelectorAll('.edtk-cb').forEach(c=>c.onclick=async()=>{ const id=c.dataset.id; const gg=allGames().find(x=>x.id===ent.gameId); if(!gg) return; const t=(gg.tasks||[]).find(x=>x.id===id); if(t){ t.done=!t.done; t.doneAt=t.done?Date.now():null; if(gg.__shared) await saveSharedGame(gg); else await saveLocal(); reRender(); } });
   body.querySelectorAll('.edtk-del').forEach(c=>c.onclick=async()=>{ const id=c.dataset.id; const gg=allGames().find(x=>x.id===ent.gameId); if(!gg) return; gg.tasks=(gg.tasks||[]).filter(x=>x.id!==id); if(gg.__shared) await saveSharedGame(gg); else await saveLocal(); reRender(); });
