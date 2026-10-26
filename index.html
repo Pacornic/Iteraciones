@@ -371,7 +371,10 @@
   .ed-tablewrap{ overflow-x:auto; }
   .ed-minis{ display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
   .ed-mini{ font-size:11.5px; padding:3px 9px; border-radius:7px; background:var(--surface-2); color:var(--muted); border:1px solid var(--border); }
-  .ed-mini.edst-firmado{ border-color:rgba(87,179,148,0.5); } .ed-mini.edst-descartado{ opacity:.55; }
+  .ed-mini.edst-interesado{ color:#f0c078; border-color:rgba(232,163,61,0.35); }
+  .ed-mini.edst-proto_dejado{ color:#8fd3b6; border-color:rgba(87,179,148,0.35); }
+  .ed-mini.edst-firmado{ color:#8fd3b6; border-color:rgba(87,179,148,0.6); background:var(--teal-dim); }
+  .ed-mini.edst-descartado{ color:var(--faint); border-style:dashed; border-color:rgba(217,99,74,0.4); opacity:.75; text-decoration:line-through; }
   .ed-table .ed-c3{ color:var(--text); font-size:12.5px; } .ed-nonext{ color:var(--faint); }
   .st.edst.on.edst-interesado{ background:var(--amber); color:#2a1c06; border-color:transparent; }
   .st.edst.on.edst-conversando{ background:var(--blue); color:#08222e; border-color:transparent; }
@@ -1453,10 +1456,12 @@ function renderEdMain(){
   const map=new Map(); ents.forEach(ent=>{ const k=edGroupKeyOf(ent); if(!map.has(k)) map.set(k,[]); map.get(k).push(ent); });
   const groups=[...map.entries()].map(([k,list])=>({k,list})).sort((a,b)=>edGroupLabel(a.list).localeCompare(edGroupLabel(b.list),'es',{sensitivity:'base'}));
   const grid=document.createElement('div'); grid.className='pt-grid';
-  groups.forEach(gr=>{ const list=gr.list; const activeN=list.filter(e=>e.status!=='firmado'&&e.status!=='descartado').length; const overdue=list.some(e=>{ const d=edDeadlineInfo(e); return d&&d.cls==='over'; });
+  const edRank={ interesado:0, proto_dejado:0, enviado:1, negociando:1, firmado:2, descartado:3 };
+  groups.forEach(gr=>{ const list=gr.list; const activeN=list.filter(e=>e.status!=='firmado'&&e.status!=='descartado').length; const discN=list.filter(e=>e.status==='descartado').length; const overdue=list.some(e=>{ const d=edDeadlineInfo(e); return d&&d.cls==='over'; });
     const card=document.createElement('div'); card.className='gcard'; card.setAttribute('role','button'); card.setAttribute('tabindex','0'); card.style.setProperty('--sp', edGroupColor(list));
-    const chips=list.map(e=>`<span class="ed-mini edst-${e.status}">${escapeHtml(edEntrySecondary(e))}</span>`).join('');
-    card.innerHTML=`<div class="gtop"><span class="gname" style="${chipStyle(edGroupColor(list))}">${escapeHtml(edGroupLabel(list))}</span><span class="gsum">${activeN} activo(s)${overdue?' · ⚠':''}</span></div><div class="ed-minis">${chips}</div>`;
+    const sorted=list.slice().sort((a,b)=> ((edRank[a.status]??1)-(edRank[b.status]??1)) || edEntrySecondary(a).localeCompare(edEntrySecondary(b),'es',{sensitivity:'base'}));
+    const chips=sorted.map(e=>{ const mk = e.status==='descartado'?'✕ ':(e.status==='firmado'?'✓ ':''); return `<span class="ed-mini edst-${e.status}" title="${escapeHtml(ED_STATE_TITLE[e.status]||e.status)}">${mk}${escapeHtml(edEntrySecondary(e))}</span>`; }).join('');
+    card.innerHTML=`<div class="gtop"><span class="gname" style="${chipStyle(edGroupColor(list))}">${escapeHtml(edGroupLabel(list))}</span><span class="gsum">${activeN} activo(s)${discN?(' · '+discN+' descartada(s)'):''}${overdue?' · ⚠':''}</span></div><div class="ed-minis">${chips}</div>`;
     const open=()=>{ edGroupKey=gr.k; edEntryId=null; renderEditorialesPortada(); }; card.onclick=open; card.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
     grid.appendChild(card); });
   inner.appendChild(grid); host.appendChild(inner);
@@ -1688,7 +1693,7 @@ function openApptDetail(f, a, isNew){
   const gamesHtml=(a.games||[]).map((e,i)=>`<div class="ag-item">
       <div class="ag-h"><span class="ag-name">${escapeHtml(e.gameName||gameNameById(e.gameId)||'—')}</span><button class="ag-rm" data-i="${i}" title="Quitar juego">✕</button></div>
       <div class="fstates">${FAIR_STATES.map(([k,l])=>`<button class="fst f-${k}${e.estado===k?' on':''}" data-i="${i}" data-e="${k}">${l}</button>`).join('')}</div>
-      ${e.estado==='interesado'?`<div class="ag-follow"><div class="ag-follow-h">Pendiente</div>${FOLLOW_OPTS.map(([k,l])=>`<label class="fchk"><input type="checkbox" class="ag-fl" data-i="${i}" data-k="${k}" ${(e.follow||[]).includes(k)?'checked':''}> <span>${escapeHtml(l)}</span></label>`).join('')}</div>`:''}
+      ${(e.estado==='interesado'||e.estado==='proto_dejado')?`<div class="ag-follow"><div class="ag-follow-h">Pendiente</div>${FOLLOW_OPTS.filter(([k])=> e.estado==='proto_dejado' ? k!=='proto' : true).map(([k,l])=>`<label class="fchk"><input type="checkbox" class="ag-fl" data-i="${i}" data-k="${k}" ${(e.follow||[]).includes(k)?'checked':''}> <span>${escapeHtml(l)}</span></label>`).join('')}</div>`:''}
       <textarea class="ag-fb" data-i="${i}" placeholder="Feedback…">${escapeHtml(e.feedback||'')}</textarea>
     </div>`).join('');
   b.innerHTML=`<label class="cd-label">Editorial</label><input class="cd-title" id="apEd" placeholder="Nombre de la editorial…">
@@ -1707,10 +1712,10 @@ function openApptDetail(f, a, isNew){
   { let dp='',hh='',mn=''; const m=String(a.when||'').match(/^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2}))?/); if(m){ dp=m[1]; hh=m[2]||''; mn=m[3]||''; } $('apDate').value=dp; $('apHour').value=hh; const ms=$('apMin'); if(mn && !Array.from(ms.options).some(o=>o.value===mn)){ const o=document.createElement('option'); o.value=mn; o.textContent=mn; ms.appendChild(o); } ms.value=mn; }
   const commit=()=>{ a.editorial=$('apEd').value.trim(); const d=$('apDate').value, hh=$('apHour').value, mn=$('apMin').value; const t=(hh!==''||mn!=='')?((hh||'00')+':'+(mn||'00')):''; a.when = d ? (t? d+'T'+t : d) : ''; a.place=$('apPlace').value.trim(); a.contact=$('apContact').value.trim(); b.querySelectorAll('.ag-fb').forEach(x=>{ const i=+x.dataset.i; if(a.games[i]) a.games[i].feedback=x.value.replace(/\s+$/,''); }); };
   b.querySelectorAll('.fst').forEach(btn=>btn.onclick=()=>{ commit(); const i=+btn.dataset.i; const e=a.games[i]; if(e){ e.estado=btn.dataset.e;
-      if(e.estado==='interesado'){ e.follow=e.follow||[]; ensureEditorialEntry(a.editorial, e.gameId, e.gameName, seedFromAppt(f,a,e), 'interesado'); applyFollowTask(e, a.editorial); }
-      else { e.follow=[]; applyFollowTask(e, a.editorial); if(e.estado==='proto_dejado'){ ensureEditorialEntry(a.editorial, e.gameId, e.gameName, seedFromAppt(f,a,e), 'proto_dejado'); } }
+      if(e.estado==='interesado'||e.estado==='proto_dejado'){ e.follow=e.follow||[]; if(e.estado==='proto_dejado') e.follow=e.follow.filter(k=>k!=='proto'); ensureEditorialEntry(a.editorial, e.gameId, e.gameName, seedFromAppt(f,a,e), e.estado); applyFollowTask(e, a.editorial); }
+      else { e.follow=[]; applyFollowTask(e, a.editorial); }
     } saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
-  b.querySelectorAll('.ag-fl').forEach(chk=>chk.onchange=()=>{ commit(); const i=+chk.dataset.i, k=chk.dataset.k; const e=a.games[i]; if(!e) return; e.follow=e.follow||[]; if(chk.checked){ if(!e.follow.includes(k)) e.follow.push(k); } else { e.follow=e.follow.filter(x=>x!==k); } ensureEditorialEntry(a.editorial, e.gameId, e.gameName, seedFromAppt(f,a,e)); applyFollowTask(e, a.editorial); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
+  b.querySelectorAll('.ag-fl').forEach(chk=>chk.onchange=()=>{ commit(); const i=+chk.dataset.i, k=chk.dataset.k; const e=a.games[i]; if(!e) return; e.follow=e.follow||[]; if(chk.checked){ if(!e.follow.includes(k)) e.follow.push(k); } else { e.follow=e.follow.filter(x=>x!==k); } ensureEditorialEntry(a.editorial, e.gameId, e.gameName, seedFromAppt(f,a,e), e.estado==='proto_dejado'?'proto_dejado':'interesado'); applyFollowTask(e, a.editorial); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
   b.querySelectorAll('.ag-rm').forEach(btn=>btn.onclick=()=>{ commit(); const i=+btn.dataset.i; a.games.splice(i,1); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
   { const sel=$('apAddG'); if(sel) sel.onchange=()=>{ const id=sel.value; if(!id) return; commit(); a.games.push({ gameId:id, gameName:gameNameById(id), estado:'pendiente', feedback:'' }); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); }; }
   $('apSave').onclick=async()=>{ commit(); if(!a.editorial){ $('apEd').focus(); toast('Pon el nombre de la editorial.','warn'); return; } const conflicts=apptConflicts(f,a); if(conflicts.length){ const ms=apptMs(a.when); const overlap=conflicts.some(c=>apptMs(c.when)===ms); const list=conflicts.map(c=>`${c.editorial||'(sin editorial)'} (${fmtAppt(c.when)})`).join('; '); const ok=await confirmDialog(`${overlap?'Esta cita se solapa con':'Esta cita queda a menos de 30 min de'}: ${list}. ¿Guardar igualmente?`, { okLabel:'Guardar igualmente', danger:false }); if(!ok) return; } await saveAppt(f,a); closePanel(); renderFairBoard(); toast('Cita guardada.'); };
