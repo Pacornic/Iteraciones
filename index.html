@@ -1517,17 +1517,12 @@ function renderEdDetailPage(){
   const updates=(ent.updates||[]).slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
   const logRows = updates.map(u=>{ const d=edDirOf(u); return `<tr class="dir-${d}"><td class="lg-date">${escapeHtml(fmtWhen(u.createdAt))}</td><td class="lg-dir"><button class="ed-dir-chip dir-${d}" data-id="${u.id}" title="Cambiar quién">${ED_DIR_SHORT[d]}</button>${u.fromFair?' <span class="ed-tag">feria</span>':''}</td><td class="lg-txt">${escapeHtml(u.text||'')}</td><td class="lg-x"><button class="ed-up-x" data-id="${u.id}" title="Eliminar">✕</button></td></tr>`; }).join('');
   const logHtml = updates.length ? `<table class="ed-logtable"><thead><tr><th>Fecha</th><th>Quién</th><th>Comentario</th><th></th></tr></thead><tbody>${logRows}</tbody></table>` : '<div style="font-size:12.5px;color:var(--faint);">Sin iteraciones todavía.</div>';
-  const rel=edRelatedTasks(ent); const pendT=rel.filter(t=>!t.done), doneT=rel.filter(t=>t.done);
-  const taskRow=(t)=>`<div class="tk-row${t.done?' done':''}"><button class="tk-cb${t.done?' on':''} edtk-cb" data-id="${t.id}">✓</button><span class="tk-tx">${escapeHtml(t.text||'')}</span><button class="tk-del edtk-del" data-id="${t.id}">✕</button></div>`;
   const header=document.createElement('div'); header.className='pt-secrow'; header.innerHTML=`<span class="gname" style="${chipStyle(gcolor)};font-family:'Fraunces',serif;font-size:19px;padding:4px 14px;">${escapeHtml(ent.gameName||gameNameById(ent.gameId)||'—')}</span><span style="color:var(--faint);">·</span><span style="font-size:15px;color:var(--muted);">${escapeHtml(ent.editorial||'—')}</span>`;
   inner.appendChild(header);
   const body=document.createElement('div');
   body.innerHTML=`
     <div class="field" style="margin-top:10px;"><label>Editorial</label><input class="ap-in" id="edEd" value="${escapeHtml(ent.editorial||'')}"></div>
     <div class="field"><label>Estado</label><div class="states">${ED_STATES.map(([k,l])=>`<button class="st edst edst-${k} ${ent.status===k?'on':''}" data-s="${k}">${l}</button>`).join('')}</div></div>
-    <div class="field"><label>Tareas pendientes (enlazadas con el juego)</label>
-      <div class="tk-composer"><input class="tk-in" id="edTaskIn" placeholder="Nueva tarea para esta editorial…"><button class="btn tk-add" id="edTaskAdd">Añadir</button></div>
-      <div class="tk-list">${pendT.length?pendT.map(taskRow).join(''):'<div class="home-empty" style="padding:6px 0;">Sin tareas pendientes.</div>'}${doneT.length?('<div class="tk-donehdr">Hechas ('+doneT.length+')</div>'+doneT.map(taskRow).join('')):''}</div></div>
     <div class="field"><label>Añadir iteración</label><textarea id="edNote" style="min-height:62px;" placeholder="Comentario… (qué envío, qué me responden, acuerdos…)"></textarea>
       <div class="ed-dir-pickrow">${ED_DIR.map(([k,l])=>`<button class="ed-dir-pick ${edNewDir===k?'on':''} dir-${k}" data-d="${k}">${l}</button>`).join('')}<button class="btn ed-addbtn" id="edAdd">Añadir al log</button></div></div>
     <div class="field"><label>Historial de iteraciones</label><div id="edTimeline" class="ed-tablewrap">${logHtml}</div></div>
@@ -1536,9 +1531,6 @@ function renderEdDetailPage(){
   const reRender=()=>{ renderEdDetailPage(); };
   body.querySelectorAll('.edst').forEach(btn=>btn.onclick=async()=>{ ent.status=btn.dataset.s; await saveLocal(); reRender(); });
   $('edEd').onchange=async()=>{ ent.editorial=$('edEd').value.trim(); await saveLocal(); };
-  { const add=async()=>{ const v=$('edTaskIn').value.trim(); if(!v) return; const gg=allGames().find(x=>x.id===ent.gameId); if(!gg){ toast('El juego ya no existe.','warn'); return; } gg.tasks=gg.tasks||[]; gg.tasks.push({ id:uid(), text:v, done:false, createdAt:Date.now(), editorial:ent.editorial }); if(gg.__shared) await saveSharedGame(gg); else await saveLocal(); reRender(); }; $('edTaskAdd').onclick=add; $('edTaskIn').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); add(); } }); }
-  body.querySelectorAll('.edtk-cb').forEach(c=>c.onclick=async()=>{ const id=c.dataset.id; const gg=allGames().find(x=>x.id===ent.gameId); if(!gg) return; const t=(gg.tasks||[]).find(x=>x.id===id); if(t){ t.done=!t.done; t.doneAt=t.done?Date.now():null; if(gg.__shared) await saveSharedGame(gg); else await saveLocal(); reRender(); } });
-  body.querySelectorAll('.edtk-del').forEach(c=>c.onclick=async()=>{ const id=c.dataset.id; const gg=allGames().find(x=>x.id===ent.gameId); if(!gg) return; gg.tasks=(gg.tasks||[]).filter(x=>x.id!==id); if(gg.__shared) await saveSharedGame(gg); else await saveLocal(); reRender(); });
   body.querySelectorAll('.ed-dir-pick').forEach(btn=>btn.onclick=()=>{ edNewDir=btn.dataset.d; body.querySelectorAll('.ed-dir-pick').forEach(x=>x.classList.toggle('on', x.dataset.d===edNewDir)); });
   $('edAdd').onclick=async()=>{ const t=$('edNote').value.replace(/\s+$/,''); if(!t) return; ent.updates=ent.updates||[]; ent.updates.push({ id:uid(), text:t, dir:edNewDir, createdAt:Date.now() }); $('edNote').value=''; await saveLocal(); reRender(); };
   body.querySelectorAll('.ed-dir-chip').forEach(c=>c.onclick=async()=>{ const id=c.dataset.id; const u=(ent.updates||[]).find(x=>x.id===id); if(!u) return; const order=['out','in','note']; const cur=edDirOf(u); u.dir=order[(order.indexOf(cur)+1)%order.length]; await saveLocal(); reRender(); });
