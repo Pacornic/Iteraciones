@@ -203,7 +203,7 @@
   .home-note .hn-in:focus{ outline:none; border-color:var(--amber); }
   .home-note .hn-sel{ flex-shrink:0; width:150px; background:var(--surface); border:1px solid var(--border); border-radius:9px; color:var(--muted); font-size:12px; padding:0 8px; }
   .home-note .hn-btn{ flex-shrink:0; }
-  .home-areas{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .home-areas{ display:grid; grid-template-columns:repeat(auto-fit, minmax(210px,1fr)); gap:12px; }
   .home-area{ position:relative; overflow:hidden; background:var(--surface); border:1px solid var(--border); border-radius:13px; padding:15px; cursor:pointer; transition:border-color .15s, transform .12s; }
   .home-area::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--spine,var(--amber)); }
   .home-area:hover{ border-color:#3a4658; transform:translateY(-2px); }
@@ -342,6 +342,26 @@
   .fst.on.f-no{ background:var(--brick); color:#2a0f0a; border-color:transparent; font-weight:600; }
   .fst.on.f-interesado{ background:var(--amber); color:#2a1c06; border-color:transparent; font-weight:600; }
   .fst.on.f-proto{ background:var(--teal); color:#08231c; border-color:transparent; font-weight:600; }
+  .ag-follow{ margin-top:9px; padding:8px 10px; background:var(--amber-dim); border:1px solid rgba(232,163,61,0.35); border-radius:8px; }
+  .ag-follow-h{ font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.8px; text-transform:uppercase; color:#f0c078; margin-bottom:6px; }
+  .fchk{ display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--text); margin:3px 12px 3px 0; cursor:pointer; }
+  .fchk input{ accent-color:var(--amber); }
+  .edchip{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; padding:3px 8px; border-radius:20px; white-space:nowrap; }
+  .edst-interesado{ background:var(--amber-dim); color:#f0c078; } .edst-conversando{ background:rgba(102,182,223,0.16); color:#a6d6ee; }
+  .edst-propuesta{ background:rgba(181,138,223,0.18); color:#cbb3ef; }
+  .edst-firmado{ background:var(--teal-dim); color:#8fd3b6; } .edst-descartado{ background:var(--surface-2); color:var(--faint); }
+  .st.edst{ font-size:11.5px; }
+  .st.edst.on.edst-interesado{ background:var(--amber); color:#2a1c06; border-color:transparent; }
+  .st.edst.on.edst-conversando{ background:var(--blue); color:#08222e; border-color:transparent; }
+  .st.edst.on.edst-propuesta{ background:#b58adf; color:#1c0f2b; border-color:transparent; }
+  .st.edst.on.edst-firmado{ background:var(--teal); color:#08231c; border-color:transparent; }
+  .st.edst.on.edst-descartado{ background:var(--brick); color:#2a0f0a; border-color:transparent; }
+  .ed-up{ border-top:1px solid var(--line); padding:8px 0; }
+  .ed-up:first-child{ border-top:none; }
+  .ed-up-t{ font-size:13px; color:var(--text); white-space:pre-wrap; word-break:break-word; }
+  .ed-up-d{ display:flex; align-items:center; gap:8px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--faint); margin-top:3px; }
+  .ed-up-x{ background:none; border:none; color:var(--faint); cursor:pointer; font-size:10px; margin-left:auto; } .ed-up-x:hover{ color:var(--brick); }
+  .agenda-day.agenda-done{ color:var(--faint); }
 
   .btn{ background:var(--amber); border:none; color:#1a1206; font-weight:600; padding:9px 15px; border-radius:8px; cursor:pointer; font-size:13px; }
   .btn:disabled{ opacity:0.4; cursor:not-allowed; }
@@ -753,8 +773,12 @@ const RB_PLACEHOLDER = Object.fromEntries(RB_SECTIONS.map(([k,,p])=>[k,p]));
 function makeRulebook(c){ return { sections: RB_SECTIONS.map(([k,t])=>({ key:k, title:t, content:(c&&c[k])||'' })) }; }
 const STATES = [['porprobar','Por probar'],['aparcada','Testing'],['funciona','OK'],['descartada','Descartada']];
 const STATE_TITLE = Object.fromEntries(STATES.map(([k,t])=>[k,t]));
-const FAIR_STATES = [['pendiente','Pendiente'],['no','No interesa'],['interesado','Interesado'],['proto','Quiere proto']];
+const FAIR_STATES = [['pendiente','Pendiente'],['interesado','Interesado'],['no','No interesado']];
 const FAIR_STATE_TITLE = Object.fromEntries(FAIR_STATES.map(([k,t])=>[k,t]));
+const FAIR_STATE_RANK = { interesado:0, pendiente:1, no:2 };
+// Opciones de seguimiento cuando una editorial está 'interesado'. 'dejar' no genera tarea.
+const FOLLOW_OPTS = [['dejar','Proto dejado'],['proto','Enviar proto'],['pnp','Enviar PNP'],['reglas','Enviar reglas'],['video','Enviar vídeo'],['sellsheet','Enviar SellSheet']];
+const SEND_LABEL = { proto:'Proto', pnp:'PNP', reglas:'Reglas', video:'Vídeo', sellsheet:'SellSheet' };
 const STATE_COLOR = { porprobar:'var(--violet)', funciona:'var(--teal)', descartada:'var(--brick)', aparcada:'var(--blue)' };
 const OLD_OUTCOME = { pendiente:'porprobar', funciona:'funciona', falla:'descartada', genera:'aparcada' };
 
@@ -870,6 +894,7 @@ const Store = {
   async listSharedGames(){ if(this.backend!=='supabase') return []; const {data,error}=await this.supa.from('shared_games').select('*').order('updated_at',{ascending:false}); if(error) throw error; return data||[]; },
   async createSharedGame(gameObj){ const row={ owner_id:this.userId, owner_email:this.email, data:gameObj, members:[], rev:1, updated_by:this.email, updated_by_name:this.name, updated_at:new Date().toISOString() }; const {data,error}=await this.supa.from('shared_games').insert(row).select().maybeSingle(); if(error) throw error; return data; },
   async updateSharedGame(id,gameObj,expectedRev){ const {data,error}=await this.supa.from('shared_games').update({ data:gameObj, rev:(expectedRev||0)+1, updated_by:this.email, updated_by_name:this.name, updated_at:new Date().toISOString() }).eq('id',id).eq('rev',expectedRev).select(); if(error) throw error; if(!data||!data.length) return { conflict:true }; return { conflict:false, rev:data[0].rev, updated_at:data[0].updated_at }; },
+  async forceUpdateSharedGame(id,gameObj){ const {data:cur}=await this.supa.from('shared_games').select('rev').eq('id',id).maybeSingle(); const rev=cur?cur.rev:0; const {data,error}=await this.supa.from('shared_games').update({ data:gameObj, rev:rev+1, updated_by:this.email, updated_by_name:this.name, updated_at:new Date().toISOString() }).eq('id',id).eq('rev',rev).select(); if(error) throw error; if(!data||!data.length) throw new Error('no se pudo actualizar'); return data[0]; },
   async deleteSharedGame(id){ const {error}=await this.supa.from('shared_games').delete().eq('id',id); if(error) throw error; },
   async inviteToGame(gameId, email, gameName){ const {error}=await this.supa.from('game_invites').insert({ game_id:gameId, email:(email||'').toLowerCase(), inviter_email:this.email, game_name:gameName||'' }); if(error) throw error; },
   async listMyInvites(){ if(this.backend!=='supabase'||!this.email) return []; const {data,error}=await this.supa.from('game_invites').select('*').eq('status','pending'); if(error) throw error; return (data||[]).filter(x=>(x.email||'').toLowerCase()===(this.email||'').toLowerCase()); },
@@ -1023,6 +1048,9 @@ function normalizeStructures(){
     // adaptar changes existentes al modelo nuevo (idea; sin issue/sectionText)
     g.changes.forEach(c=>{ if(c.idea===undefined){ c.idea=c.sectionText||c.issue||c.note||''; ch=true; } if('issue' in c){ delete c.issue; ch=true; } if('sectionText' in c){ delete c.sectionText; ch=true; } if(c.appImpact===undefined){ c.appImpact=!!c.appImplemented; ch=true; } });
   });
+  // Ferias: migrar estados antiguos de cita y asegurar 'follow'.
+  (state.fairs||[]).forEach(f=>{ (f.appointments||[]).forEach(a=>{ (a.games||[]).forEach(e=>{ if(e.estado==='proto'){ e.estado='interesado'; if(!Array.isArray(e.follow)) e.follow=[]; if(!e.follow.includes('proto')) e.follow.push('proto'); ch=true; } if(!Array.isArray(e.follow)){ e.follow=[]; ch=true; } }); }); });
+  if(!Array.isArray(state.editorials)){ state.editorials=[]; ch=true; }
   return ch;
 }
 let storageWarned=false;
@@ -1047,9 +1075,34 @@ async function reloadInvites(){ if(Store.backend!=='supabase'){ myInvites=[]; re
 async function acceptInviteUI(iv){ try{ await Store.acceptInvite(iv.id); }catch(e){ toast('No se pudo aceptar: '+(e.message||e),'warn',6000); return; } await reloadInvites(); await reloadSharedGames(); render(); toast('Invitación aceptada.'); }
 async function declineInviteUI(iv){ try{ await Store.declineInvite(iv.id); }catch(e){ toast('Error: '+(e.message||e),'warn',5000); return; } await reloadInvites(); render(); toast('Invitación rechazada.'); }
 function gameData(g){ const c={}; Object.keys(g||{}).forEach(k=>{ if(!k.startsWith('__')) c[k]=g[k]; }); return c; }
-async function reloadSharedGames(){ if(Store.backend!=='supabase'){ sharedGames=[]; return; } try{ const rows=await Store.listSharedGames(); sharedGames=rows.map(r=>{ const g=Object.assign({}, r.data||{}); if(!g.id) g.id='shared_'+r.id; g.__shared=true; g.__sharedId=r.id; g.__rev=r.rev; g.__owner=r.owner_email; g.__members=r.members||[]; g.__updatedBy=r.updated_by; g.__updatedByName=r.updated_by_name; g.__updatedAt=r.updated_at; return g; }); }catch(e){ sharedGames=[]; } }
-async function saveSharedGame(g){ try{ const res=await Store.updateSharedGame(g.__sharedId, gameData(g), g.__rev); if(res.conflict){ toast('Otro usuario guardó cambios antes; recargo la versión más reciente.','warn',6000); await reloadSharedGames(); render(); return false; } g.__rev=res.rev; g.__updatedAt=res.updated_at; g.__updatedBy=Store.email; g.__updatedByName=Store.name; updateSavedIndicator(); return true; }catch(e){ if(!storageWarned){ storageWarned=true; toast('No se pudo guardar el juego compartido: '+(e.message||e),'warn',6000); } return false; } }
-async function saveState(){ if(appView==='game'){ const cg=currentGame(); if(cg && cg.__shared) return saveSharedGame(cg); } return persistState(); }
+function sharedCacheKey(){ return 'kaizen-shared-'+(Store.userId||Store.email||'anon'); }
+function pendingSharedKey(){ return 'kaizen-shared-pending-'+(Store.userId||Store.email||'anon'); }
+function writeSharedCache(){ try{ localStorage.setItem(sharedCacheKey(), JSON.stringify(sharedGames)); }catch(e){} }
+function readSharedCache(){ try{ const raw=localStorage.getItem(sharedCacheKey()); return raw?JSON.parse(raw):null; }catch(e){ return null; } }
+function readPendingShared(){ try{ const raw=localStorage.getItem(pendingSharedKey()); return raw?JSON.parse(raw):{}; }catch(e){ return {}; } }
+function writePendingShared(p){ try{ localStorage.setItem(pendingSharedKey(), JSON.stringify(p)); }catch(e){} }
+function markPendingShared(g){ const p=readPendingShared(); p[g.__sharedId]=gameData(g); writePendingShared(p); }
+function clearPendingShared(id){ const p=readPendingShared(); if(id in p){ delete p[id]; writePendingShared(p); } }
+function hasPendingShared(){ return Object.keys(readPendingShared()).length>0; }
+function applyPendingShared(){ const p=readPendingShared(); Object.keys(p).forEach(id=>{ const g=sharedGames.find(x=>x.__sharedId===id); if(g) Object.assign(g, p[id]); }); }
+function mapSharedRow(r){ const g=Object.assign({}, r.data||{}); if(!g.id) g.id='shared_'+r.id; g.__shared=true; g.__sharedId=r.id; g.__rev=r.rev; g.__owner=r.owner_email; g.__members=r.members||[]; g.__updatedBy=r.updated_by; g.__updatedByName=r.updated_by_name; g.__updatedAt=r.updated_at; return g; }
+async function reloadSharedGames(){ if(Store.backend!=='supabase'){ sharedGames=[]; return; }
+  if(isOffline()){ sharedGames=readSharedCache()||[]; return; }
+  try{ const rows=await withTimeout(Store.listSharedGames(), 5000); sharedGames=rows.map(mapSharedRow); applyPendingShared(); writeSharedCache(); }
+  catch(e){ sharedGames=readSharedCache()||[]; } }
+async function saveSharedGame(g){
+  g.touchedAt=Date.now();
+  if(isOffline()){ markPendingShared(g); g.__updatedAt=new Date().toISOString(); g.__updatedBy=Store.email; g.__updatedByName=Store.name; writeSharedCache(); updateSavedIndicator(); return true; }
+  try{ const res=await Store.updateSharedGame(g.__sharedId, gameData(g), g.__rev); if(res.conflict){ toast('Otro usuario guardó cambios antes; recargo la versión más reciente.','warn',6000); await reloadSharedGames(); render(); return false; } g.__rev=res.rev; g.__updatedAt=res.updated_at; g.__updatedBy=Store.email; g.__updatedByName=Store.name; clearPendingShared(g.__sharedId); writeSharedCache(); updateSavedIndicator(); return true; }
+  catch(e){ /* fallo de red: encolar como offline, no perder el cambio */ markPendingShared(g); writeSharedCache(); updateSavedIndicator(); return true; } }
+async function syncPendingShared(){ if(Store.backend!=='supabase' || isOffline() || !hasPendingShared()) return;
+  const p=readPendingShared(); const ids=Object.keys(p);
+  const ok=await confirmDialog('Tienes cambios sin conexión en '+ids.length+' proyecto(s) compartido(s). ¿Subirlos ahora? Ante un conflicto se conservará tu versión más reciente.', { okLabel:'Sincronizar', danger:false });
+  if(!ok) return;
+  let fail=0; for(const id of ids){ try{ await Store.forceUpdateSharedGame(id, p[id]); clearPendingShared(id); }catch(e){ fail++; } }
+  await reloadSharedGames(); render(); toast(fail?('Sincronizado con '+fail+' error(es).'):'Compartidos sincronizados.'); }
+window.addEventListener('online', ()=>{ syncPendingShared(); });
+async function saveState(){ if(appView==='game'){ const cg=currentGame(); if(cg){ cg.touchedAt=Date.now(); if(cg.__shared) return saveSharedGame(cg); } } return persistState(); }
 /* ---- Capa offline: copia local de los datos privados + sincronización simple ---- */
 function cacheKey(){ return 'kaizen-cache-'+(Store.userId||Store.email||'anon'); }
 function writeStateCache(){ try{ localStorage.setItem(cacheKey(), JSON.stringify({ t:state.updatedAt||Date.now(), data:state })); }catch(e){} }
@@ -1083,13 +1136,15 @@ function lastVersion(g){ return g.rulebookVersions.length ? g.rulebookVersions.s
 function hasUnsaved(g){ if(g.pendingChanges.length) return true; const lv=lastVersion(g); if(!lv) return g.rulebook.sections.some(s=>s.content.trim()); return g.rulebook.sections.some(s=>{ const o=lv.sections.find(x=>x.key===s.key); return (o?o.content:'')!==s.content; }); }
 
 /* ---------- Render ---------- */
-function render(){ const isP=(appView==='home'||appView==='design'||appView==='ferias'); document.body.classList.toggle('view-home', isP); document.body.classList.toggle('view-game', !isP); if(appView==='home') renderHomeHub(); else if(appView==='design') renderDesignPortada(); else if(appView==='ferias') renderFeriasPortada(); else if(appView==='fair') renderFairBoard(); else renderBoard(); }
+function render(){ const isP=(appView==='home'||appView==='design'||appView==='ferias'||appView==='editoriales'); document.body.classList.toggle('view-home', isP); document.body.classList.toggle('view-game', !isP); if(appView==='home') renderHomeHub(); else if(appView==='design') renderDesignPortada(); else if(appView==='ferias') renderFeriasPortada(); else if(appView==='editoriales') renderEditorialesPortada(); else if(appView==='fair') renderFairBoard(); else renderBoard(); }
 function openArea(v){ appView=v; closePanel(); render(); }
 function goBack(){ if(appView==='game') appView='design'; else if(appView==='fair') appView='ferias'; else appView='home'; closePanel(); render(); }
 
 /* ---------- Portada ---------- */
-function latestTouch(g){ let t=0; (g.changes||[]).forEach(c=>{ t=Math.max(t,c.updatedAt||c.createdAt||0); }); (g.rulebookVersions||[]).forEach(v=>{ t=Math.max(t,v.updatedAt||v.createdAt||0); }); if(g.proto&&g.proto.updatedAt) t=Math.max(t,g.proto.updatedAt); return t; }
-function recentOf(g){ return g.__shared ? (g.__updatedAt?new Date(g.__updatedAt).getTime():0) : latestTouch(g); }
+function latestTouch(g){ let t=0; const scan=(arr)=>{ (arr||[]).forEach(x=>{ if(!x) return; t=Math.max(t, x.updatedAt||0, x.createdAt||0, x.doneAt||0); }); };
+  scan(g.changes); (g.rulebookVersions||[]).forEach(v=>{ t=Math.max(t,v.updatedAt||v.createdAt||0); }); scan(g.tasks); scan(g.posts);
+  if(g.proto&&g.proto.updatedAt) t=Math.max(t,g.proto.updatedAt); if(g.touchedAt) t=Math.max(t,g.touchedAt); return t; }
+function recentOf(g){ const base = (g.__shared && g.__updatedAt) ? new Date(g.__updatedAt).getTime() : 0; return Math.max(base, latestTouch(g)); }
 function byRecent(a,b){ return recentOf(b)-recentOf(a); }
 function goHome(){ appView='home'; closePanel(); render(); }
 function openGame(id){ const own=state.games.some(x=>x.id===id); state.currentGameId=id; currentTab='inicio'; rbView='draft'; rbVersionId=null; appView='game'; closePanel(); if(own) saveState(); render(); }
@@ -1197,6 +1252,11 @@ function areaCard(title,desc,meta,color,fn){
 }
 function hsec(text){ const d=document.createElement('div'); d.className='pt-sec home-sec'; d.textContent=text; return d; }
 function nextFair(){ const today=new Date(); today.setHours(0,0,0,0); let best=null; (state.fairs||[]).filter(f=>!f.past).forEach(f=>{ if(!f.start) return; const d=new Date(f.start+'T00:00'); if(isNaN(d.getTime())) return; const diff=Math.round((d-today)/86400000); if(diff>=0 && (!best||diff<best.diff)) best={f,diff}; }); return best; }
+// Feria en curso (hoy entre inicio y fin) o, si no hay, la próxima. null si ninguna.
+function fairOngoingOrNext(){ const today=new Date(); today.setHours(0,0,0,0); let ongoing=null, next=null;
+  (state.fairs||[]).filter(f=>!f.past).forEach(f=>{ if(!f.start) return; const s=new Date(f.start+'T00:00'); const e=new Date((f.end||f.start)+'T00:00'); if(isNaN(s.getTime())) return; if(today>=s && today<=e){ if(!ongoing) ongoing=f; } else if(s>today){ const diff=Math.round((s-today)/86400000); if(!next||diff<next.diff) next={f,diff}; } });
+  if(ongoing) return { f:ongoing, ongoing:true, diff:0 };
+  return next ? { f:next.f, ongoing:false, diff:next.diff } : null; }
 function metricTile(n,label,cls,fn){ const d=document.createElement('div'); d.className='mt'+(fn?' clk':''); d.innerHTML=`<div class="n ${cls||''}">${escapeHtml(String(n))}</div><div class="l">${escapeHtml(label)}</div>`; if(fn) d.onclick=fn; return d; }
 function buildQuickNote(){ const w=document.createElement('div'); w.className='home-note'; const inp=document.createElement('input'); inp.className='hn-in'; inp.placeholder='Suelta una idea…';
   const sel=document.createElement('select'); sel.className='hn-sel'; sel.innerHTML='<option value="draft">→ Draft (nuevo)</option>'+state.games.filter(g=>(g.stage||'active')==='active').concat(sharedGames).map(g=>`<option value="${g.id}">→ ${escapeHtml(g.name)}</option>`).join('');
@@ -1218,7 +1278,8 @@ function buildQuickTask(){ const w=document.createElement('div'); w.className='h
   bt.onclick=go; inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } });
   w.appendChild(inp); w.appendChild(sel); w.appendChild(bt); return w; }
 function homeAreaDiseno(){ const stg=g=>g.stage||'active'; const active=state.games.filter(g=>stg(g)==='active').concat(sharedGames); const draftN=state.games.filter(g=>stg(g)==='draft').length; const pausedN=state.games.filter(g=>stg(g)==='paused').length; const recent=active.slice().sort(byRecent).slice(0,5); const c=document.createElement('div'); c.className='home-area'; c.style.setProperty('--spine','#e8a33d'); c.setAttribute('role','button'); c.setAttribute('tabindex','0'); c.innerHTML=`<svg class="ha-em" viewBox="0 0 24 24" fill="none" stroke="#e8a33d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18h5M10 21h4"/><path d="M12 3a6 6 0 0 0-3.8 10.7c.7.6 1.1 1.4 1.3 2.3h5c.2-.9.6-1.7 1.3-2.3A6 6 0 0 0 12 3z"/></svg><h3>Diseño</h3><div class="ha-d">Ideas, reglas, Board y prototipos.</div><div class="ha-s">${active.length} juego(s) activo(s)${draftN?(' · '+draftN+' en Draft'):''}${pausedN?(' · '+pausedN+' en pausa'):''}</div><div class="ha-spines">${recent.map(g=>`<i style="background:${g.color||'#e8a33d'}"></i>`).join('')}</div>`; const go=()=>openArea('design'); c.onclick=go; c.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } }; return c; }
-function homeAreaFerias(nf){ const upFairs=(state.fairs||[]).filter(f=>!f.past); const up=upFairs.length; const pendCitas=upFairs.reduce((s,f)=>s+(f.appointments||[]).filter(a=>(a.state||'pendiente')==='pendiente').length,0); const c=document.createElement('div'); c.className='home-area'; c.style.setProperty('--spine','#66b6df'); c.setAttribute('role','button'); c.setAttribute('tabindex','0'); c.innerHTML=`<svg class="ha-em" viewBox="0 0 24 24" fill="none" stroke="#66b6df" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg><h3>Ferias</h3><div class="ha-d">Citas con editoriales y feedback.</div><div class="ha-s">${up} próxima(s)${pendCitas?(' · '+pendCitas+' cita(s) pendiente(s)'):''}</div>${nf?`<span class="ha-fair">◷ ${escapeHtml(nf.f.name)} · en ${nf.diff} días</span>`:`<span class="ha-fair off">Sin ferias próximas</span>`}`; const go=()=>openArea('ferias'); c.onclick=go; c.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } }; return c; }
+function homeAreaFerias(nf){ const upFairs=(state.fairs||[]).filter(f=>!f.past); const up=upFairs.length; const pendCitas=upFairs.reduce((s,f)=>s+(f.appointments||[]).filter(a=>!a.done).length,0); const c=document.createElement('div'); c.className='home-area'; c.style.setProperty('--spine','#66b6df'); c.setAttribute('role','button'); c.setAttribute('tabindex','0'); c.innerHTML=`<svg class="ha-em" viewBox="0 0 24 24" fill="none" stroke="#66b6df" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg><h3>Ferias</h3><div class="ha-d">Citas con editoriales y feedback.</div><div class="ha-s">${up} próxima(s)${pendCitas?(' · '+pendCitas+' cita(s) pendiente(s)'):''}</div>${nf?(nf.ongoing?`<span class="ha-fair">● En curso: ${escapeHtml(nf.f.name)}</span>`:`<span class="ha-fair">◷ ${escapeHtml(nf.f.name)} · en ${nf.diff} días</span>`):`<span class="ha-fair off">Sin ferias próximas</span>`}`; const go=()=>openArea('ferias'); c.onclick=go; c.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } }; return c; }
+function homeAreaEditoriales(){ const ents=(state.editorials||[]); const activeN=ents.filter(e=>e.status!=='descartado'&&e.status!=='firmado').length; const games=new Set(ents.map(e=>e.gameId)); const c=document.createElement('div'); c.className='home-area'; c.style.setProperty('--spine','#b58adf'); c.setAttribute('role','button'); c.setAttribute('tabindex','0'); c.innerHTML=`<svg class="ha-em" viewBox="0 0 24 24" fill="none" stroke="#b58adf" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h11a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2z"/><path d="M17 8h3v9a2 2 0 0 1-2 2M8 8h5M8 11h5"/></svg><h3>Editoriales</h3><div class="ha-d">Seguimiento de juegos con editoriales interesadas.</div><div class="ha-s">${ents.length} seguimiento(s)${games.size?(' · '+games.size+' juego(s)'):''}</div>${activeN?`<span class="ha-fair">● ${activeN} activo(s)</span>`:`<span class="ha-fair off">Sin seguimientos activos</span>`}`; const go=()=>openArea('editoriales'); c.onclick=go; c.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } }; return c; }
 function homeAttentionItems(){ const items=[]; const act=g=>g.__shared||((g.stage||'active')==='active'); allGames().filter(act).forEach(g=>{ const n=(g.changes||[]).filter(c=>c.state==='porprobar'||c.state==='aparcada').length; if(n>0) items.push({ic:'○',tx:n+' idea(s) pendiente(s) en '+g.name, go:()=>openGame(g.id)}); }); return items; }
 function buildAtencion(){ const box=document.createElement('div'); box.className='home-box'; const items=homeAttentionItems(); if(!items.length){ const e=document.createElement('div'); e.className='home-empty'; e.textContent='Nada pendiente ✓'; box.appendChild(e); return box; } items.slice(0,6).forEach(it=>{ const r=document.createElement('div'); r.className='hb-r clk'; r.innerHTML=`<span class="hb-ic">${it.ic}</span><span class="hb-tx">${escapeHtml(it.tx)}</span><span class="hb-go">→</span>`; r.onclick=it.go; box.appendChild(r); }); return box; }
 function buildActividad(){ const box=document.createElement('div'); box.className='home-box'; const mine=(Store.email||'').toLowerCase(); const acts=sharedGames.filter(g=>(g.__updatedBy||'')&&(g.__updatedBy||'').toLowerCase()!==mine).slice().sort((a,b)=>(new Date(b.__updatedAt||0))-(new Date(a.__updatedAt||0))).slice(0,6); if(!acts.length){ const e=document.createElement('div'); e.className='home-empty'; e.textContent='Sin actividad reciente.'; box.appendChild(e); return box; } acts.forEach(g=>{ const who=g.__updatedByName||atFor(g.__updatedBy)||''; const t=g.__updatedAt?fmtWhen(new Date(g.__updatedAt).getTime()):''; const r=document.createElement('div'); r.className='hb-r clk'; r.innerHTML=`<span class="hb-tx"><b>${escapeHtml(who)}</b> · ${escapeHtml(g.name)}</span><span class="hb-tm">${escapeHtml(t)}</span>`; r.onclick=()=>openGame(g.id); box.appendChild(r); }); return box; }
@@ -1238,19 +1299,19 @@ function renderHomeHub(){
   const stg=g=>g.stage||'active';
   const activeN=state.games.filter(g=>stg(g)==='active').length + sharedGames.length;
   const porProbar=allGames().reduce((s,g)=>s+(g.changes||[]).filter(c=>c.state==='porprobar').length,0);
-  const nf=nextFair();
+  const nf=fairOngoingOrNext();
   inner.appendChild(hsec('De un vistazo'));
   const mt=document.createElement('div'); mt.className='home-metrics';
   mt.appendChild(metricTile(activeN,'juegos activos','amber',()=>openArea('design')));
   mt.appendChild(metricTile(porProbar,'ideas por probar','',null));
-  mt.appendChild(nf?metricTile(nf.diff+'d','para '+nf.f.name,'blue',()=>openFair(nf.f.id)):metricTile('—','sin ferias próximas','off',()=>openArea('ferias')));
+  mt.appendChild(nf?metricTile(nf.ongoing?'hoy':(nf.diff+'d'), (nf.ongoing?'en curso: ':'para ')+nf.f.name,'blue',()=>openFair(nf.f.id)):metricTile('—','sin ferias próximas','off',()=>openArea('ferias')));
   inner.appendChild(mt);
   inner.appendChild(hsec('Idea rápida'));
   inner.appendChild(buildQuickNote());
   inner.appendChild(hsec('Tarea rápida'));
   inner.appendChild(buildQuickTask());
   inner.appendChild(hsec('Tus áreas'));
-  const ag=document.createElement('div'); ag.className='home-areas'; ag.appendChild(homeAreaDiseno()); ag.appendChild(homeAreaFerias(nf)); inner.appendChild(ag);
+  const ag=document.createElement('div'); ag.className='home-areas'; ag.appendChild(homeAreaDiseno()); ag.appendChild(homeAreaFerias(nf)); ag.appendChild(homeAreaEditoriales()); inner.appendChild(ag);
   inner.appendChild(hsec('Tareas pendientes'));
   const tph=document.createElement('div'); tph.className='home-tasks'; renderHomeTareas(tph); inner.appendChild(tph);
   const two=document.createElement('div'); two.className='home-two';
@@ -1311,12 +1372,90 @@ function renderFeriasPortada(){
     const pgrid=document.createElement('div'); pgrid.className='pt-grid'; past.forEach(f=>pgrid.appendChild(fairCard(f))); inner.appendChild(pgrid); }
   host.appendChild(inner);
 }
+let edSub='juego';  // juego | editorial
+function edLastUpdate(ent){ const u=(ent.updates||[]); return u.length?Math.max(...u.map(x=>x.createdAt||0)):(ent.createdAt||0); }
+function renderEditorialesPortada(){
+  const host=$('portada'); host.innerHTML='';
+  const inner=document.createElement('div'); inner.className='pt-inner';
+  ptBack(inner,'← Inicio',goHome);
+  const row=document.createElement('div'); row.className='pt-secrow';
+  const sec=document.createElement('span'); sec.className='pt-sec'; sec.textContent='Editoriales'; row.appendChild(sec); inner.appendChild(row);
+  const tabs=document.createElement('div'); tabs.className='tabs'; tabs.style.padding='0 0 6px';
+  [['juego','Por juego'],['editorial','Por editorial']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(edSub===k?' on':''); b.textContent=l; b.onclick=()=>{ edSub=k; renderEditorialesPortada(); }; tabs.appendChild(b); });
+  inner.appendChild(tabs);
+  const ents=(state.editorials||[]).slice();
+  if(!ents.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Aún no hay seguimientos.<br>Marca una editorial como «Interesado» en una cita de feria y aparecerá aquí.</p>'; inner.appendChild(e); host.appendChild(inner); return; }
+  const grid=document.createElement('div'); grid.className='pt-grid';
+  const groups=new Map();
+  ents.forEach(ent=>{ const key = edSub==='juego' ? (ent.gameId||('name:'+ent.gameName)) : (ent.editorial||'').trim().toLowerCase();
+    if(!groups.has(key)) groups.set(key,[]); groups.get(key).push(ent); });
+  groups.forEach(list=>{
+    list.sort((a,b)=>edLastUpdate(b)-edLastUpdate(a));
+    const headName = edSub==='juego' ? (list[0].gameName||gameNameById(list[0].gameId)||'—') : (list[0].editorial||'—');
+    const color = edSub==='juego' ? (((state.games.find(x=>x.id===list[0].gameId)||{}).color)||colorFor(headName)) : colorFor(headName);
+    const card=document.createElement('div'); card.className='gcard'; card.style.setProperty('--sp', color);
+    const top=document.createElement('div'); top.className='gtop'; top.innerHTML=`<span class="gname" style="${chipStyle(color)}">${escapeHtml(headName)}</span><span class="gsum">${list.length} seguimiento(s)</span>`; card.appendChild(top);
+    list.forEach(ent=>{ const r=document.createElement('div'); r.className='er'; r.setAttribute('role','button'); r.setAttribute('tabindex','0');
+      const sub = edSub==='juego' ? (ent.editorial||'—') : (ent.gameName||gameNameById(ent.gameId)||'—');
+      const nUp=(ent.updates||[]).length;
+      r.innerHTML=`<span class="ed" style="${chipStyle(edSub==='juego'?colorFor(sub):(((state.games.find(x=>x.id===ent.gameId)||{}).color)||colorFor(sub)))}">${escapeHtml(sub)}</span><span class="edchip edst-${ent.status}">${ED_STATE_TITLE[ent.status]||ent.status}</span><span class="er-meta">${nUp?(nUp+' nota(s) · '):''}${escapeHtml(fmtWhen(edLastUpdate(ent)))}</span>`;
+      const open=()=>openEditorialDetail(ent); r.onclick=open; r.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
+      card.appendChild(r); });
+    grid.appendChild(card);
+  });
+  inner.appendChild(grid);
+  host.appendChild(inner);
+}
+let edRef=null;
+function openEditorialDetail(ent){
+  edRef=ent; const p=$('panel'), b=$('panelBody');
+  const updates=(ent.updates||[]).slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  b.innerHTML=`<label class="cd-label">Editorial</label><input class="cd-title" id="edEd" value="${escapeHtml(ent.editorial||'')}">
+    <div class="cd-meta">Juego: ${escapeHtml(ent.gameName||gameNameById(ent.gameId)||'—')}</div>
+    <div class="field"><label>Estado</label><div class="states">${ED_STATES.map(([k,l])=>`<button class="st edst edst-${k} ${ent.status===k?'on':''}" data-s="${k}">${l}</button>`).join('')}</div></div>
+    <div class="field"><label>Añadir nota de seguimiento</label><textarea id="edNote" style="min-height:70px;" placeholder="p. ej. Enviado proto el 3/11; quedamos en feedback en 2 semanas…"></textarea><div style="margin-top:6px;"><button class="btn" id="edAdd">Añadir nota</button></div></div>
+    <div class="field"><label>Historial</label><div id="edTimeline">${updates.length?updates.map(u=>`<div class="ed-up"><div class="ed-up-t">${escapeHtml(u.text||'')}</div><div class="ed-up-d">${escapeHtml(fmtWhen(u.createdAt))}<button class="ed-up-x" data-id="${u.id}" title="Eliminar">✕</button></div></div>`).join(''):'<div style="font-size:12.5px;color:var(--faint);">Sin notas todavía.</div>'}</div></div>
+    <div class="pactions"><button class="btn-danger" id="edDel">Eliminar seguimiento</button></div>`;
+  p.classList.add('open');
+  b.querySelectorAll('.edst').forEach(btn=>btn.onclick=async()=>{ ent.status=btn.dataset.s; await saveLocal(); openEditorialDetail(ent); if(appView==='editoriales') renderEditorialesPortada(); });
+  $('edEd').onchange=async()=>{ ent.editorial=$('edEd').value.trim(); await saveLocal(); };
+  $('edAdd').onclick=async()=>{ const t=$('edNote').value.replace(/\s+$/,''); if(!t) return; ent.updates=ent.updates||[]; ent.updates.push({ id:uid(), text:t, createdAt:Date.now() }); $('edNote').value=''; await saveLocal(); openEditorialDetail(ent); if(appView==='editoriales') renderEditorialesPortada(); };
+  b.querySelectorAll('.ed-up-x').forEach(x=>x.onclick=async()=>{ const id=x.dataset.id; ent.updates=(ent.updates||[]).filter(u=>u.id!==id); await saveLocal(); openEditorialDetail(ent); });
+  $('edDel').onclick=async()=>{ const ok=await confirmDialog('¿Eliminar este seguimiento con la editorial?'); if(!ok) return; state.editorials=(state.editorials||[]).filter(x=>x.id!==ent.id); await saveLocal(); closePanel(); if(appView==='editoriales') renderEditorialesPortada(); toast('Seguimiento eliminado.'); };
+}
 
 /* ---------- Ferias ---------- */
 function currentFair(){ return (state.fairs||[]).find(f=>f.id===currentFairId); }
 function currentFairById(id){ return (state.fairs||[]).find(f=>f.id===id); }
 function allGames(){ return state.games.concat(sharedGames||[]); }
 function gameNameById(id){ const g=allGames().find(x=>x.id===id); return g?g.name:null; }
+/* ---------- Editoriales (seguimiento tras feria) ---------- */
+function edKey(editorial,gameId){ return (editorial||'').trim().toLowerCase()+'\u0001'+(gameId||''); }
+function ensureEditorialEntry(editorial, gameId, gameName){
+  state.editorials=state.editorials||[];
+  const k=edKey(editorial,gameId);
+  let ent=state.editorials.find(x=>edKey(x.editorial,x.gameId)===k);
+  if(!ent){ ent={ id:uid(), editorial:(editorial||'').trim(), gameId, gameName:gameName||gameNameById(gameId)||'—', status:'interesado', createdAt:Date.now(), updates:[] }; state.editorials.push(ent); }
+  return ent;
+}
+const ED_STATES=[['interesado','Interesado'],['conversando','En conversaciones'],['propuesta','Propuesta'],['firmado','Firmado'],['descartado','Descartado']];
+const ED_STATE_TITLE=Object.fromEntries(ED_STATES.map(([k,t])=>[k,t]));
+// Crea/actualiza/borra la tarea automática de envío para una editorial interesada.
+function applyFollowTask(e){
+  const g=allGames().find(x=>x.id===e.gameId); if(!g) return;
+  const sends=(e.follow||[]).filter(k=>k!=='dejar');
+  if(sends.length){
+    const text='Enviar '+sends.map(k=>SEND_LABEL[k]).join(' + ');
+    g.tasks=g.tasks||[];
+    let t = e.taskId ? g.tasks.find(x=>x.id===e.taskId) : null;
+    if(t){ t.text=text; t.done=false; } else { t={ id:uid(), text, done:false, createdAt:Date.now() }; g.tasks.push(t); e.taskId=t.id; }
+    if(g.__shared) saveSharedGame(g); else saveLocal();
+  } else if(e.taskId){
+    const t=(g.tasks||[]).find(x=>x.id===e.taskId);
+    if(t && !t.done){ g.tasks=g.tasks.filter(x=>x.id!==e.taskId); if(g.__shared) saveSharedGame(g); else saveLocal(); }
+    e.taskId=null;
+  }
+}
 function fmtAppt(v){ if(!v) return ''; const dateOnly=/^\d{4}-\d{2}-\d{2}$/.test(v); const d=new Date(dateOnly?v+'T00:00':v); if(isNaN(d.getTime())) return v; const opt=dateOnly?{ weekday:'short', day:'numeric', month:'short' }:{ weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }; let s=d.toLocaleString('es-ES',opt); return s.charAt(0).toUpperCase()+s.slice(1); }
 function hourOptions(){ let o='<option value="">--</option>'; for(let h=0;h<24;h++){ const v=String(h).padStart(2,'0'); o+=`<option value="${v}">${v}</option>`; } return o; }
 function minOptions(){ let o='<option value="">--</option>'; for(let m=0;m<60;m+=5){ const v=String(m).padStart(2,'0'); o+=`<option value="${v}">${v}</option>`; } return o; }
@@ -1329,13 +1468,13 @@ function apptMs(w){ if(!w||!/T\d\d:\d\d/.test(String(w))) return null; const d=n
 function apptConflicts(f,a){ const ms=apptMs(a.when); if(ms==null) return []; return (f.appointments||[]).filter(x=>x!==a && x.id!==a.id).map(x=>({x,m:apptMs(x.when)})).filter(o=>o.m!=null && Math.abs(o.m-ms)<30*60000).map(o=>o.x); }
 function hexToRgba(hex,a){ if(!hex) return 'rgba(102,182,223,'+a+')'; let h=String(hex).replace('#',''); if(h.length===3) h=h.split('').map(c=>c+c).join(''); const n=parseInt(h,16); if(isNaN(n)) return 'rgba(102,182,223,'+a+')'; const r=(n>>16)&255,g=(n>>8)&255,b=n&255; return 'rgba('+r+','+g+','+b+','+a+')'; }
 function chipStyle(color){ return `background:${hexToRgba(color,0.22)};color:${color}`; }
-function fairStats(f){ const appts=(f.appointments||[]); const games=new Set(); let proto=0,inter=0; appts.forEach(a=>(a.games||[]).forEach(e=>{ games.add(e.gameId||('name:'+e.gameName)); if(e.estado==='proto')proto++; else if(e.estado==='interesado')inter++; })); return { appts:appts.length, games:games.size, proto, inter }; }
+function fairStats(f){ const appts=(f.appointments||[]); const games=new Set(); let inter=0; appts.forEach(a=>(a.games||[]).forEach(e=>{ games.add(e.gameId||('name:'+e.gameName)); if(e.estado==='interesado')inter++; })); return { appts:appts.length, games:games.size, inter }; }
 function openFair(id){ currentFairId=id; fairSub='agenda'; appView='fair'; closePanel(); saveState(); render(); }
 function fairCard(f){
   const s=fairStats(f);
   const card=document.createElement('div'); card.className='pt-card'+(f.past?' paused':''); card.setAttribute('role','button'); card.setAttribute('tabindex','0');
   card.style.setProperty('--spine', '#66b6df');
-  card.innerHTML=`<div class="pt-card-top"><span class="pt-ver" style="color:#66b6df;background:rgba(102,182,223,0.14)">Feria</span>${f.past?'<span class="pt-badge pause">✓ pasada</span>':''}${s.proto?`<span class="pt-badge">★ ${s.proto} quiere proto</span>`:''}<button class="pt-mn mn" aria-label="Opciones de ${escapeHtml(f.name)}">⋯</button></div>
+  card.innerHTML=`<div class="pt-card-top"><span class="pt-ver" style="color:#66b6df;background:rgba(102,182,223,0.14)">Feria</span>${f.past?'<span class="pt-badge pause">✓ pasada</span>':''}${s.inter?`<span class="pt-badge">★ ${s.inter} interesado(s)</span>`:''}<button class="pt-mn mn" aria-label="Opciones de ${escapeHtml(f.name)}">⋯</button></div>
     <h3 class="pt-name">${escapeHtml(f.name)}</h3>
     <div class="pt-stats"><span>${s.appts} cita(s)</span><span class="dot2">·</span><span>${s.games} juego(s)</span></div>
     <div class="pt-foot">${f.dates?escapeHtml(f.dates):'Sin fechas'}${f.place?' · '+escapeHtml(f.place):''}</div>`;
@@ -1370,10 +1509,11 @@ function renderFairByGame(f, host){
   if(!map.size){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Tienes citas, pero sin juegos asignados.<br>Abre una cita y añade los juegos que enseñas.</p>'; host.appendChild(e); return; }
   map.forEach(g=>{
     const card=document.createElement('div'); card.className='gcard'; card.style.setProperty('--sp', g.color);
-    const proto=g.rows.filter(r=>r.e.estado==='proto').length, inter=g.rows.filter(r=>r.e.estado==='interesado').length, no=g.rows.filter(r=>r.e.estado==='no').length, pend=g.rows.filter(r=>r.e.estado==='pendiente').length;
-    const sum=[proto?proto+' quiere proto':'',inter?inter+' interesado':'',pend?pend+' pendiente':'',no?no+' no':''].filter(Boolean).join(' · ');
+    const inter=g.rows.filter(r=>r.e.estado==='interesado').length, no=g.rows.filter(r=>r.e.estado==='no').length, pend=g.rows.filter(r=>r.e.estado==='pendiente').length;
+    const sum=[inter?inter+' interesado':'',pend?pend+' pendiente':'',no?no+' no interesado':''].filter(Boolean).join(' · ');
     const top=document.createElement('div'); top.className='gtop'; top.innerHTML=`<span class="gname" style="${chipStyle(g.color)}">${escapeHtml(g.name)}</span><span class="gsum">${sum}</span>`; card.appendChild(top);
-    g.rows.sort((a,b)=>byWhen(a.appt,b.appt));
+    // Orden: no realizadas primero; dentro, por estado (interesado, pendiente, no); las hechas al final.
+    g.rows.sort((a,b)=> ((a.appt.done?1:0)-(b.appt.done?1:0)) || ((FAIR_STATE_RANK[a.e.estado]??9)-(FAIR_STATE_RANK[b.e.estado]??9)) || byWhen(a.appt,b.appt));
     g.rows.forEach(r=>{ const row=document.createElement('div'); row.className='er'+(r.appt.done?' done':''); row.setAttribute('role','button'); row.setAttribute('tabindex','0');
       const metaTxt=[fmtAppt(r.appt.when), r.appt.place, r.appt.contact].filter(Boolean).join(' | ');
       row.innerHTML=`<span class="ed" style="${chipStyle(edColor(ecol,r.appt.editorial))}">${escapeHtml(r.appt.editorial||'—')}</span><span class="fchip f-${r.e.estado}">${FAIR_STATE_TITLE[r.e.estado]||r.e.estado}</span>${metaTxt?`<span class="er-meta">${escapeHtml(metaTxt)}</span>`:''}<button class="apdone${r.appt.done?' on':''}" title="Marcar como realizada" aria-label="Realizada">✓</button>${r.e.feedback?`<span class="fb">${escapeHtml(r.e.feedback)}</span>`:''}`;
@@ -1387,19 +1527,20 @@ function renderFairAgenda(f, host){
   fairToolbar(f, host);
   if(!(f.appointments||[]).length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Sin citas todavía.<br>Pulsa «Nueva cita» para empezar tu agenda.</p>'; host.appendChild(e); return; }
   const ecol=fairEditorialColors(f);
-  const appts=(f.appointments||[]).slice().sort(byWhen);
-  let lastDay=null;
-  appts.forEach(a=>{
-    const dayKey=(a.when&&String(a.when).slice(0,10))||'';
-    if(dayKey!==lastDay){ lastDay=dayKey; const dh=document.createElement('div'); dh.className='agenda-day'; dh.textContent=dayKey?fmtDay(dayKey):'Sin fecha'; host.appendChild(dh); }
+  const all=(f.appointments||[]).slice().sort(byWhen);
+  const apptCard=(a)=>{
     const card=document.createElement('div'); card.className='apcard'+(a.done?' done':''); card.setAttribute('role','button'); card.setAttribute('tabindex','0'); card.style.setProperty('--sp', edColor(ecol,a.editorial));
     const metaTxt=[fmtAppt(a.when), a.place, a.contact].filter(Boolean).join(' | ');
     const games=(a.games||[]).map(e=>`<div class="apg"><span>${escapeHtml(e.gameName||gameNameById(e.gameId)||'—')}</span><span class="fchip f-${e.estado}">${FAIR_STATE_TITLE[e.estado]||e.estado}</span></div>`).join('')||'<div class="apnil">sin juegos asignados</div>';
     card.innerHTML=`<div class="aptop"><button class="apdone${a.done?' on':''}" title="Marcar como realizada" aria-label="Realizada">✓</button><span class="aped" style="${chipStyle(edColor(ecol,a.editorial))}">${escapeHtml(a.editorial||'(sin editorial)')}</span></div>${metaTxt?`<div class="apmeta">${escapeHtml(metaTxt)}</div>`:''}${games}`;
     const open=()=>openApptDetail(f,a,false); card.onclick=open; card.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
-    const chk=card.querySelector('.apdone'); if(chk) chk.onclick=(ev)=>{ ev.stopPropagation(); a.done=!a.done; saveState(); renderFairBoard(); };
-    host.appendChild(card);
-  });
+    const chk=card.querySelector('.apdone'); if(chk) chk.onclick=(ev)=>{ ev.stopPropagation(); a.done=!a.done; a.doneAt=a.done?Date.now():null; saveState(); renderFairBoard(); };
+    return card;
+  };
+  const pend=all.filter(a=>!a.done), done=all.filter(a=>a.done);
+  let lastDay=null;
+  pend.forEach(a=>{ const dayKey=(a.when&&String(a.when).slice(0,10))||''; if(dayKey!==lastDay){ lastDay=dayKey; const dh=document.createElement('div'); dh.className='agenda-day'; dh.textContent=dayKey?fmtDay(dayKey):'Sin fecha'; host.appendChild(dh); } host.appendChild(apptCard(a)); });
+  if(done.length){ const dh=document.createElement('div'); dh.className='agenda-day agenda-done'; dh.textContent='Completadas ('+done.length+')'; host.appendChild(dh); done.slice().sort((a,b)=>((b.doneAt||0)-(a.doneAt||0))).forEach(a=>host.appendChild(apptCard(a))); }
 }
 function saveAppt(f, a){ if(a._new){ delete a._new; f.appointments=f.appointments||[]; f.appointments.push(a); } return saveState(); }
 function openApptDetail(f, a, isNew){
@@ -1409,6 +1550,7 @@ function openApptDetail(f, a, isNew){
   const gamesHtml=(a.games||[]).map((e,i)=>`<div class="ag-item">
       <div class="ag-h"><span class="ag-name">${escapeHtml(e.gameName||gameNameById(e.gameId)||'—')}</span><button class="ag-rm" data-i="${i}" title="Quitar juego">✕</button></div>
       <div class="fstates">${FAIR_STATES.map(([k,l])=>`<button class="fst f-${k}${e.estado===k?' on':''}" data-i="${i}" data-e="${k}">${l}</button>`).join('')}</div>
+      ${e.estado==='interesado'?`<div class="ag-follow"><div class="ag-follow-h">Seguimiento</div>${FOLLOW_OPTS.map(([k,l])=>`<label class="fchk"><input type="checkbox" class="ag-fl" data-i="${i}" data-k="${k}" ${(e.follow||[]).includes(k)?'checked':''}> ${escapeHtml(l)}</label>`).join('')}</div>`:''}
       <textarea class="ag-fb" data-i="${i}" placeholder="Feedback…">${escapeHtml(e.feedback||'')}</textarea>
     </div>`).join('');
   b.innerHTML=`<label class="cd-label">Editorial</label><input class="cd-title" id="apEd" placeholder="Nombre de la editorial…">
@@ -1426,7 +1568,8 @@ function openApptDetail(f, a, isNew){
   $('apEd').value=a.editorial||''; $('apPlace').value=a.place||''; $('apContact').value=a.contact||'';
   { let dp='',hh='',mn=''; const m=String(a.when||'').match(/^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2}))?/); if(m){ dp=m[1]; hh=m[2]||''; mn=m[3]||''; } $('apDate').value=dp; $('apHour').value=hh; const ms=$('apMin'); if(mn && !Array.from(ms.options).some(o=>o.value===mn)){ const o=document.createElement('option'); o.value=mn; o.textContent=mn; ms.appendChild(o); } ms.value=mn; }
   const commit=()=>{ a.editorial=$('apEd').value.trim(); const d=$('apDate').value, hh=$('apHour').value, mn=$('apMin').value; const t=(hh!==''||mn!=='')?((hh||'00')+':'+(mn||'00')):''; a.when = d ? (t? d+'T'+t : d) : ''; a.place=$('apPlace').value.trim(); a.contact=$('apContact').value.trim(); b.querySelectorAll('.ag-fb').forEach(x=>{ const i=+x.dataset.i; if(a.games[i]) a.games[i].feedback=x.value.replace(/\s+$/,''); }); };
-  b.querySelectorAll('.fst').forEach(btn=>btn.onclick=()=>{ commit(); const i=+btn.dataset.i; if(a.games[i]) a.games[i].estado=btn.dataset.e; saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
+  b.querySelectorAll('.fst').forEach(btn=>btn.onclick=()=>{ commit(); const i=+btn.dataset.i; const e=a.games[i]; if(e){ e.estado=btn.dataset.e; if(e.estado==='interesado'){ e.follow=e.follow||[]; ensureEditorialEntry(a.editorial, e.gameId, e.gameName); applyFollowTask(e); } else if(e.taskId){ applyFollowTask(Object.assign({}, e, {follow:[]})); e.taskId=null; } } saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
+  b.querySelectorAll('.ag-fl').forEach(chk=>chk.onchange=()=>{ commit(); const i=+chk.dataset.i, k=chk.dataset.k; const e=a.games[i]; if(!e) return; e.follow=e.follow||[]; if(chk.checked){ if(!e.follow.includes(k)) e.follow.push(k); } else { e.follow=e.follow.filter(x=>x!==k); } ensureEditorialEntry(a.editorial, e.gameId, e.gameName); applyFollowTask(e); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
   b.querySelectorAll('.ag-rm').forEach(btn=>btn.onclick=()=>{ commit(); const i=+btn.dataset.i; a.games.splice(i,1); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); });
   { const sel=$('apAddG'); if(sel) sel.onchange=()=>{ const id=sel.value; if(!id) return; commit(); a.games.push({ gameId:id, gameName:gameNameById(id), estado:'pendiente', feedback:'' }); saveAppt(f,a); renderFairBoard(); openApptDetail(f,a,false); }; }
   $('apSave').onclick=async()=>{ commit(); if(!a.editorial){ $('apEd').focus(); toast('Pon el nombre de la editorial.','warn'); return; } const conflicts=apptConflicts(f,a); if(conflicts.length){ const ms=apptMs(a.when); const overlap=conflicts.some(c=>apptMs(c.when)===ms); const list=conflicts.map(c=>`${c.editorial||'(sin editorial)'} (${fmtAppt(c.when)})`).join('; '); const ok=await confirmDialog(`${overlap?'Esta cita se solapa con':'Esta cita queda a menos de 30 min de'}: ${list}. ¿Guardar igualmente?`, { okLabel:'Guardar igualmente', danger:false }); if(!ok) return; } await saveAppt(f,a); closePanel(); renderFairBoard(); toast('Cita guardada.'); };
@@ -1758,7 +1901,7 @@ function printVersion(g,v){ const a=$('printArea'); a.innerHTML=versionDocHtml(g
 
 /* ---------- Game create/rename/delete ---------- */
 function openGameModal(edit=false,id=null,stage){ lastFocused=document.activeElement; editingGameId=edit?id:null; pendingGameStage = edit ? pendingGameStage : (stage||'draft'); if(edit){ const g=state.games.find(x=>x.id===id); $('gmTitle').textContent='Renombrar juego'; $('gmHint').textContent='Cambia el nombre.'; $('gmSave').textContent='Guardar'; $('gmName').value=g?g.name:''; } else { $('gmTitle').textContent='Nuevo juego'; $('gmHint').textContent='Se crea en Draft; cuando esté listo lo pasas a activos desde el menú ⋯.'; $('gmSave').textContent='Crear'; $('gmName').value=''; } $('gameModal').style.display='flex'; $('gmName').focus(); }
-async function saveGame(){ const name=$('gmName').value.trim(); if(!name){ $('gmName').focus(); return; } if(sharedRenameRef){ const g=sharedRenameRef; g.name=name; sharedRenameRef=null; await saveSharedGame(g); await reloadSharedGames(); closeGameModal(); render(); toast('Proyecto renombrado.'); return; } if(editingGameId){ const g=state.games.find(x=>x.id===editingGameId); if(g) g.name=name; toast('Juego renombrado.'); } else { const stage=pendingGameStage||'draft'; const ng={ id:uid(), name, color:SPINE_COLORS[state.games.length%SPINE_COLORS.length], stage, rulebook:makeRulebook(), rulebookVersions:[], changes:[], pendingChanges:[], currentSummary:'', migrated:true, flattened:true }; state.games.push(ng); state.currentGameId=ng.id; currentTab='inicio'; appView = (stage==='draft') ? 'design' : 'game'; pendingGameStage='draft'; toast(stage==='draft'?'Juego creado en Draft.':'Juego creado.'); } await saveState(); closeGameModal(); render(); }
+async function saveGame(){ const name=$('gmName').value.trim(); if(!name){ $('gmName').focus(); return; } if(sharedRenameRef){ const g=sharedRenameRef; g.name=name; sharedRenameRef=null; await saveSharedGame(g); await reloadSharedGames(); closeGameModal(); render(); toast('Proyecto renombrado.'); return; } if(editingGameId){ const g=state.games.find(x=>x.id===editingGameId); if(g){ g.name=name; g.touchedAt=Date.now(); } toast('Juego renombrado.'); } else { const stage=pendingGameStage||'draft'; const ng={ id:uid(), name, color:SPINE_COLORS[state.games.length%SPINE_COLORS.length], stage, rulebook:makeRulebook(), rulebookVersions:[], changes:[], pendingChanges:[], currentSummary:'', migrated:true, flattened:true }; state.games.push(ng); state.currentGameId=ng.id; currentTab='inicio'; appView = (stage==='draft') ? 'design' : 'game'; pendingGameStage='draft'; toast(stage==='draft'?'Juego creado en Draft.':'Juego creado.'); } await saveState(); closeGameModal(); render(); }
 function closeGameModal(){ $('gameModal').style.display='none'; editingGameId=null; sharedRenameRef=null; restoreFocus(); }
 async function deleteGame(id){ const g=state.games.find(x=>x.id===id); if(!g) return; const ok=await confirmDialog(`¿Eliminar el juego "${g.name}" con todo su contenido?`); if(!ok) return; state.games=state.games.filter(x=>x.id!==id); if(state.currentGameId===id){ state.currentGameId=null; } appView='design'; currentTab='inicio'; await saveState(); closePanel(); render(); toast('Juego eliminado.'); }
 
@@ -1868,6 +2011,7 @@ $('drawAdd').onclick=()=>{ const cv=$('drawCanvas'); let url=null; try{ url=cv.t
 
 async function bootApp(){ await loadState(); if(normalizeStructures()) await saveState();
   if(dedupeLocalIds()) await saveLocal();
+  if(Store.backend==='supabase'){ const sc=readSharedCache(); if(sc) sharedGames=sc; }
   render(); updateBackend(); updateSavedIndicator();
   if(Store.backend==='supabase' && !isOffline()){
     try{ await Store.upsertProfile(); }catch(e){}
@@ -1875,6 +2019,7 @@ async function bootApp(){ await loadState(); if(normalizeStructures()) await sav
     await reconcileSharedDuplicates();
     await syncPending();
     render(); updateBackend();
+    await syncPendingShared();
   }
   if(window.__kaizenRecovery){ window.__kaizenRecovery=false; openRecovery(); } else if(Store.backend==='supabase' && !isOffline()){ await ensureUsername(); } }
 // Si hay varios juegos privados con el MISMO id (duplicado), fusiona su contenido único
