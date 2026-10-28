@@ -1105,6 +1105,9 @@ function normalizeStructures(){
   // Ferias: migrar estados antiguos de cita y asegurar 'follow'.
   (state.fairs||[]).forEach(f=>{ (f.appointments||[]).forEach(a=>{ (a.games||[]).forEach(e=>{ if(e.estado==='proto'){ e.estado='interesado'; if(!Array.isArray(e.follow)) e.follow=[]; if(!e.follow.includes('proto')) e.follow.push('proto'); ch=true; } if(e.estado==='no'){ e.estado='descartado'; ch=true; } if(Array.isArray(e.follow) && e.follow.includes('dejar')){ e.follow=e.follow.filter(x=>x!=='dejar'); if(e.estado!=='proto_dejado') e.estado='proto_dejado'; ch=true; } if(!Array.isArray(e.follow)){ e.follow=[]; ch=true; } }); }); });
   if(!Array.isArray(state.editorials)){ state.editorials=[]; ch=true; }
+  // Mantén el nombre del juego actualizado en seguimientos y citas (si el juego existe).
+  state.editorials.forEach(ent=>{ const n=gameNameById(ent.gameId); if(n && ent.gameName!==n){ ent.gameName=n; ch=true; } });
+  (state.fairs||[]).forEach(f=>{ (f.appointments||[]).forEach(a=>{ (a.games||[]).forEach(e=>{ const n=gameNameById(e.gameId); if(n && e.gameName!==n){ e.gameName=n; ch=true; } }); }); });
   // Rellena la editorial en tareas automáticas ya creadas (juegos propios) a partir de la cita.
   (state.fairs||[]).forEach(f=>{ (f.appointments||[]).forEach(a=>{ const ed=(a.editorial||'').trim(); if(!ed) return; (a.games||[]).forEach(e=>{ if(!(e.estado==='interesado'||e.estado==='proto_dejado')) return; const g=state.games.find(x=>x.id===e.gameId); if(!g||!Array.isArray(g.tasks)) return; const suf=' a '+ed;
     if(e.taskId){ const t=g.tasks.find(x=>x.id===e.taskId); if(t){ const sends=(e.follow||[]).filter(k=>['proto','pnp','reglas','video','sellsheet'].includes(k)); if(sends.length){ const txt='Enviar '+sends.map(k=>SEND_LABEL[k]).join(' + ')+suf; if(t.text!==txt){ t.text=txt; ch=true; } if((t.editorial||'')!==ed){ t.editorial=ed; ch=true; } } } }
@@ -1437,9 +1440,9 @@ function renderFeriasPortada(){
 let edSub='juego', edGroupKey=null, edEntryId=null;  // juego | editorial ; drill-down
 function edLastUpdate(ent){ const u=(ent.updates||[]); return u.length?Math.max(...u.map(x=>x.createdAt||0)):(ent.createdAt||0); }
 function edGroupKeyOf(ent){ return edSub==='juego' ? (ent.gameId||('n:'+ent.gameName)) : (ent.editorial||'').trim().toLowerCase(); }
-function edGroupLabel(list){ return edSub==='juego' ? (list[0].gameName||gameNameById(list[0].gameId)||'—') : (list[0].editorial||'—'); }
+function edGroupLabel(list){ return edSub==='juego' ? (gameNameById(list[0].gameId)||list[0].gameName||'—') : (list[0].editorial||'—'); }
 function edGroupColor(list){ return edSub==='juego' ? (((state.games.find(x=>x.id===list[0].gameId)||{}).color)||colorFor(edGroupLabel(list))) : colorFor(edGroupLabel(list)); }
-function edEntrySecondary(ent){ return edSub==='juego' ? (ent.editorial||'—') : (ent.gameName||gameNameById(ent.gameId)||'—'); }
+function edEntrySecondary(ent){ return edSub==='juego' ? (ent.editorial||'—') : (gameNameById(ent.gameId)||ent.gameName||'—'); }
 function renderEditorialesPortada(){
   if(edEntryId && (state.editorials||[]).some(e=>e.id===edEntryId)){ renderEdDetailPage(); return; }
   edEntryId=null;
@@ -1517,13 +1520,13 @@ function renderEdDetailPage(){
   const ent=(state.editorials||[]).find(e=>e.id===edEntryId); if(!ent){ edEntryId=null; renderEditorialesPortada(); return; }
   const host=$('portada'); host.innerHTML='';
   const inner=document.createElement('div'); inner.className='pt-inner'; inner.id='edPage';
-  const backLabel = '← ' + (edSub==='juego' ? (ent.gameName||gameNameById(ent.gameId)||'Juego') : (ent.editorial||'Editorial'));
+  const backLabel = '← ' + (edSub==='juego' ? (gameNameById(ent.gameId)||ent.gameName||'Juego') : (ent.editorial||'Editorial'));
   ptBack(inner, backLabel, ()=>{ edEntryId=null; renderEditorialesPortada(); });
   const g=allGames().find(x=>x.id===ent.gameId); const gcolor=(g&&g.color)||colorFor(ent.gameName||'');
   const updates=(ent.updates||[]).slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
   const logRows = updates.map(u=>{ const d=edDirOf(u); return `<tr class="dir-${d}"><td class="lg-date">${escapeHtml(fmtWhen(u.createdAt))}</td><td class="lg-dir"><button class="ed-dir-chip dir-${d}" data-id="${u.id}" title="Cambiar quién">${ED_DIR_SHORT[d]}</button>${u.fromFair?' <span class="ed-tag">feria</span>':''}</td><td class="lg-txt">${escapeHtml(u.text||'')}</td><td class="lg-x"><button class="ed-up-x" data-id="${u.id}" title="Eliminar">✕</button></td></tr>`; }).join('');
   const logHtml = updates.length ? `<table class="ed-logtable"><thead><tr><th>Fecha</th><th>Quién</th><th>Comentario</th><th></th></tr></thead><tbody>${logRows}</tbody></table>` : '<div style="font-size:12.5px;color:var(--faint);">Sin iteraciones todavía.</div>';
-  const header=document.createElement('div'); header.className='pt-secrow'; header.innerHTML=`<span class="gname" style="${chipStyle(gcolor)};font-family:'Fraunces',serif;font-size:19px;padding:4px 14px;">${escapeHtml(ent.gameName||gameNameById(ent.gameId)||'—')}</span><span style="color:var(--faint);">·</span><span style="font-size:15px;color:var(--muted);">${escapeHtml(ent.editorial||'—')}</span>`;
+  const header=document.createElement('div'); header.className='pt-secrow'; header.innerHTML=`<span class="gname" style="${chipStyle(gcolor)};font-family:'Fraunces',serif;font-size:19px;padding:4px 14px;">${escapeHtml(gameNameById(ent.gameId)||ent.gameName||'—')}</span><span style="color:var(--faint);">·</span><span style="font-size:15px;color:var(--muted);">${escapeHtml(ent.editorial||'—')}</span>`;
   const goIdeas=document.createElement('button'); goIdeas.className='btn-q'; goIdeas.style.marginLeft='auto'; goIdeas.textContent='Ideas del juego →'; goIdeas.title='Ir a las ideas de '+(ent.gameName||'este juego'); goIdeas.onclick=()=>{ if(allGames().some(x=>x.id===ent.gameId)) openGameTab(ent.gameId,'inicio'); else toast('El juego ya no existe.','warn'); };
   header.appendChild(goIdeas);
   inner.appendChild(header);
@@ -1643,7 +1646,7 @@ function renderFairByGame(f, host){
   const appts=f.appointments||[];
   if(!appts.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Aún no hay citas.<br>Añade una cita con una editorial y los juegos que le enseñas.</p>'; host.appendChild(e); return; }
   const map=new Map();
-  appts.forEach(a=>(a.games||[]).forEach(e=>{ const key=e.gameId||('name:'+e.gameName); if(!map.has(key)) map.set(key,{ name:(e.gameName||gameNameById(e.gameId)||'—'), color:((state.games.find(x=>x.id===e.gameId)||{}).color)||'#66b6df', rows:[] }); map.get(key).rows.push({ appt:a, e }); }));
+  appts.forEach(a=>(a.games||[]).forEach(e=>{ const key=e.gameId||('name:'+e.gameName); if(!map.has(key)) map.set(key,{ name:(gameNameById(e.gameId)||e.gameName||'—'), color:((state.games.find(x=>x.id===e.gameId)||{}).color)||'#66b6df', rows:[] }); map.get(key).rows.push({ appt:a, e }); }));
   if(!map.size){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Tienes citas, pero sin juegos asignados.<br>Abre una cita y añade los juegos que enseñas.</p>'; host.appendChild(e); return; }
   map.forEach(g=>{
     const card=document.createElement('div'); card.className='gcard'; card.style.setProperty('--sp', g.color);
@@ -1669,7 +1672,7 @@ function renderFairAgenda(f, host){
   const apptCard=(a)=>{
     const card=document.createElement('div'); card.className='apcard'+(a.done?' done':''); card.setAttribute('role','button'); card.setAttribute('tabindex','0'); card.style.setProperty('--sp', edColor(ecol,a.editorial));
     const metaTxt=[fmtAppt(a.when), a.place, a.contact].filter(Boolean).join(' | ');
-    const games=(a.games||[]).map(e=>`<div class="apg"><span>${escapeHtml(e.gameName||gameNameById(e.gameId)||'—')}</span><span class="fchip f-${e.estado}">${FAIR_STATE_TITLE[e.estado]||e.estado}</span></div>`).join('')||'<div class="apnil">sin juegos asignados</div>';
+    const games=(a.games||[]).map(e=>`<div class="apg"><span>${escapeHtml(gameNameById(e.gameId)||e.gameName||'—')}</span><span class="fchip f-${e.estado}">${FAIR_STATE_TITLE[e.estado]||e.estado}</span></div>`).join('')||'<div class="apnil">sin juegos asignados</div>';
     card.innerHTML=`<div class="aptop"><button class="apdone${a.done?' on':''}" title="Marcar como realizada" aria-label="Realizada">✓</button><span class="aped" style="${chipStyle(edColor(ecol,a.editorial))}">${escapeHtml(a.editorial||'(sin editorial)')}</span></div>${metaTxt?`<div class="apmeta">${escapeHtml(metaTxt)}</div>`:''}${games}`;
     const open=()=>openApptDetail(f,a,false); card.onclick=open; card.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
     const chk=card.querySelector('.apdone'); if(chk) chk.onclick=(ev)=>{ ev.stopPropagation(); a.done=!a.done; a.doneAt=a.done?Date.now():null; saveState(); renderFairBoard(); };
@@ -1686,7 +1689,7 @@ function openApptDetail(f, a, isNew){
   const p=$('panel'), b=$('panelBody');
   const catalog=allGames().filter(g=>(g.__shared||(g.stage||'active')==='active') && !(a.games||[]).some(e=>e.gameId===g.id));
   const gamesHtml=(a.games||[]).map((e,i)=>`<div class="ag-item">
-      <div class="ag-h"><span class="ag-name">${escapeHtml(e.gameName||gameNameById(e.gameId)||'—')}</span><button class="ag-rm" data-i="${i}" title="Quitar juego">✕</button></div>
+      <div class="ag-h"><span class="ag-name">${escapeHtml(gameNameById(e.gameId)||e.gameName||'—')}</span><button class="ag-rm" data-i="${i}" title="Quitar juego">✕</button></div>
       <div class="fstates">${FAIR_STATES.map(([k,l])=>`<button class="fst f-${k}${e.estado===k?' on':''}" data-i="${i}" data-e="${k}">${l}</button>`).join('')}</div>
       ${(e.estado==='interesado'||e.estado==='proto_dejado')?`<div class="ag-follow"><div class="ag-follow-h">Pendiente</div>${FOLLOW_OPTS.filter(([k])=> e.estado==='proto_dejado' ? k!=='proto' : true).map(([k,l])=>`<label class="fchk"><input type="checkbox" class="ag-fl" data-i="${i}" data-k="${k}" ${(e.follow||[]).includes(k)?'checked':''}> <span>${escapeHtml(l)}</span></label>`).join('')}</div>`:''}
       <textarea class="ag-fb" data-i="${i}" placeholder="Feedback…">${escapeHtml(e.feedback||'')}</textarea>
