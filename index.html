@@ -372,6 +372,16 @@
   .ed-dl-badge{ font-family:'IBM Plex Mono',monospace; font-size:10px; padding:2px 8px; border-radius:20px; background:var(--surface-2); color:var(--muted); white-space:nowrap; }
   .ed-dl-badge.soon{ background:var(--amber-dim); color:#f0c078; } .ed-dl-badge.over{ background:rgba(217,99,74,0.2); color:#e0937f; }
   .ed-tablewrap{ overflow-x:auto; }
+  .kb-board{ display:flex; gap:12px; overflow-x:auto; padding:8px 0 4px; align-items:flex-start; }
+  .kb-col{ flex:0 0 220px; min-width:220px; background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:10px; }
+  .kb-colh{ display:flex; align-items:center; gap:8px; margin-bottom:9px; }
+  .kb-colh .kb-n{ margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint); }
+  .kb-colbody{ display:flex; flex-direction:column; gap:8px; min-height:30px; }
+  .kb-empty{ color:var(--faint); font-size:12px; text-align:center; padding:6px 0; }
+  .kb-card{ background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:9px 10px; cursor:pointer; transition:border-color .12s, transform .1s; }
+  .kb-card:hover{ border-color:var(--amber); transform:translateY(-1px); }
+  .kb-card-t{ font-size:13px; font-weight:600; color:var(--text); word-break:break-word; }
+  .kb-card-m{ font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--faint); margin-top:3px; }
   .ed-minis{ display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
   .ed-mini{ font-size:11.5px; padding:3px 9px; border-radius:7px; background:var(--surface-2); color:var(--muted); border:1px solid var(--border); }
   .ed-mini.edst-interesado{ color:#f0c078; border-color:rgba(232,163,61,0.35); }
@@ -1442,16 +1452,17 @@ function renderFeriasPortada(){
     const pgrid=document.createElement('div'); pgrid.className='pt-grid'; past.forEach(f=>pgrid.appendChild(fairCard(f))); inner.appendChild(pgrid); }
   host.appendChild(inner);
 }
-let edSub='juego', edGroupKey=null, edEntryId=null;  // juego | editorial ; drill-down
+let edSub='juego', edGroupKey=null, edEntryId=null;  // juego | editorial | kanban ; drill-down
+function edByGame(){ return edSub!=='editorial'; }  // juego y kanban agrupan por juego
 function edLastUpdate(ent){ const u=(ent.updates||[]); return u.length?Math.max(...u.map(x=>x.createdAt||0)):(ent.createdAt||0); }
-function edGroupKeyOf(ent){ return edSub==='juego' ? (ent.gameId||('n:'+ent.gameName)) : (ent.editorial||'').trim().toLowerCase(); }
-function edGroupLabel(list){ return edSub==='juego' ? (gameNameById(list[0].gameId)||list[0].gameName||'—') : (list[0].editorial||'—'); }
-function edGroupColor(list){ return edSub==='juego' ? (((state.games.find(x=>x.id===list[0].gameId)||{}).color)||colorFor(edGroupLabel(list))) : colorFor(edGroupLabel(list)); }
-function edEntrySecondary(ent){ return edSub==='juego' ? (ent.editorial||'—') : (gameNameById(ent.gameId)||ent.gameName||'—'); }
+function edGroupKeyOf(ent){ return edByGame() ? (ent.gameId||('n:'+ent.gameName)) : (ent.editorial||'').trim().toLowerCase(); }
+function edGroupLabel(list){ return edByGame() ? (gameNameById(list[0].gameId)||list[0].gameName||'—') : (list[0].editorial||'—'); }
+function edGroupColor(list){ return edByGame() ? (((state.games.find(x=>x.id===list[0].gameId)||{}).color)||colorFor(edGroupLabel(list))) : colorFor(edGroupLabel(list)); }
+function edEntrySecondary(ent){ return edByGame() ? (ent.editorial||'—') : (gameNameById(ent.gameId)||ent.gameName||'—'); }
 function renderEditorialesPortada(){
   if(edEntryId && (state.editorials||[]).some(e=>e.id===edEntryId)){ renderEdDetailPage(); return; }
   edEntryId=null;
-  if(edGroupKey!=null && (state.editorials||[]).some(e=>edGroupKeyOf(e)===edGroupKey)){ renderEdGroupPage(); return; }
+  if(edGroupKey!=null && (state.editorials||[]).some(e=>edGroupKeyOf(e)===edGroupKey)){ if(edSub==='kanban') renderEdKanbanPage(); else renderEdGroupPage(); return; }
   edGroupKey=null; renderEdMain();
 }
 function renderEdMain(){
@@ -1464,7 +1475,7 @@ function renderEdMain(){
   const add=document.createElement('button'); add.className='btn'; add.textContent='＋ Nuevo seguimiento'; add.onclick=()=>openNewEditorial(); row.appendChild(add);
   inner.appendChild(row);
   const tabs=document.createElement('div'); tabs.className='tabs'; tabs.style.padding='0 0 10px';
-  [['juego','Por juego'],['editorial','Por editorial']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(edSub===k?' on':''); b.textContent=l; b.onclick=()=>{ edSub=k; edGroupKey=null; edEntryId=null; renderEditorialesPortada(); }; tabs.appendChild(b); });
+  [['juego','Por juego'],['editorial','Por editorial'],['kanban','Kanban']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(edSub===k?' on':''); b.textContent=l; b.onclick=()=>{ edSub=k; edGroupKey=null; edEntryId=null; renderEditorialesPortada(); }; tabs.appendChild(b); });
   inner.appendChild(tabs);
   if(!ents.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Aún no hay seguimientos.<br>Marca una editorial como «Interesado» o «Proto dejado» en una cita de feria, o crea uno con «＋ Nuevo seguimiento».</p>'; inner.appendChild(e); host.appendChild(inner); return; }
   const map=new Map(); ents.forEach(ent=>{ const k=edGroupKeyOf(ent); if(!map.has(k)) map.set(k,[]); map.get(k).push(ent); });
@@ -1504,6 +1515,28 @@ function renderEdGroupPage(){
   if(closed.length){ const hr=document.createElement('hr'); hr.className='pt-sep'; inner.appendChild(hr); const ch=document.createElement('div'); ch.className='pt-sec'; ch.style.margin='4px 0 6px'; ch.textContent='Cerrados · '+closed.length; inner.appendChild(ch); inner.appendChild(buildTable(closed,true)); }
   host.appendChild(inner);
 }
+function renderEdKanbanPage(){
+  const host=$('portada'); host.innerHTML='';
+  const inner=document.createElement('div'); inner.className='pt-inner';
+  ptBack(inner,'← Editoriales',()=>{ edGroupKey=null; edEntryId=null; renderEditorialesPortada(); });
+  const list=(state.editorials||[]).filter(e=>edGroupKeyOf(e)===edGroupKey);
+  if(!list.length){ edGroupKey=null; renderEditorialesPortada(); return; }
+  const title=edGroupLabel(list); const color=edGroupColor(list);
+  const hr0=document.createElement('div'); hr0.className='pt-secrow'; hr0.innerHTML=`<span class="gname" style="${chipStyle(color)};font-family:'Fraunces',serif;font-size:19px;padding:4px 14px;">${escapeHtml(title)}</span>`; inner.appendChild(hr0);
+  const board=document.createElement('div'); board.className='kb-board';
+  ED_STATES.forEach(([k,l])=>{ const col=document.createElement('div'); col.className='kb-col';
+    const items=list.filter(e=>e.status===k).sort((a,b)=>edLastUpdate(b)-edLastUpdate(a));
+    col.innerHTML=`<div class="kb-colh"><span class="edchip edst-${k}">${escapeHtml(l)}</span><span class="kb-n">${items.length}</span></div>`;
+    const body=document.createElement('div'); body.className='kb-colbody';
+    if(!items.length){ const e=document.createElement('div'); e.className='kb-empty'; e.textContent='—'; body.appendChild(e); }
+    items.forEach(ent=>{ const c=document.createElement('div'); c.className='kb-card'; c.setAttribute('role','button'); c.setAttribute('tabindex','0');
+      const nUp=(ent.updates||[]).length;
+      c.innerHTML=`<div class="kb-card-t">${escapeHtml(edEntrySecondary(ent))}</div><div class="kb-card-m">${escapeHtml(fmtWhen(edLastUpdate(ent)))}${nUp?(' · '+nUp+' iter.'):''}</div>`;
+      const open=()=>{ edEntryId=ent.id; renderEditorialesPortada(); }; c.onclick=open; c.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
+      body.appendChild(c); });
+    col.appendChild(body); board.appendChild(col); });
+  inner.appendChild(board); host.appendChild(inner);
+}
 function openNewEditorial(){
   const p=$('panel'), b=$('panelBody');
   const games=allGames().filter(g=>g.__shared||((g.stage||'active')!=='draft')).slice().sort((x,y)=>String(x.name||'').localeCompare(String(y.name||''),'es',{sensitivity:'base'}));
@@ -1525,7 +1558,7 @@ function renderEdDetailPage(){
   const ent=(state.editorials||[]).find(e=>e.id===edEntryId); if(!ent){ edEntryId=null; renderEditorialesPortada(); return; }
   const host=$('portada'); host.innerHTML='';
   const inner=document.createElement('div'); inner.className='pt-inner'; inner.id='edPage';
-  const backLabel = '← ' + (edSub==='juego' ? (gameNameById(ent.gameId)||ent.gameName||'Juego') : (ent.editorial||'Editorial'));
+  const backLabel = '← ' + (edByGame() ? (gameNameById(ent.gameId)||ent.gameName||'Juego') : (ent.editorial||'Editorial'));
   ptBack(inner, backLabel, ()=>{ edEntryId=null; renderEditorialesPortada(); });
   const g=allGames().find(x=>x.id===ent.gameId); const gcolor=(g&&g.color)||colorFor(ent.gameName||'');
   const updates=(ent.updates||[]).slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
