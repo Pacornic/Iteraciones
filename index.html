@@ -356,10 +356,13 @@
   .edst-propuesta{ background:rgba(181,138,223,0.18); color:#cbb3ef; }
   .edst-firmado{ background:var(--teal-dim); color:#8fd3b6; } .edst-descartado{ background:var(--surface-2); color:var(--faint); }
   .edst-proto_dejado{ background:var(--teal-dim); color:#8fd3b6; } .edst-enviado{ background:rgba(102,182,223,0.16); color:#a6d6ee; } .edst-negociando{ background:rgba(181,138,223,0.18); color:#cbb3ef; }
+  .edst-testing{ background:rgba(52,199,89,0.22); color:#5fe08a; }
   .st.edst{ font-size:11.5px; }
   .st.edst.on.edst-proto_dejado{ background:var(--teal); color:#08231c; border-color:transparent; }
   .st.edst.on.edst-enviado{ background:var(--blue); color:#08222e; border-color:transparent; }
   .st.edst.on.edst-negociando{ background:#b58adf; color:#1c0f2b; border-color:transparent; }
+  .st.edst.on.edst-testing{ background:#2ecc71; color:#04230f; border-color:transparent; }
+  .ed-mini.edst-testing{ color:#5fe08a; border-color:rgba(52,199,89,0.5); }
   .ed-next{ background:var(--amber-dim); border:1px solid rgba(232,163,61,0.3); border-radius:9px; padding:10px 12px; margin:0 0 14px; }
   .ed-next-h{ font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.7px; text-transform:uppercase; color:#f0c078; margin-bottom:6px; }
   .ed-next .ap-in{ width:100%; }
@@ -1105,6 +1108,8 @@ function normalizeStructures(){
   // Ferias: migrar estados antiguos de cita y asegurar 'follow'.
   (state.fairs||[]).forEach(f=>{ (f.appointments||[]).forEach(a=>{ (a.games||[]).forEach(e=>{ if(e.estado==='proto'){ e.estado='interesado'; if(!Array.isArray(e.follow)) e.follow=[]; if(!e.follow.includes('proto')) e.follow.push('proto'); ch=true; } if(e.estado==='no'){ e.estado='descartado'; ch=true; } if(Array.isArray(e.follow) && e.follow.includes('dejar')){ e.follow=e.follow.filter(x=>x!=='dejar'); if(e.estado!=='proto_dejado') e.estado='proto_dejado'; ch=true; } if(!Array.isArray(e.follow)){ e.follow=[]; ch=true; } }); }); });
   if(!Array.isArray(state.editorials)){ state.editorials=[]; ch=true; }
+  // Migra estados de seguimiento antiguos a 'testing'.
+  state.editorials.forEach(ent=>{ if(ent.status==='enviado'||ent.status==='negociando'||ent.status==='conversando'||ent.status==='propuesta'){ ent.status='testing'; ch=true; } });
   // Mantén el nombre del juego actualizado en seguimientos y citas (si el juego existe).
   state.editorials.forEach(ent=>{ const n=gameNameById(ent.gameId); if(n && ent.gameName!==n){ ent.gameName=n; ch=true; } });
   (state.fairs||[]).forEach(f=>{ (f.appointments||[]).forEach(a=>{ (a.games||[]).forEach(e=>{ const n=gameNameById(e.gameId); if(n && e.gameName!==n){ e.gameName=n; ch=true; } }); }); });
@@ -1567,10 +1572,10 @@ function ensureEditorialEntry(editorial, gameId, gameName, seedText, initialStat
   return ent;
 }
 function seedFromAppt(f,a,e){ return 'Feria «'+(f?f.name:'')+'» · '+(FAIR_STATE_TITLE[e.estado]||e.estado)+((e.feedback||'').trim()?(' — '+e.feedback.trim()):''); }
-const ED_STATES=[['interesado','Interesado'],['proto_dejado','Proto dejado'],['enviado','Enviado · esperando'],['negociando','Negociando'],['firmado','Firmado'],['descartado','Descartado']];
+const ED_STATES=[['interesado','Interesado'],['proto_dejado','Proto dejado'],['testing','En Testing'],['firmado','Firmado'],['descartado','Descartado']];
 const ED_STATE_TITLE=Object.fromEntries(ED_STATES.map(([k,t])=>[k,t]));
 // compat estados antiguos
-ED_STATE_TITLE.conversando='Negociando'; ED_STATE_TITLE.propuesta='Negociando';
+ED_STATE_TITLE.conversando='En Testing'; ED_STATE_TITLE.propuesta='En Testing'; ED_STATE_TITLE.enviado='En Testing'; ED_STATE_TITLE.negociando='En Testing';
 // Crea/actualiza/borra tareas automáticas según el seguimiento de una editorial interesada.
 function syncAutoTask(g, e, key, text, editorial){
   g.tasks=g.tasks||[]; let changed=false;
