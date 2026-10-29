@@ -858,7 +858,7 @@ const RB_PLACEHOLDER = Object.fromEntries(RB_SECTIONS.map(([k,,p])=>[k,p]));
 function makeRulebook(c){ return { sections: RB_SECTIONS.map(([k,t])=>({ key:k, title:t, content:(c&&c[k])||'' })) }; }
 const STATES = [['porprobar','Por probar'],['aparcada','Testing'],['funciona','OK'],['descartada','Descartada']];
 const STATE_TITLE = Object.fromEntries(STATES.map(([k,t])=>[k,t]));
-const FAIR_STATES = [['pendiente','Pendiente'],['proto_dejado','Proto dejado'],['interesado','Interesado'],['descartado','Descartado']];
+const FAIR_STATES = [['pendiente','Pendiente'],['proto_dejado','Proto entregado'],['interesado','Interesado'],['descartado','Descartado']];
 const FAIR_STATE_TITLE = Object.fromEntries(FAIR_STATES.map(([k,t])=>[k,t]));
 const FAIR_STATE_RANK = { proto_dejado:0, interesado:1, pendiente:2, descartado:3 };
 // Opciones de seguimiento cuando una editorial está 'interesado'.
@@ -1494,7 +1494,7 @@ function renderEdMain(){
   const tabs=document.createElement('div'); tabs.className='tabs'; tabs.style.padding='0 0 12px';
   [['activos','Activos'],['descartados','Descartados']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(edSub===k?' on':''); b.textContent=l; b.onclick=()=>{ edSub=k; if(k!=='descartados') edDescGame=null; edEntryId=null; renderEditorialesPortada(); }; tabs.appendChild(b); });
   inner.appendChild(tabs);
-  if(!ents.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Aún no hay seguimientos.<br>Marca una editorial como «Interesado» o «Proto dejado» en una cita de feria, o crea uno con «＋ Nuevo seguimiento».</p>'; inner.appendChild(e); host.appendChild(inner); return; }
+  if(!ents.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Aún no hay seguimientos.<br>Marca una editorial como «Interesado» o «Proto entregado» en una cita de feria, o crea uno con «＋ Nuevo seguimiento».</p>'; inner.appendChild(e); host.appendChild(inner); return; }
   const map=new Map(); ents.forEach(ent=>{ const k=edGroupKeyOf(ent); if(!map.has(k)) map.set(k,[]); map.get(k).push(ent); });
   const groups=[...map.entries()].map(([k,list])=>({k,list})).sort((a,b)=>edGroupLabel(a.list).localeCompare(edGroupLabel(b.list),'es',{sensitivity:'base'}));
   if(edSub==='descartados'){
@@ -1647,7 +1647,7 @@ function ensureEditorialEntry(editorial, gameId, gameName, seedText, initialStat
   return ent;
 }
 function seedFromAppt(f,a,e){ return 'Feria «'+(f?f.name:'')+'» · '+(FAIR_STATE_TITLE[e.estado]||e.estado)+((e.feedback||'').trim()?(' — '+e.feedback.trim()):''); }
-const ED_STATES=[['interesado','Interesado'],['proto_dejado','Proto dejado'],['testing','En Testing'],['firmado','Firmado'],['descartado','Descartado']];
+const ED_STATES=[['interesado','Interesado'],['proto_dejado','Proto entregado'],['testing','En Testing'],['firmado','Firmado'],['descartado','Descartado']];
 const ED_STATE_TITLE=Object.fromEntries(ED_STATES.map(([k,t])=>[k,t]));
 // compat estados antiguos
 ED_STATE_TITLE.conversando='En Testing'; ED_STATE_TITLE.propuesta='En Testing'; ED_STATE_TITLE.enviado='En Testing'; ED_STATE_TITLE.negociando='En Testing';
