@@ -372,7 +372,16 @@
   .ed-dl-badge{ font-family:'IBM Plex Mono',monospace; font-size:10px; padding:2px 8px; border-radius:20px; background:var(--surface-2); color:var(--muted); white-space:nowrap; }
   .ed-dl-badge.soon{ background:var(--amber-dim); color:#f0c078; } .ed-dl-badge.over{ background:rgba(217,99,74,0.2); color:#e0937f; }
   .ed-tablewrap{ overflow-x:auto; }
-  .kb-gamecard .gtop{ margin-bottom:6px; }
+  .ed-disc-link{ margin-left:auto; background:none; border:1px solid rgba(217,99,74,0.4); color:#e0937f; font-size:11px; padding:3px 9px; border-radius:7px; cursor:pointer; }
+  .ed-disc-link:hover{ background:rgba(217,99,74,0.12); }
+  .ed-disc{ border-top:1px solid var(--line); padding:9px 2px; cursor:pointer; }
+  .ed-disc:hover{ background:rgba(255,255,255,0.02); }
+  .ed-disc-h{ display:flex; align-items:baseline; gap:8px; }
+  .ed-disc-n{ font-weight:600; color:var(--text); font-size:13.5px; }
+  .ed-disc-d{ margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--faint); }
+  .ed-disc-fb{ font-size:12.5px; color:var(--muted); margin-top:3px; white-space:pre-wrap; word-break:break-word; }
+  .ed-disc-fb.empty{ color:var(--faint); font-style:italic; }
+  .kb-gamecard .gtop{ margin-bottom:6px; align-items:center; }
   .kb-mini{ display:flex; gap:8px; }
   .kb-mcol{ flex:1 1 0; min-width:0; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:7px; }
   .kb-mcolh{ display:flex; align-items:center; gap:5px; margin-bottom:6px; }
@@ -1237,7 +1246,7 @@ function byRecent(a,b){ return recentOf(b)-recentOf(a); }
 function goHome(){ appView='home'; closePanel(); render(); }
 function openGame(id){ const own=state.games.some(x=>x.id===id); state.currentGameId=id; currentTab='inicio'; rbView='draft'; rbVersionId=null; appView='game'; closePanel(); if(own) saveState(); render(); }
 function openGameTab(id,tab){ openGame(id); currentTab=tab; render(); }
-function goGameEditorials(gameId){ edSub='juego'; edGroupKey=gameId; edEntryId=null; appView='editoriales'; closePanel(); render(); }
+function goGameEditorials(gameId){ edSub='activos'; edGroupKey=null; edEntryId=null; edDescGame=null; appView='editoriales'; closePanel(); render(); }
 async function persistGame(g){ if(g && g.__shared) return saveSharedGame(g); state.updatedAt=Date.now(); try{ const ok=await Store.set('games-data', JSON.stringify(state)); updateSavedIndicator(); if(!ok&&!storageWarned){ storageWarned=true; toast('No se pudo guardar de forma persistente.','warn',6000); } }catch(e){} }
 async function saveLocal(){ return persistState(); }
 function gameStageRank(g){ const s=g.__shared?'active':(g.stage||'active'); return s==='paused'?2:(s==='draft'?1:0); }
@@ -1461,8 +1470,8 @@ function renderFeriasPortada(){
     const pgrid=document.createElement('div'); pgrid.className='pt-grid'; past.forEach(f=>pgrid.appendChild(fairCard(f))); inner.appendChild(pgrid); }
   host.appendChild(inner);
 }
-let edSub='juego', edGroupKey=null, edEntryId=null;  // juego | editorial | kanban ; drill-down
-function edByGame(){ return edSub!=='editorial'; }  // juego y kanban agrupan por juego
+let edSub='activos', edGroupKey=null, edEntryId=null, edDescGame=null;  // activos | descartados
+function edByGame(){ return true; }  // siempre agrupado por juego
 function edLastUpdate(ent){ const u=(ent.updates||[]); return u.length?Math.max(...u.map(x=>x.createdAt||0)):(ent.createdAt||0); }
 function edGroupKeyOf(ent){ return edByGame() ? (ent.gameId||('n:'+ent.gameName)) : (ent.editorial||'').trim().toLowerCase(); }
 function edGroupLabel(list){ return edByGame() ? (gameNameById(list[0].gameId)||list[0].gameName||'—') : (list[0].editorial||'—'); }
@@ -1470,10 +1479,9 @@ function edGroupColor(list){ return edByGame() ? (((state.games.find(x=>x.id===l
 function edEntrySecondary(ent){ return edByGame() ? (ent.editorial||'—') : (gameNameById(ent.gameId)||ent.gameName||'—'); }
 function renderEditorialesPortada(){
   if(edEntryId && (state.editorials||[]).some(e=>e.id===edEntryId)){ renderEdDetailPage(); return; }
-  edEntryId=null;
-  if(edGroupKey!=null && (state.editorials||[]).some(e=>edGroupKeyOf(e)===edGroupKey)){ if(edSub==='kanban') renderEdKanbanPage(); else renderEdGroupPage(); return; }
-  edGroupKey=null; renderEdMain();
+  edEntryId=null; edGroupKey=null; renderEdMain();
 }
+function edLastFeedback(ent){ const u=(ent.updates||[]).slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)); return u.length?(u[0].text||''):''; }
 function renderEdMain(){
   const host=$('portada'); host.innerHTML='';
   const inner=document.createElement('div'); inner.className='pt-inner';
@@ -1483,38 +1491,47 @@ function renderEdMain(){
   const sec=document.createElement('span'); sec.className='pt-sec'; sec.textContent='Editoriales · '+ents.length; row.appendChild(sec);
   const add=document.createElement('button'); add.className='btn'; add.textContent='＋ Nuevo seguimiento'; add.onclick=()=>openNewEditorial(); row.appendChild(add);
   inner.appendChild(row);
-  const tabs=document.createElement('div'); tabs.className='tabs'; tabs.style.padding='0 0 10px';
-  [['juego','Por juego'],['editorial','Por editorial'],['kanban','Kanban']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(edSub===k?' on':''); b.textContent=l; b.onclick=()=>{ edSub=k; edGroupKey=null; edEntryId=null; renderEditorialesPortada(); }; tabs.appendChild(b); });
+  const tabs=document.createElement('div'); tabs.className='tabs'; tabs.style.padding='0 0 12px';
+  [['activos','Activos'],['descartados','Descartados']].forEach(([k,l])=>{ const b=document.createElement('button'); b.className='tab'+(edSub===k?' on':''); b.textContent=l; b.onclick=()=>{ edSub=k; if(k!=='descartados') edDescGame=null; edEntryId=null; renderEditorialesPortada(); }; tabs.appendChild(b); });
   inner.appendChild(tabs);
   if(!ents.length){ const e=document.createElement('div'); e.className='empty'; e.innerHTML='<p>Aún no hay seguimientos.<br>Marca una editorial como «Interesado» o «Proto dejado» en una cita de feria, o crea uno con «＋ Nuevo seguimiento».</p>'; inner.appendChild(e); host.appendChild(inner); return; }
   const map=new Map(); ents.forEach(ent=>{ const k=edGroupKeyOf(ent); if(!map.has(k)) map.set(k,[]); map.get(k).push(ent); });
   const groups=[...map.entries()].map(([k,list])=>({k,list})).sort((a,b)=>edGroupLabel(a.list).localeCompare(edGroupLabel(b.list),'es',{sensitivity:'base'}));
-  if(edSub==='kanban'){
-    const KST=ED_STATES.filter(([k])=>k!=='firmado');
-    groups.forEach(gr=>{ const list=gr.list;
-      const card=document.createElement('div'); card.className='gcard kb-gamecard'; card.style.setProperty('--sp', edGroupColor(list));
-      card.innerHTML=`<div class="gtop"><span class="gname" style="${chipStyle(edGroupColor(list))}">${escapeHtml(edGroupLabel(list))}</span></div>`;
-      const mini=document.createElement('div'); mini.className='kb-mini';
-      KST.forEach(([k,l])=>{ const items=list.filter(e=>e.status===k).sort((a,b)=>edLastUpdate(b)-edLastUpdate(a));
-        const col=document.createElement('div'); col.className='kb-mcol';
-        col.innerHTML=`<div class="kb-mcolh"><span class="edchip edst-${k}">${escapeHtml(l)}</span><span class="kb-n">${items.length}</span></div>`;
-        const cbody=document.createElement('div'); cbody.className='kb-mbody';
-        if(!items.length){ const e=document.createElement('div'); e.className='kb-empty'; e.textContent='—'; cbody.appendChild(e); }
-        items.forEach(ent=>{ const c=document.createElement('div'); c.className='kb-mcard'; c.setAttribute('role','button'); c.setAttribute('tabindex','0'); c.textContent=edEntrySecondary(ent); const open=()=>{ edEntryId=ent.id; edGroupKey=null; renderEditorialesPortada(); }; c.onclick=open; c.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } }; cbody.appendChild(c); });
-        col.appendChild(cbody); mini.appendChild(col); });
-      card.appendChild(mini); inner.appendChild(card); });
+  if(edSub==='descartados'){
+    let shown=0;
+    const only = edDescGame;
+    if(only){ const l=document.createElement('button'); l.className='btn-q'; l.textContent='← Ver todos los descartados'; l.style.marginBottom='8px'; l.onclick=()=>{ edDescGame=null; renderEditorialesPortada(); }; inner.appendChild(l); }
+    groups.forEach(gr=>{ const list=gr.list; if(only && gr.k!==only) return; const disc=list.filter(e=>e.status==='descartado').sort((a,b)=>edLastUpdate(b)-edLastUpdate(a)); if(!disc.length) return; shown++;
+      const card=document.createElement('div'); card.className='gcard'; card.style.setProperty('--sp', edGroupColor(list));
+      card.innerHTML=`<div class="gtop"><span class="gname" style="${chipStyle(edGroupColor(list))}">${escapeHtml(edGroupLabel(list))}</span><span class="gsum">${disc.length} descartada(s)</span></div>`;
+      disc.forEach(ent=>{ const r=document.createElement('div'); r.className='ed-disc'; r.setAttribute('role','button'); r.setAttribute('tabindex','0');
+        const fb=edLastFeedback(ent);
+        r.innerHTML=`<div class="ed-disc-h"><span class="ed-disc-n">${escapeHtml(ent.editorial||'—')}</span><span class="ed-disc-d">${escapeHtml(fmtWhen(edLastUpdate(ent)))}</span></div>${fb?`<div class="ed-disc-fb">${escapeHtml(fb)}</div>`:'<div class="ed-disc-fb empty">Sin feedback registrado.</div>'}`;
+        const open=()=>{ edEntryId=ent.id; renderEditorialesPortada(); }; r.onclick=open; r.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
+        card.appendChild(r); });
+      inner.appendChild(card); });
+    if(!shown){ const e=document.createElement('div'); e.className='home-empty'; e.textContent='No hay editoriales que hayan descartado juegos.'; inner.appendChild(e); }
     host.appendChild(inner); return;
   }
-  const grid=document.createElement('div'); grid.className='pt-grid';
-  const edRank={ interesado:0, proto_dejado:0, enviado:1, negociando:1, firmado:2, descartado:3 };
-  groups.forEach(gr=>{ const list=gr.list; const activeN=list.filter(e=>e.status!=='firmado'&&e.status!=='descartado').length; const discN=list.filter(e=>e.status==='descartado').length; const overdue=list.some(e=>{ const d=edDeadlineInfo(e); return d&&d.cls==='over'; });
-    const card=document.createElement('div'); card.className='gcard'; card.setAttribute('role','button'); card.setAttribute('tabindex','0'); card.style.setProperty('--sp', edGroupColor(list));
-    const sorted=list.slice().sort((a,b)=> ((edRank[a.status]??1)-(edRank[b.status]??1)) || edEntrySecondary(a).localeCompare(edEntrySecondary(b),'es',{sensitivity:'base'}));
-    const chips=sorted.map(e=>{ const mk = e.status==='descartado'?'✕ ':(e.status==='firmado'?'✓ ':''); return `<span class="ed-mini edst-${e.status}" title="${escapeHtml(ED_STATE_TITLE[e.status]||e.status)}">${mk}${escapeHtml(edEntrySecondary(e))}</span>`; }).join('');
-    card.innerHTML=`<div class="gtop"><span class="gname" style="${chipStyle(edGroupColor(list))}">${escapeHtml(edGroupLabel(list))}</span><span class="gsum">${activeN} activo(s)${discN?(' · '+discN+' descartada(s)'):''}${overdue?' · ⚠':''}</span></div><div class="ed-minis">${chips}</div>`;
-    const open=()=>{ edGroupKey=gr.k; edEntryId=null; renderEditorialesPortada(); }; card.onclick=open; card.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } };
-    grid.appendChild(card); });
-  inner.appendChild(grid); host.appendChild(inner);
+  // Activos: mini-kanban por juego (Interesado · Proto dejado · En Testing)
+  const KST=ED_STATES.filter(([k])=>k==='interesado'||k==='proto_dejado'||k==='testing');
+  let anyActive=false;
+  groups.forEach(gr=>{ const list=gr.list; const actives=list.filter(e=>KST.some(([k])=>k===e.status)); const discN=list.filter(e=>e.status==='descartado').length; if(!actives.length) return; anyActive=true;
+    const card=document.createElement('div'); card.className='gcard kb-gamecard'; card.style.setProperty('--sp', edGroupColor(list));
+    const head=document.createElement('div'); head.className='gtop'; head.innerHTML=`<span class="gname" style="${chipStyle(edGroupColor(list))}">${escapeHtml(edGroupLabel(list))}</span>`;
+    if(discN){ const dl=document.createElement('button'); dl.className='ed-disc-link'; dl.textContent='✕ '+discN+' descartada(s)'; dl.title='Ver quién descartó este juego'; dl.onclick=(ev)=>{ ev.stopPropagation(); edSub='descartados'; edDescGame=gr.k; edEntryId=null; renderEditorialesPortada(); }; head.appendChild(dl); }
+    card.appendChild(head);
+    const mini=document.createElement('div'); mini.className='kb-mini';
+    KST.forEach(([k,l])=>{ const items=list.filter(e=>e.status===k).sort((a,b)=>edLastUpdate(b)-edLastUpdate(a));
+      const col=document.createElement('div'); col.className='kb-mcol';
+      col.innerHTML=`<div class="kb-mcolh"><span class="edchip edst-${k}">${escapeHtml(l)}</span><span class="kb-n">${items.length}</span></div>`;
+      const cbody=document.createElement('div'); cbody.className='kb-mbody';
+      if(!items.length){ const e=document.createElement('div'); e.className='kb-empty'; e.textContent='—'; cbody.appendChild(e); }
+      items.forEach(ent=>{ const c=document.createElement('div'); c.className='kb-mcard'; c.setAttribute('role','button'); c.setAttribute('tabindex','0'); c.textContent=edEntrySecondary(ent); const open=()=>{ edEntryId=ent.id; renderEditorialesPortada(); }; c.onclick=open; c.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); open(); } }; cbody.appendChild(c); });
+      col.appendChild(cbody); mini.appendChild(col); });
+    card.appendChild(mini); inner.appendChild(card); });
+  if(!anyActive){ const e=document.createElement('div'); e.className='home-empty'; e.textContent='Sin seguimientos activos. Mira la pestaña Descartados.'; inner.appendChild(e); }
+  host.appendChild(inner);
 }
 function renderEdGroupPage(){
   const host=$('portada'); host.innerHTML='';
