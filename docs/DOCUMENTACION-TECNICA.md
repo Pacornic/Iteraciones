@@ -1,223 +1,145 @@
-# Kaizen — Documentación técnica y de despliegue
+# Kaizen — Documentación técnica
 
-Guía para montar Kaizen desde cero: **GitHub** (código) → **Vercel** (hosting) → **Supabase** (datos + login). Está pensada para que alguien pueda reproducir el despliegue siguiendo los pasos en orden.
+Guía de arquitectura para entender, mantener o **replicar** la app (p. ej. describiéndosela a otra IA). Última actualización: octubre 2026.
 
----
+## 1. Qué es
 
-## 1. Arquitectura general
+Kaizen — *Iteration Design Manager* es una **app de una sola página** para diseñar juegos de mesa: ideas e iteraciones, reglamento versionado, prototipo jugable, "Board" de notas, tareas pendientes, preparación de **ferias** (citas con editoriales) y **seguimiento de editoriales** (CRM tipo tracking). Funciona en el navegador y como **app instalable (PWA) con modo offline**.
 
-- **App de una sola página**: todo el front está en un único archivo HTML (`index.html`), sin paso de compilación. No hay framework ni backend propio.
-- **Capa de almacenamiento (`Store`)**: se autodetecta y funciona en tres modos:
-  - **localStorage** — si se abre el HTML sin configurar nada (datos solo en ese navegador).
-  - **Supabase** — si hay `config.js` con credenciales y sesión iniciada (nube + login). Es el modo de producción.
-  - **Cowork** — si corre dentro de ese entorno.
-- **Hosting**: Vercel sirve el sitio y **redespliega en cada commit** del repo de GitHub.
-- **Datos y autenticación**: Supabase (Postgres + Auth), con seguridad por fila (**RLS**).
+## 2. Stack y decisiones
+
+- **Front:** un único archivo HTML con CSS y JavaScript *vanilla* embebidos (sin framework, sin bundler, sin build de JS). Tema oscuro, variables CSS.
+- **Backend/datos:** [Supabase](https://supabase.com) (Postgres + Auth + RLS + Edge Functions). La clave *anon* es pública y va en `config.js`; la seguridad la dan las políticas **RLS**.
+- **Hosting:** [Vercel](https://vercel.com), redeploy automático en cada commit de GitHub. La web solo necesita `index.html` + `config.js` (+ los archivos PWA).
+- **PWA:** `manifest.webmanifest` + `sw.js` (service worker) para instalar y abrir sin conexión.
+- **Sin dependencias de build.** La única librería externa es `@supabase/supabase-js@2` desde CDN (jsDelivr).
+
+## 3. Estructura del repositorio (carpeta publicada `iteraciones-app/`)
+
+Lo que la web necesita, en la raíz de la carpeta publicada:
+- **`index.html`** — la aplicación (generada, ver §4).
+- **`config.js`** — `window.SUPABASE_CONFIG = { url, anonKey }`. Si está vacío, la app funciona en modo local (localStorage) sin nube.
+- **`sw.js`** — service worker (offline + autoactualización).
+- **`manifest.webmanifest`** + `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`.
+
+Material de trabajo / documentación (no lo usa la web):
+- **`iteraciones.html`** (en la raíz del proyecto, un nivel por encima) — **archivo fuente** que se edita.
+- **`build.py`** — genera `iteraciones-app/index.html` desde `iteraciones.html`.
+- **`docs/`** — esta documentación, SQL y funciones Edge.
+
+## 4. Flujo de publicación (build)
+
+El código fuente vive en `iteraciones.html`. `build.py` lo copia a `iteraciones-app/index.html` **inyectando antes de `</head>`**:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>/* preconnect dinámico al dominio de Supabase leyendo config.js */</script>
+```
+
+Para publicar: ejecutar `python build.py`, subir `index.html` (y, si cambian, `sw.js`/`config.js`/iconos) al repo. Vercel redepliega. Validación recomendada antes de publicar: extraer el mayor `<script>` y pasar `node --check`.
+
+## 5. Capa de almacenamiento: `Store`
+
+Objeto `Store` que abstrae el backend. `Store.backend` ∈ `local` | `cowork` | `supabase` | `supabase-anon`.
+
+- `init()` — crea el cliente Supabase si hay `SUPABASE_CONFIG` y sesión; si no, `local`.
+- `get(key)` / `set(key,val)` — en supabase leen/escriben la fila del usuario en `app_state`; en local usan `localStorage`.
+- Juegos compartidos: `listSharedGames()`, `createSharedGame(data)`, `updateSharedGame(id,data,rev)` (bloqueo optimista por `rev`), `forceUpdateSharedGame(id,data)` (última versión gana), `deleteSharedGame(id)`, `leaveGame(id)`.
+- Perfiles/identidad: `upsertProfile()`, `setUsername()`, `changeName()`, directorio `listAllProfiles()`.
+- Admin/solicitudes: `checkAdmin()`, `listSignupRequests()`, anuncios, invitaciones, muro.
+
+## 6. Modelo de datos (objeto `state`, serializado a JSON)
 
 ```
-Navegador  ──>  Vercel (index.html estático)  ──>  Supabase (Auth + Postgres/RLS)
-                        ^
-                        └── GitHub (código; cada commit redepliega)
+state = {
+  games: [ Game ],          // juegos propios del usuario
+  generalTasks: [ Task ],   // tareas sin juego ("General"), solo en Inicio
+  fairs: [ Fair ],          // ferias
+  editorials: [ EdEntry ],  // seguimientos juego↔editorial (CRM)
+  currentGameId, preloadVersion, updatedAt
+}
+sharedGames = [ Game + meta __ ]   // en memoria, cargados de la nube (no en state)
 ```
 
----
-
-## 2. Archivos del proyecto (carpeta `iteraciones-app/`)
-
-| Archivo | Para qué sirve | ¿Se sube al repo? |
-|---|---|---|
-| `index.html` | La app publicada (copia de `iteraciones.html` con los scripts inyectados) | **Sí** |
-| `config.js` | URL y clave pública (anon) de Supabase | **Sí** |
-| `supabase-schema.sql` | Tablas base: `app_state` y `signup_requests` | No (solo se ejecuta en Supabase) |
-| `shared-games-schema.sql` | `profiles` (@usuario), `shared_games`, `game_invites` y función de aceptar | No |
-| `admins-schema.sql` | Tabla `admins` y restricción de solicitudes al administrador | No |
-| `leave-game-fix.sql` | Función para salir de un proyecto compartido | No |
-| `backup-app-state.sql` | Copia de seguridad puntual de `app_state` | No |
-| `MANUAL-USUARIO.md` / `DOCUMENTACION-TECNICA.md` | Documentación | Opcional |
-
-> El archivo de trabajo del diseño es `iteraciones.html` (en la raíz del proyecto local). **Nunca se sube tal cual**: hay que generar `index.html` a partir de él (ver sección 7).
-
----
-
-## 3. Paso 1 — GitHub (código)
-
-1. Crea una cuenta en https://github.com y un repositorio **público** (p. ej. `Iteraciones`).
-2. Sube por la web (**Add file → Upload files**) el contenido de `iteraciones-app/`: como mínimo **`index.html`** y **`config.js`**. Los `.sql` no hacen falta en el repo (se ejecutan en Supabase).
-3. No subas la carpeta `.git`.
-
-> Regla práctica: en GitHub solo tocas archivos dentro de esta carpeta de despliegue.
-
----
-
-## 4. Paso 2 — Vercel (hosting)
-
-1. Crea cuenta en https://vercel.com e **importa el repositorio** de GitHub.
-2. **Framework Preset = Other** (es estático). Deploy.
-3. Obtendrás una URL del tipo `https://TU-PROYECTO.vercel.app` (en este caso, `kaizen-idm.vercel.app`).
-4. A partir de ahí, **cada commit** en GitHub redepliega solo.
-
-> Si el repo no aparece al importar: en Vercel, "Adjust GitHub App Permissions" y da acceso al repo.
-
----
-
-## 5. Paso 3 — Supabase (datos + login)
-
-### 5.1 Crear proyecto
-1. Crea cuenta en https://supabase.com → **New project** (guarda la contraseña de la base de datos).
-
-### 5.2 Ejecutar el SQL (en este orden)
-En **SQL Editor → New query**, pega y ejecuta cada archivo **en orden**:
-
-1. **`supabase-schema.sql`** — crea `app_state` (datos por usuario) y `signup_requests` (solicitudes de acceso) con sus políticas RLS.
-2. **`shared-games-schema.sql`** — crea `profiles` (directorio con **@usuario** único), añade la columna `username` a `signup_requests`, y crea `shared_games`, `game_invites` y la función `accept_game_invite`.
-3. **`admins-schema.sql`** — crea `admins` y restringe las solicitudes de acceso a administradores. **Edita el correo del `insert` por el tuyo** antes de ejecutar.
-4. **`leave-game-fix.sql`** — crea la función `leave_shared_game` (salir de un compartido de forma segura).
-5. **`announcements-schema.sql`** — crea `announcements` (mensajes del admin a todos los usuarios). Requiere `admins` ya creada.
-6. **`webhook-trigger.sql`** — (opcional, para el aviso por email) disparador que llama a la Edge Function al recibir una solicitud. Ver sección 12.
-
-> Si Supabase avisa de "destructive" o de habilitar RLS al crear tablas, es normal (es por crear tablas/activar RLS). Elige **Run and enable RLS** cuando lo ofrezca.
-
-### 5.3 Conectar la app con Supabase (`config.js`)
-1. En Supabase: **Project Settings → API** (o *Data API*). Copia el **Project URL** y la **anon public key**.
-2. Rellena `config.js` y súbelo a GitHub:
-   ```js
-   window.SUPABASE_CONFIG = {
-     url: "https://TUPROYECTO.supabase.co",
-     anonKey: "eyJhbGciOi...."
-   };
-   ```
-   - El `url` debe ser `https://xxxx.supabase.co` (no la URL del panel). Un `url` mal puesto da el error "Invalid path specified in request URL".
-
-### 5.4 Configurar el login
-- **Authentication → URL Configuration**: pon en **Site URL** y en **Redirect URLs** la URL de Vercel (`https://kaizen-idm.vercel.app` y `https://kaizen-idm.vercel.app/**`). Esto hace que los correos (invitación, validación, recuperación) apunten a Kaizen y no a una URL antigua.
-- **Authentication → Sign In / Providers → Email**: deja **Email** habilitado. Para que al crear usuarios entren con contraseña sin fricción, puedes desactivar "Confirm email" según prefieras.
-- **Cierra los registros públicos**: desactiva **"Allow new users to sign up"**. El alta se hace solo por el flujo de solicitudes + creación manual (ver 6.1).
-
----
-
-## 6. Flujos clave
-
-### 6.1 Alta de usuarios (aprobación manual, sin servidor)
-1. La persona rellena **Solicitar acceso** → se guarda una fila en `signup_requests` (no se crea cuenta).
-2. El **administrador** (correo en la tabla `admins`) la ve en el **buzón ✉** y la **aprueba** (se marca y copia el correo).
-3. El administrador pulsa **Aprobar** en el buzón → la Edge Function **`approve-signup`** invita al usuario automáticamente (le llega el correo para fijar contraseña) y marca la solicitud como *Aprobada*. Si el correo ya existía, le envía un enlace de restablecer. Ver sección 13.
-4. Al entrar por primera vez, la persona elige su **@usuario** (se guarda en `profiles`; se pre-rellena con el que pidió al registrarse).
-
-> El aviso por email al administrador cuando llega una solicitud está en la sección 12.
-
-### 6.2 Compartir un juego
-1. El dueño comparte: el juego se **migra** de su `app_state` a la tabla `shared_games` (dueño = él, `members` vacío).
-2. Invita por **@usuario** → se crea una fila en `game_invites` (pendiente). La búsqueda usa el directorio `profiles` (nunca expone correos).
-3. El invitado **acepta** → la función `accept_game_invite` lo añade a `members`.
-4. Ambos editan; cada guardado actualiza `shared_games` con `updated_by`/`updated_by_name` y un **contador `rev`** para **control de conflictos** (si cambió desde que abriste, se avisa y recarga).
-5. Salir: la función `leave_shared_game` quita al usuario de `members`. Dejar de compartir (dueño): borra la fila (el juego vuelve a ser privado).
-
-### 6.3 Recuperar contraseña
-"¿No recuerdas tu contraseña?" → `resetPasswordForEmail` → al volver del enlace, la app detecta el evento de recuperación y pide la nueva contraseña (`updateUser`).
-
----
-
-## 7. Mantenimiento: publicar cambios del código
-
-El diseño se edita en **`iteraciones.html`** (archivo de trabajo). Para publicar:
-
-1. Regenera `index.html` a partir de `iteraciones.html` **inyectando dos scripts antes de `</head>`**:
-   - `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2`
-   - `config.js`
-   (Es la única diferencia entre `iteraciones.html` y `index.html`.)
-2. Sube el `index.html` resultante a GitHub (carpeta de despliegue) → Vercel redepliega solo.
-
-> Publicar código **no toca la base de datos**: los datos viven en Supabase, no en el HTML.
-
----
-
-## 8. Modelo de datos (resumen)
-
-| Tabla | Columnas principales | Acceso (RLS) |
-|---|---|---|
-| `app_state` | `user_id` (pk), `data` (jsonb), `updated_at` | Cada usuario solo su fila |
-| `signup_requests` | `id`, `nombre`, `apellido`, `email`, `username`, `status`, `created_at` | Insertar: público. Ver/gestionar: solo admins |
-| `profiles` | `user_id` (pk), `email`, `name`, `username` (único), `updated_at` | Leer: autenticados. Escribir: su propia fila |
-| `shared_games` | `id`, `owner_email`, `data` (jsonb), `members` (text[]), `rev`, `updated_by(_name)`, `updated_at` | Ver/editar: dueño o miembro. Borrar: dueño |
-| `game_invites` | `id`, `game_id`, `email`, `inviter_email`, `game_name`, `status` | Ver/editar: invitado o quien invita |
-| `admins` | `email` (pk) | Cada uno solo ve su propia fila |
-| `announcements` | `id`, `text`, `created_by`, `created_at` | Leer: autenticados. Publicar/borrar: admins |
-
-**Funciones** (SECURITY DEFINER): `accept_game_invite(uuid)` (aceptar invitación), `leave_shared_game(uuid)` (salir de un compartido).
-
-El contenido real de cada juego (ideas, reglamento, versiones, prototipo, posts de bitácora) va dentro del campo **`data` (jsonb)** — en `app_state` para los propios y en `shared_games` para los compartidos.
-
----
-
-## 9. Seguridad
-
-- La **anon key** de Supabase es pública por diseño (va en el cliente); por eso `config.js` se sube al repo. **Nunca** pongas ahí la *service_role key*.
-- La privacidad real la dan **RLS** (cada usuario ve solo lo suyo y lo compartido) y tener **"Allow new users to sign up" desactivado**.
-- **Regla de oro**: no borres en Supabase un usuario que tenga datos — al borrarlo se borran sus datos en cascada. Para cerrar acceso, usa el ajuste de signups, no borres usuarios.
-- Las imágenes de la Bitácora van **incrustadas** (comprimidas) dentro del `data`. Si crecen mucho, conviene migrar a **Supabase Storage**.
-
----
-
-## 10. Copias de seguridad
-
-- **En la app**: ⤓ Exportar / ⤒ Importar JSON.
-- **En la base de datos**: ejecutar `backup-app-state.sql` (crea una copia con fecha de `app_state`; no borra nada). Al crear la copia, elige **"Run and enable RLS"** para que quede protegida.
-
----
-
-## 11. Trabas conocidas
-
-- Al pegar SQL, conserva los `--` de los comentarios (si se pierden, da error de sintaxis).
-- `url` de `config.js` debe ser `https://xxxx.supabase.co` (sin ruta).
-- Correos de invitación con dominio antiguo → revisar **Site URL / Redirect URLs** en Authentication.
-- Un correo que ya existe no se puede "invitar" de nuevo → usar "Send password recovery".
-- El correo integrado de Supabase es lento y limita envíos; puede ir a spam.
-
----
-
-## 12. Aviso por email de nuevas solicitudes (opcional)
-
-Cuando alguien envía una **solicitud de acceso**, el administrador recibe un **email al instante**. Se consigue sin servidor propio con tres piezas: una **Edge Function** de Supabase (`notify-signup` / el nombre que le pongas) que envía el correo vía **Resend**, y un **disparador** en la base de datos que la llama al insertarse la solicitud. El paso a paso completo está en `edge-notify-signup/GUIA.md`; resumen:
-
-1. **Resend**: crea cuenta (https://resend.com), genera una **API Key**. Para empezar puedes usar el remitente de prueba `onboarding@resend.dev`, que **solo envía a tu propio correo** (para enviar desde un remitente propio o a otros destinatarios, verifica un dominio en Resend).
-2. **Edge Function**: en Supabase → **Edge Functions** → crear una función y pegar `edge-notify-signup/index.ts`. Despliega con **"Verify JWT" desactivado** (el disparador no manda sesión de usuario; la protección es el `HOOK_SECRET`).
-3. **Secrets** (Edge Functions → Secrets): `RESEND_API_KEY`, `ADMIN_EMAIL` (correo donde recibir el aviso), `HOOK_SECRET` (cadena larga aleatoria) y, opcional, `MAIL_FROM`.
-4. **Disparador**: como el menú de "Database Webhooks" puede no estar visible, se monta con SQL: `webhook-trigger.sql` (crea la extensión `pg_net`, una función `notify_signup_webhook` que hace `net.http_post` a la URL de la Edge Function con la cabecera `x-hook-secret`, y un trigger `after insert` en `signup_requests`). **Antes de ejecutarlo**, sustituye la URL por la de tu función y pon el mismo `HOOK_SECRET`.
-
-### Probarlo
-Inserta una solicitud de prueba (en SQL Editor):
-```sql
-insert into public.signup_requests (nombre, apellido, email, username, status)
-values ('Prueba', 'Test', 'prueba@ejemplo.com', 'prueba', 'pending');
+**Game**
 ```
-Debe llegarte el email en segundos. Borra luego la fila de prueba. Para diagnosticar: **Edge Functions → Logs** (si la función se ejecutó y la respuesta de Resend). Un **401** en los logs = el `x-hook-secret` del disparador no coincide con el secret `HOOK_SECRET`.
+{ id, name, color, stage: 'active'|'draft'|'paused', touchedAt,
+  changes: [ Idea ], tasks: [ Task ], posts: [ Post ],
+  rulebook: { sections:[{key,title,content}] }, rulebookVersions:[{n,sections,summary,...}],
+  proto: { name, html, updatedAt } }
+// Compartido añade meta: __shared, __sharedId, __rev, __owner, __members[], __updatedBy, __updatedByName, __updatedAt
+```
 
-> Este aviso **no cambia** el flujo de aprobación: sigues aprobando desde el buzón (✉) y creando el usuario en Supabase. Solo te enteras en el momento.
+**Idea (change)** — pestaña Ideas:
+```
+{ id, title, idea, note, state:'porprobar'|'aparcada'(Testing)|'funciona'(OK)|'descartada',
+  section, implemented, implementedSection, implementedSig, appImpact, appImplemented, createdAt, updatedAt }
+```
 
-### Anuncios del administrador
-Relacionado: desde el buzón (✉), un administrador puede **publicar anuncios** para todos los usuarios (tabla `announcements`, ver `announcements-schema.sql`). A cada usuario se le "enciende" el icono del buzón cuando hay un anuncio o invitación sin leer.
+**Task** (en `game.tasks` o `state.generalTasks`):
+```
+{ id, text, done, createdAt, doneAt, editorial? }   // 'editorial' etiqueta las tareas automáticas de envío
+```
 
----
+**Post** (Board): `{ id, by, byName, text, images:[dataURL], createdAt, updatedAt, edited }`
 
-## 13. Aprobación de usuarios con un clic (Edge Function `approve-signup`)
+**Fair**: `{ id, name, start, end, dates, place, past, appointments:[ Appt ] }`
 
-Automatiza el alta: al pulsar **Aprobar** en el buzón, la app invita al usuario sin que el admin entre a Supabase. Detalle en `edge-approve-signup/GUIA.md`; resumen:
+**Appt** (cita): `{ id, editorial, when, place, contact, done, doneAt, games:[ ApptGame ] }`
 
-- **Función** `approve-signup` (`edge-approve-signup/index.ts`): usa la **service_role** (secreta, solo servidor). Verifica que quien llama es admin (tabla `admins`) y entonces llama a `auth.admin.inviteUserByEmail(email, { data })`, que envía el correo para fijar contraseña. Si el correo ya existía, hace `resetPasswordForEmail`. Marca la solicitud como *Aprobada*.
-- **Despliegue**: crear la función con nombre `approve-signup` y **"Verify JWT" desactivado** (verifica el token ella misma; así el preflight CORS funciona). **No requiere secrets nuevos**: usa los *Default secrets* `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`.
-- **App**: `Store.approveSignup()` invoca la función con la sesión del admin; el botón **Aprobar** del buzón la usa.
-- El **@usuario** solicitado se guarda en los metadatos del usuario (`requested_username`) y se pre-rellena en su primer acceso.
-- Diagnóstico: **Edge Functions → approve-signup → Logs** (403 = tu correo no está en `admins`).
+**ApptGame** (juego mostrado en una cita):
+```
+{ gameId, gameName, estado:'pendiente'|'proto_dejado'|'interesado'|'descartado',
+  follow:[ 'proto'|'pnp'|'reglas'|'video'|'sellsheet'|'agendar' ],  // solo si interesado/proto_dejado
+  feedback, taskId, taskAgendarId }   // ids de las tareas automáticas creadas
+```
 
-### Panel de usuarios activos (`admin-users`)
-El **buzón** (✉) queda solo para notificaciones: **Solicitudes** (pendientes) y **Anuncios**. La lista de **usuarios activos** con su **último acceso** y fecha de alta está en **⚙ Ajustes → pestaña Usuarios** (solo admin). Esa lista la sirve la Edge Function **`admin-users`** (`edge-admin-users/index.ts`): verifica que quien llama es admin y devuelve correo, @usuario, nombre, `created_at` y la última actividad, uniendo `auth.users` con `profiles`. Despliega igual que `approve-signup`: nombre `admin-users`, **Verify JWT off**, sin secrets nuevos.
+**EdEntry** (seguimiento editorial, CRM):
+```
+{ id, editorial, gameId, gameName, status:'interesado'|'proto_dejado'|'testing'|'firmado'|'descartado',
+  createdAt, updates:[ { id, text, createdAt, dir:'out'|'in'|'note', fromFair? } ] }
+```
+El `log` (`updates`) es tipo conversación: `dir` = *Yo→editorial* / *Editorial→yo* / *Nota*. La primera línea suele venir de la cita de feria (`fromFair:true`).
 
-> **Último acceso**: se usa `profiles.updated_at` (que se actualiza en cada arranque de la app mediante `upsertProfile`), **no** `auth.users.last_sign_in_at`. Motivo: `last_sign_in_at` solo cambia en un inicio de sesión real (contraseña/invitación/enlace), no cuando la sesión se refresca sola; `profiles.updated_at` refleja mejor "la última vez que abrió la app". Se usa `last_sign_in_at` solo como respaldo.
+## 7. Relaciones automáticas (reglas de negocio)
 
-Los **anuncios** son solo in-app (no se envían por email).
+- En una cita, marcar un juego como **Interesado** o **Proto dejado** → crea/asegura un **EdEntry** (con la editorial de la cita) y siembra la primera línea del log desde la cita. **Descartado** también crea EdEntry con estado `descartado`.
+- En **Interesado/Proto dejado** se despliegan casillas de seguimiento. Marcar envíos (`proto/pnp/reglas/video/sellsheet`) crea/actualiza **una** tarea en el juego: `"Enviar PNP + Reglas a {Editorial}"`. `agendar` crea otra tarea `"Agendar TTS a {Editorial}"`. En Proto dejado se oculta "Enviar proto". Esas tareas se etiquetan con `editorial` y aparecen también en la pestaña Tareas del juego y en Inicio.
+- Al **guardar la cita** y **al cargar** se re-aplica la editorial a esas tareas (por si se escribió el nombre después).
+- El **nombre del juego** se resuelve siempre en vivo por `gameId` (si renombras un juego, se actualiza en ferias/editoriales).
 
----
+## 8. Persistencia y modo offline
 
-## 14. Personalizar los correos de acceso (remitente y texto)
+- `persistState()` escribe en la nube **y** en una **copia local** (`localStorage` key `kaizen-cache-<userId>`), con bandera `kaizen-dirty` si no pudo subir.
+- `loadState()`: carga primero la copia local (apertura instantánea); intenta la nube con **timeout** (`withTimeout`, 5 s); si hay cambios locales sin sincronizar más nuevos, gana lo local; si no, gana la nube. Offline → usa la copia local.
+- **Compartidos offline:** se cachean (`kaizen-shared-<userId>`); edición offline se encola (`kaizen-shared-pending-<userId>`) y al reconectar pregunta si sincronizar (**última versión gana** ante conflicto).
+- **Reanudar:** al volver la app a primer plano (`visibilitychange`/`focus`/`pageshow`) o recuperar conexión (`online`), se vuelve a traer la nube y repinta (clave en iOS, que *reanuda* la PWA en vez de recargar).
+- **Service worker (`sw.js`):** mismo origen = *stale-while-revalidate* (abre al instante, refresca en segundo plano); CDN = caché primero; llamadas a `*.supabase.co` = nunca se cachean. Autoactualiza sin versiones.
 
-Por defecto los correos de Auth llegan de "Supabase Auth". Para que lleguen como **Kaizen** y con texto propio, ver `email-personalizacion/GUIA.md`. En resumen: el **remitente** se cambia activando **SMTP propio** en Authentication (p. ej. con Resend + dominio verificado, Sender name "Kaizen"); el **texto/diseño** se edita en **Authentication → Email Templates** (Invite, Reset Password…), usando variables como `{{ .ConfirmationURL }}`.
+## 9. Render y navegación
+
+- `appView` ∈ `home` | `design` | `ferias` | `editoriales` | `fair` | `game`. `render()` enruta a `renderHomeHub`, `renderDesignPortada`, `renderFeriasPortada`, `renderEditorialesPortada`, `renderFairBoard`, `renderBoard`.
+- Las "portadas" (home/design/ferias/editoriales) se pintan en `#portada`; la vista de juego/feria en `#wrap` dentro de `.content`.
+- `saveState()` enruta: si estás en un juego compartido, guarda en la nube (`saveSharedGame`); si no, `persistState()`. Helper `persistGame(g)` para guardar un juego concreto (propio o compartido).
+- Normalización/migraciones: `normalizeStructures()` adapta datos antiguos al modelo nuevo y hace *backfills* (p. ej. crear seguimientos de editoriales desde citas ya marcadas).
+
+## 10. Supabase: tablas y funciones (ver `docs/sql` y `docs/edge`)
+
+Orden de ejecución del SQL (SQL Editor):
+1. `supabase-schema.sql` — `app_state` (estado por usuario) + `signup_requests`.
+2. `shared-games-schema.sql` — `profiles` (@usuario), `shared_games`, `game_invites` + función de aceptar.
+3. `admins-schema.sql` — `admins` + restringe solicitudes a admins.
+4. `leave-game-fix.sql` — función para salir de un compartido.
+5. `announcements-schema.sql` — anuncios del admin.
+6. `webhook-trigger.sql` — (opcional) dispara email al llegar una solicitud.
+
+Edge Functions (Supabase → Edge Functions, *Verify JWT off* donde se indica): `notify-signup`, `approve-signup`, `admin-users`. Correos: ver `docs/email`.
+
+Seguridad: todo el acceso a datos pasa por **RLS**; un usuario solo ve/edita su `app_state`, los `shared_games` donde es dueño o miembro, su perfil y lo compartido con él.
+
+## 11. Cómo replicarlo en otro chat de IA (resumen-prompt)
+
+> Crea una SPA en **un solo archivo HTML** (CSS+JS vanilla, tema oscuro con variables CSS, sin frameworks ni build) para gestionar el diseño iterativo de juegos de mesa. Debe tener: un objeto `Store` que abstraiga el backend (localStorage o Supabase según `window.SUPABASE_CONFIG`); un `state` con `games[]`, `generalTasks[]`, `fairs[]`, `editorials[]`; navegación por `appView` con una función `render()`. Un juego tiene pestañas **Ideas** (con estados Por probar/Testing/OK/Descartada, "llevar al reglamento" y "APP idea"), **Tareas**, **Board** (notas con imágenes y dibujo a mano en canvas), **Reglas** (reglamento versionado) y **Proto** (HTML jugable embebido en iframe). Inicio = dashboard (métricas, "Idea rápida", "Tarea rápida", áreas Diseño/Ferias/Editoriales, tareas e ideas pendientes). **Ferias**: citas con editorial, fecha, lugar; cada cita lista juegos con estado (Pendiente/Proto dejado/Interesado/Descartado); Interesado/Proto dejado despliega casillas de seguimiento que generan tareas automáticas y crean entradas de **Editoriales**. **Editoriales (Tracking)**: por juego, pestaña *Activos* (kanban de columnas Interesado/Proto dejado/En Testing) y *Descartados* (lista con último feedback); cada seguimiento tiene un **log** de iteraciones con dirección (Yo→editorial / Editorial→yo / Nota). Persistencia con copia local + nube y modo **offline** (service worker + cache de estado). Juegos **compartidos** multiusuario con bloqueo optimista por `rev`. Instalable como **PWA**.
+
+Con esa descripción y el modelo de datos de §6–§7, otra IA puede reconstruir la app.
