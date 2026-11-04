@@ -1187,11 +1187,14 @@ async function reloadSharedGames(){ if(Store.backend!=='supabase'){ sharedGames=
   if(isOffline()){ sharedGames=readSharedCache()||[]; return; }
   try{ const rows=await withTimeout(Store.listSharedGames(), 5000); sharedGames=rows.map(mapSharedRow); applyPendingShared(); writeSharedCache(); }
   catch(e){ sharedGames=readSharedCache()||[]; } }
+let pendingSaves=0;
 async function saveSharedGame(g){
   g.touchedAt=Date.now();
   if(isOffline()){ markPendingShared(g); g.__updatedAt=new Date().toISOString(); g.__updatedBy=Store.email; g.__updatedByName=Store.name; writeSharedCache(); updateSavedIndicator(); return true; }
+  pendingSaves++;
   try{ const res=await Store.updateSharedGame(g.__sharedId, gameData(g), g.__rev); if(res.conflict){ toast('Otro usuario guardó cambios antes; recargo la versión más reciente.','warn',6000); await reloadSharedGames(); render(); return false; } g.__rev=res.rev; g.__updatedAt=res.updated_at; g.__updatedBy=Store.email; g.__updatedByName=Store.name; clearPendingShared(g.__sharedId); writeSharedCache(); updateSavedIndicator(); return true; }
-  catch(e){ /* fallo de red: encolar como offline, no perder el cambio */ markPendingShared(g); writeSharedCache(); updateSavedIndicator(); return true; } }
+  catch(e){ /* fallo de red: encolar como offline, no perder el cambio */ markPendingShared(g); writeSharedCache(); updateSavedIndicator(); return true; }
+  finally{ pendingSaves--; } }
 async function syncPendingShared(){ if(Store.backend!=='supabase' || isOffline() || !hasPendingShared()) return;
   const p=readPendingShared(); const ids=Object.keys(p);
   const ok=await confirmDialog('Tienes cambios sin conexión en '+ids.length+' proyecto(s) compartido(s). ¿Subirlos ahora? Ante un conflicto se conservará tu versión más reciente.', { okLabel:'Sincronizar', danger:false });
@@ -1212,8 +1215,10 @@ async function persistState(){
   writeStateCache();
   if(Store.backend==='supabase'){
     if(isOffline()){ setDirty(true); updateSavedIndicator(); return true; }
+    pendingSaves++;
     try{ const ok=await Store.set('games-data', JSON.stringify(state)); setDirty(!ok); updateSavedIndicator(); if(!ok&&!storageWarned){ storageWarned=true; toast('No se pudo guardar en la nube; guardado en el dispositivo.','warn',5000); } return true; }
     catch(e){ setDirty(true); updateSavedIndicator(); return true; }
+    finally{ pendingSaves--; }
   }
   try{ const ok=await Store.set('games-data', JSON.stringify(state)); updateSavedIndicator(); if(!ok&&!storageWarned){ storageWarned=true; toast('No se pudo guardar de forma persistente.','warn',6000); } return ok; }
   catch(e){ if(!storageWarned){ storageWarned=true; toast('No se pudo guardar: '+(e.message||e),'warn',6000); } return false; }
@@ -2202,7 +2207,7 @@ $('recCancel').onclick=closeRecovery; $('recSave').onclick=saveRecovery; $('recP
 $('shClose').onclick=closeShareModal; $('shInput').addEventListener('input',shareInput);
 $('setName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); doChangeName(); } });
 $('setPw2').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); doChangePassword(); } });
-$('protoFile').onchange=async(e)=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return; const g=currentGame(); if(!g) return; const html=await f.text(); if(html.length>2000000){ toast('Archivo muy grande; puede ralentizar el guardado.','warn',5000); } g.proto={ name:f.name, html, updatedAt:Date.now() }; await saveState(); currentTab='proto'; renderBoard(); toast('Prototipo cargado.'); };
+$('protoFile').onchange=async(e)=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return; const g=currentGame(); if(!g) return; const html=await f.text(); if(html.length>2000000){ toast('Archivo muy grande; puede ralentizar el guardado.','warn',5000); } g.proto={ name:f.name, html, updatedAt:Date.now() }; g.touchedAt=Date.now(); currentTab='proto'; renderBoard(); toast('Prototipo cargado.'); saveState(); };
 $('cmName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveChange(); } });
 $('gmName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveGame(); } });
 $('svSum').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); consolidateVersion(); } });
@@ -2282,13 +2287,13 @@ async function reconcileSharedDuplicates(){
   if(changedLocal) await saveLocal();
   return changedLocal;
 }
-async function refreshCloud(){ if(Store.backend!=='supabase' || isOffline()) return; try{ await loadState(); }catch(e){} await Promise.allSettled([ Store.checkAdmin(), reloadDirectory(), reloadSharedGames(), reloadInvites(), reloadSentInvites(), reloadAnnouncements() ]); await reconcileSharedDuplicates(); await syncPending(); render(); updateBackend(); }
+async function refreshCloud(){ if(Store.backend!=='supabase' || isOffline() || pendingSaves>0) return; try{ await loadState(); }catch(e){} await Promise.allSettled([ Store.checkAdmin(), reloadDirectory(), reloadSharedGames(), reloadInvites(), reloadSentInvites(), reloadAnnouncements() ]); await reconcileSharedDuplicates(); await syncPending(); render(); updateBackend(); }
 // Al volver a primer plano (reabrir la app instalada), vuelve a traer datos de la nube.
 let lastResumeRefresh=0;
 let suppressResumeUntil=0;
 // Al abrir un selector de archivos la página se oculta; no refresques al volver (pisaría lo recién subido).
 document.addEventListener('click', e=>{ const t=e.target; if(t && t.tagName==='INPUT' && t.type==='file') suppressResumeUntil=Date.now()+8000; }, true);
-function onAppResume(){ if(document.visibilityState!=='visible') return; if(Store.backend!=='supabase' || isOffline()) return;
+function onAppResume(){ if(document.visibilityState!=='visible') return; if(Store.backend!=='supabase' || isOffline() || pendingSaves>0) return;
   if(Date.now()<suppressResumeUntil){ suppressResumeUntil=0; return; }
   // No refrescar si hay algo abierto en edición (panel o modal), para no perder lo que se escribe.
   if($('panel') && $('panel').classList.contains('open')) return;
