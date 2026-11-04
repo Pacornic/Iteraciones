@@ -2285,7 +2285,11 @@ async function reconcileSharedDuplicates(){
 async function refreshCloud(){ if(Store.backend!=='supabase' || isOffline()) return; try{ await loadState(); }catch(e){} await Promise.allSettled([ Store.checkAdmin(), reloadDirectory(), reloadSharedGames(), reloadInvites(), reloadSentInvites(), reloadAnnouncements() ]); await reconcileSharedDuplicates(); await syncPending(); render(); updateBackend(); }
 // Al volver a primer plano (reabrir la app instalada), vuelve a traer datos de la nube.
 let lastResumeRefresh=0;
+let suppressResumeUntil=0;
+// Al abrir un selector de archivos la página se oculta; no refresques al volver (pisaría lo recién subido).
+document.addEventListener('click', e=>{ const t=e.target; if(t && t.tagName==='INPUT' && t.type==='file') suppressResumeUntil=Date.now()+8000; }, true);
 function onAppResume(){ if(document.visibilityState!=='visible') return; if(Store.backend!=='supabase' || isOffline()) return;
+  if(Date.now()<suppressResumeUntil){ suppressResumeUntil=0; return; }
   // No refrescar si hay algo abierto en edición (panel o modal), para no perder lo que se escribe.
   if($('panel') && $('panel').classList.contains('open')) return;
   if([...document.querySelectorAll('.ov')].some(o=>o.style.display==='flex')) return;
