@@ -249,6 +249,7 @@
   .ptr.on{ color:var(--amber); border-color:var(--amber); }
   .ptr.spin .ptr-i{ animation:ptrspin .8s linear infinite; display:inline-block; }
   @keyframes ptrspin{ to{ transform:rotate(360deg); } }
+  .ibtn.spin{ animation:ptrspin .8s linear infinite; }
   /* home tareas */
   .home-tasks{ background:var(--surface); border:1px solid var(--border); border-radius:13px; padding:8px 14px 12px; }
   .ht-blk{ padding:8px 0; border-top:1px solid var(--line); }
@@ -613,6 +614,7 @@
     <span class="offdot" id="offReady" title="offline ready" aria-label="offline ready" style="display:none;">●</span>
     <span class="backend" id="savedAt"></span>
     <span class="backend" id="backend"></span>
+    <button class="ibtn" id="refreshBtn" title="Refrescar desde la nube" aria-label="Refrescar" style="display:none;">↻</button>
     <button class="ibtn" id="exportBtn" title="Exportar copia (.json)" aria-label="Exportar">⤓</button>
     <button class="ibtn" id="importBtn" title="Importar copia (.json)" aria-label="Importar">⤒</button>
     <input type="file" id="importFile" accept="application/json,.json" style="display:none;">
@@ -992,7 +994,7 @@ const Store = {
 };
 function showAuthGate(){ $('home').style.display='flex'; $('agEmail').focus(); }
 function hideAuthGate(){ $('home').style.display='none'; }
-function updateBackend(){ $('backend').textContent='· '+Store.label(); $('signOutBtn').style.display = Store.backend==='supabase'?'inline-flex':'none'; const showInbox = Store.backend==='supabase' && (Store.admin || myInvites.length>0 || unreadAnn()>0); $('reqBtn').style.display = showInbox?'inline-flex':'none'; if(Store.backend==='supabase') refreshRequestsBadge(); updateHello(); }
+function updateBackend(){ $('backend').textContent='· '+Store.label(); $('signOutBtn').style.display = Store.backend==='supabase'?'inline-flex':'none'; { const rb=$('refreshBtn'); if(rb) rb.style.display = Store.backend==='supabase'?'inline-flex':'none'; } const showInbox = Store.backend==='supabase' && (Store.admin || myInvites.length>0 || unreadAnn()>0); $('reqBtn').style.display = showInbox?'inline-flex':'none'; if(Store.backend==='supabase') refreshRequestsBadge(); updateHello(); }
 function firstName(){ return String(Store.name||'').trim().split(/\s+/)[0]||''; }
 function updateHello(){ const el=$('hello'); if(!el) return; const n=firstName(); el.textContent = n?('Hola, '+n):''; }
 let setTab='cuenta';
@@ -2199,6 +2201,7 @@ $('scCancel').onclick=closeSectionModal; $('scSave').onclick=saveSectionModal;
 $('cfCancel').onclick=()=>resolveConfirm(false); $('cfOk').onclick=()=>resolveConfirm(true);
 $('exportBtn').onclick=exportData; $('importBtn').onclick=()=>$('importFile').click(); $('importFile').onchange=(e)=>{ const f=e.target.files[0]; if(f) importData(f); e.target.value=''; };
 $('signOutBtn').onclick=()=>Store.signOut();
+{ const rb=$('refreshBtn'); if(rb) rb.onclick=async()=>{ if(pendingSaves>0) return; rb.classList.add('spin'); try{ await refreshCloud(); toast('Actualizado.'); }catch(e){} rb.classList.remove('spin'); }; }
 $('settingsBtn').onclick=openSettings; $('setClose').onclick=closeSettings; $('setTopClose').onclick=closeSettings; $('setPwSave').onclick=doChangePassword; $('setNameSave').onclick=doChangeName;
 $('reqBtn').onclick=openRequests; $('reqClose').onclick=closeRequests;
 $('setUserSave').onclick=doChangeUsername; $('setEdit').onclick=enableSettingsEdit;
@@ -2207,7 +2210,7 @@ $('recCancel').onclick=closeRecovery; $('recSave').onclick=saveRecovery; $('recP
 $('shClose').onclick=closeShareModal; $('shInput').addEventListener('input',shareInput);
 $('setName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); doChangeName(); } });
 $('setPw2').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); doChangePassword(); } });
-$('protoFile').onchange=async(e)=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return; const g=currentGame(); if(!g) return; const html=await f.text(); if(html.length>2000000){ toast('Archivo muy grande; puede ralentizar el guardado.','warn',5000); } g.proto={ name:f.name, html, updatedAt:Date.now() }; g.touchedAt=Date.now(); currentTab='proto'; renderBoard(); toast('Prototipo cargado.'); saveState(); };
+$('protoFile').onchange=async(e)=>{ suppressResumeUntil=Date.now()+8000; const f=e.target.files[0]; e.target.value=''; if(!f) return; const html=await f.text(); const g=currentGame(); if(!g) return; if(html.length>2000000){ toast('Archivo muy grande; puede ralentizar el guardado.','warn',5000); } g.proto={ name:f.name, html, updatedAt:Date.now() }; g.touchedAt=Date.now(); currentTab='proto'; renderBoard(); toast('Prototipo cargado.'); saveState(); };
 $('cmName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveChange(); } });
 $('gmName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveGame(); } });
 $('svSum').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); consolidateVersion(); } });
@@ -2293,12 +2296,17 @@ let lastResumeRefresh=0;
 let suppressResumeUntil=0;
 // Al abrir un selector de archivos la página se oculta; no refresques al volver (pisaría lo recién subido).
 document.addEventListener('click', e=>{ const t=e.target; if(t && t.tagName==='INPUT' && t.type==='file') suppressResumeUntil=Date.now()+8000; }, true);
-function onAppResume(){ if(document.visibilityState!=='visible') return; if(Store.backend!=='supabase' || isOffline() || pendingSaves>0) return;
-  if(Date.now()<suppressResumeUntil){ suppressResumeUntil=0; return; }
-  // No refrescar si hay algo abierto en edición (panel o modal), para no perder lo que se escribe.
-  if($('panel') && $('panel').classList.contains('open')) return;
-  if([...document.querySelectorAll('.ov')].some(o=>o.style.display==='flex')) return;
-  const now=Date.now(); if(now-lastResumeRefresh<3000) return; lastResumeRefresh=now; refreshCloud(); }
+// Auto-refresco al volver a primer plano, CON candados para no pisar nada:
+// no refresca si hay un guardado en curso, si estás escribiendo, o con panel/ventana abierta.
+function onAppResume(){
+  if(document.visibilityState!=='visible') return;
+  if(Store.backend!=='supabase' || isOffline() || pendingSaves>0) return;
+  if(Date.now()<suppressResumeUntil) return;                 // acabas de usar un selector de archivos
+  const ae=document.activeElement; if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;  // estás escribiendo
+  if($('panel') && $('panel').classList.contains('open')) return;                                   // panel abierto
+  if([...document.querySelectorAll('.ov')].some(o=>o.style.display==='flex')) return;               // ventana/modal abierto
+  const now=Date.now(); if(now-lastResumeRefresh<3000) return; lastResumeRefresh=now; refreshCloud();
+}
 document.addEventListener('visibilitychange', onAppResume);
 window.addEventListener('pageshow', onAppResume);
 window.addEventListener('focus', onAppResume);
