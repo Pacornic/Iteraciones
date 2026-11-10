@@ -433,6 +433,7 @@
   .ed-up-d{ font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--faint); margin-left:auto; }
   .ed-up-t{ font-size:13px; color:var(--text); white-space:pre-wrap; word-break:break-word; }
   .ed-up-x{ background:none; border:none; color:var(--faint); cursor:pointer; font-size:10px; } .ed-up-x:hover{ color:var(--brick); }
+  .ed-up-ed{ background:none; border:none; color:var(--faint); cursor:pointer; font-size:11px; margin-right:4px; } .ed-up-ed:hover{ color:var(--amber); }
   .ed-logtable{ width:100%; border-collapse:collapse; font-size:13px; }
   .ed-logtable th{ text-align:left; font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.5px; text-transform:uppercase; color:var(--faint); font-weight:500; padding:0 8px 6px; border-bottom:1px solid var(--line); }
   .ed-logtable td{ padding:8px; border-bottom:1px solid var(--line); vertical-align:top; }
@@ -1597,7 +1598,7 @@ function openNewEditorial(){
   p.classList.add('open'); setTimeout(()=>{ const x=$('neEd'); if(x) x.focus(); },0);
   $('neCreate').onclick=async()=>{ const ed=$('neEd').value.trim(); const gid=$('neG').value; if(!ed){ $('neEd').focus(); toast('Pon el nombre de la editorial.','warn'); return; } if(!gid){ toast('Elige un juego.','warn'); return; } const gname=gameNameById(gid)||'—'; const ent=ensureEditorialEntry(ed, gid, gname); const note=$('neNote').value.replace(/\s+$/,''); if(note){ ent.updates=ent.updates||[]; ent.updates.push({ id:uid(), text:note, createdAt:Date.now() }); } await saveLocal(); openEditorialDetail(ent); if(appView==='editoriales') renderEditorialesPortada(); toast('Seguimiento creado.'); };
 }
-let edRef=null, edNewDir='out';
+let edRef=null, edNewDir='out', edEditLogId=null;
 const ED_DIR=[['out','Yo → editorial'],['in','Editorial → yo'],['note','Nota']];
 const ED_DIR_SHORT={ out:'Yo →', in:'← Editorial', note:'Nota' };
 function edDirOf(u){ return u.dir || (u.fromFair?'note':'note'); }
@@ -1611,7 +1612,12 @@ function renderEdDetailPage(){
   ptBack(inner, backLabel, ()=>{ edEntryId=null; renderEditorialesPortada(); });
   const g=allGames().find(x=>x.id===ent.gameId); const gcolor=(g&&g.color)||colorFor(ent.gameName||'');
   const updates=(ent.updates||[]).slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-  const logRows = updates.map(u=>{ const d=edDirOf(u); return `<tr class="dir-${d}"><td class="lg-date">${escapeHtml(fmtWhen(u.createdAt))}</td><td class="lg-dir"><button class="ed-dir-chip dir-${d}" data-id="${u.id}" title="Cambiar quién">${ED_DIR_SHORT[d]}</button>${u.fromFair?' <span class="ed-tag">feria</span>':''}</td><td class="lg-txt">${escapeHtml(u.text||'')}</td><td class="lg-x"><button class="ed-up-x" data-id="${u.id}" title="Eliminar">✕</button></td></tr>`; }).join('');
+  const logRows = updates.map(u=>{ const d=edDirOf(u); const editing=(edEditLogId===u.id);
+    const txtCell = editing
+      ? `<td class="lg-txt"><textarea class="ap-in ed-up-edit-ta" data-id="${u.id}" style="min-height:48px;">${escapeHtml(u.text||'')}</textarea><div style="margin-top:5px;"><button class="btn-q rqb ed-up-save" data-id="${u.id}">Guardar</button> <button class="btn-q rqb ed-up-cancel">Cancelar</button></div></td>`
+      : `<td class="lg-txt">${escapeHtml(u.text||'')}</td>`;
+    const acts = editing ? '' : `<button class="ed-up-ed" data-id="${u.id}" title="Editar">✎</button><button class="ed-up-x" data-id="${u.id}" title="Eliminar">✕</button>`;
+    return `<tr class="dir-${d}"><td class="lg-date">${escapeHtml(fmtWhen(u.createdAt))}</td><td class="lg-dir"><button class="ed-dir-chip dir-${d}" data-id="${u.id}" title="Cambiar quién">${ED_DIR_SHORT[d]}</button>${u.fromFair?' <span class="ed-tag">feria</span>':''}</td>${txtCell}<td class="lg-x">${acts}</td></tr>`; }).join('');
   const logHtml = updates.length ? `<table class="ed-logtable"><thead><tr><th>Fecha</th><th>Quién</th><th>Comentario</th><th></th></tr></thead><tbody>${logRows}</tbody></table>` : '<div style="font-size:12.5px;color:var(--faint);">Sin iteraciones todavía.</div>';
   const header=document.createElement('div'); header.className='pt-secrow'; header.innerHTML=`<span class="gname" style="${chipStyle(gcolor)};font-family:'Fraunces',serif;font-size:19px;padding:4px 14px;">${escapeHtml(gameNameById(ent.gameId)||ent.gameName||'—')}</span><span style="color:var(--faint);">·</span><span style="font-size:15px;color:var(--muted);">${escapeHtml(ent.editorial||'—')}</span>`;
   const goIdeas=document.createElement('button'); goIdeas.className='btn-q'; goIdeas.style.marginLeft='auto'; goIdeas.textContent='Ideas del juego →'; goIdeas.title='Ir a las ideas de '+(ent.gameName||'este juego'); goIdeas.onclick=()=>{ if(allGames().some(x=>x.id===ent.gameId)) openGameTab(ent.gameId,'inicio'); else toast('El juego ya no existe.','warn'); };
@@ -1632,6 +1638,9 @@ function renderEdDetailPage(){
   body.querySelectorAll('.ed-dir-pick').forEach(btn=>btn.onclick=()=>{ edNewDir=btn.dataset.d; body.querySelectorAll('.ed-dir-pick').forEach(x=>x.classList.toggle('on', x.dataset.d===edNewDir)); });
   $('edAdd').onclick=async()=>{ const t=$('edNote').value.replace(/\s+$/,''); if(!t) return; ent.updates=ent.updates||[]; ent.updates.push({ id:uid(), text:t, dir:edNewDir, createdAt:Date.now() }); $('edNote').value=''; await saveLocal(); reRender(); };
   body.querySelectorAll('.ed-dir-chip').forEach(c=>c.onclick=async()=>{ const id=c.dataset.id; const u=(ent.updates||[]).find(x=>x.id===id); if(!u) return; const order=['out','in','note']; const cur=edDirOf(u); u.dir=order[(order.indexOf(cur)+1)%order.length]; await saveLocal(); reRender(); });
+  body.querySelectorAll('.ed-up-ed').forEach(x=>x.onclick=()=>{ edEditLogId=x.dataset.id; reRender(); setTimeout(()=>{ const ta=body.querySelector('.ed-up-edit-ta'); if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length,ta.value.length); } },0); });
+  body.querySelectorAll('.ed-up-save').forEach(x=>x.onclick=async()=>{ const id=x.dataset.id; const ta=body.querySelector('.ed-up-edit-ta[data-id="'+id+'"]'); const u=(ent.updates||[]).find(y=>y.id===id); if(u && ta){ u.text=ta.value.replace(/\s+$/,''); } edEditLogId=null; await saveLocal(); reRender(); });
+  body.querySelectorAll('.ed-up-cancel').forEach(x=>x.onclick=()=>{ edEditLogId=null; reRender(); });
   body.querySelectorAll('.ed-up-x').forEach(x=>x.onclick=async()=>{ const id=x.dataset.id; ent.updates=(ent.updates||[]).filter(u=>u.id!==id); await saveLocal(); reRender(); });
   $('edDel').onclick=async()=>{ const ok=await confirmDialog('¿Eliminar este seguimiento con la editorial?'); if(!ok) return; state.editorials=(state.editorials||[]).filter(x=>x.id!==ent.id); await saveLocal(); edEntryId=null; renderEditorialesPortada(); toast('Seguimiento eliminado.'); };
 }
