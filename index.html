@@ -2309,11 +2309,14 @@ async function reconcileSharedDuplicates(){
   return changedLocal;
 }
 async function refreshCloud(){ if(Store.backend!=='supabase' || isOffline() || pendingSaves>0) return;
-  const keepId=state.currentGameId;  // loadState sobrescribe currentGameId (no se guarda al abrir un compartido)
+  const keepId=state.currentGameId, keepView=appView, keepTab=currentTab, keepFair=currentFairId;  // loadState sobrescribe el estado
   try{ await loadState(); }catch(e){}
   await Promise.allSettled([ Store.checkAdmin(), reloadDirectory(), reloadSharedGames(), reloadInvites(), reloadSentInvites(), reloadAnnouncements() ]);
   await reconcileSharedDuplicates(); await syncPending();
+  // Mantener la vista actual (incluye juegos compartidos, que no se guardan en la nube).
+  appView=keepView; currentTab=keepTab; currentFairId=keepFair;
   if(keepId && (state.games.some(g=>g.id===keepId) || (sharedGames||[]).some(g=>g.id===keepId))) state.currentGameId=keepId;
+  else restoreView();
   render(); updateBackend(); }
 // Al volver a primer plano (reabrir la app instalada), vuelve a traer datos de la nube.
 let lastResumeRefresh=0;
