@@ -1241,7 +1241,14 @@ function lastVersion(g){ return g.rulebookVersions.length ? g.rulebookVersions.s
 function hasUnsaved(g){ if(g.pendingChanges.length) return true; const lv=lastVersion(g); if(!lv) return g.rulebook.sections.some(s=>s.content.trim()); return g.rulebook.sections.some(s=>{ const o=lv.sections.find(x=>x.key===s.key); return (o?o.content:'')!==s.content; }); }
 
 /* ---------- Render ---------- */
-function render(){ const isP=(appView==='home'||appView==='design'||appView==='ferias'||appView==='editoriales'); document.body.classList.toggle('view-home', isP); document.body.classList.toggle('view-game', !isP); if(appView==='home') renderHomeHub(); else if(appView==='design') renderDesignPortada(); else if(appView==='ferias') renderFeriasPortada(); else if(appView==='editoriales') renderEditorialesPortada(); else if(appView==='fair') renderFairBoard(); else renderBoard(); }
+function viewKey(){ return 'kaizen-view-'+(Store.userId||Store.email||'anon'); }
+function saveView(){ try{ localStorage.setItem(viewKey(), JSON.stringify({ appView, gameId:state.currentGameId, tab:currentTab, fairId:currentFairId })); }catch(e){} }
+function restoreView(){ try{ const raw=localStorage.getItem(viewKey()); if(!raw) return; const v=JSON.parse(raw);
+  if(v.appView==='game' && v.gameId && (state.games.some(g=>g.id===v.gameId)||(sharedGames||[]).some(g=>g.id===v.gameId))){ appView='game'; state.currentGameId=v.gameId; currentTab=v.tab||'inicio'; }
+  else if(v.appView==='fair' && v.fairId && (state.fairs||[]).some(f=>f.id===v.fairId)){ appView='fair'; currentFairId=v.fairId; }
+  else if(v.appView==='design'||v.appView==='ferias'||v.appView==='editoriales'){ appView=v.appView; }
+}catch(e){} }
+function render(){ const isP=(appView==='home'||appView==='design'||appView==='ferias'||appView==='editoriales'); document.body.classList.toggle('view-home', isP); document.body.classList.toggle('view-game', !isP); if(appView==='home') renderHomeHub(); else if(appView==='design') renderDesignPortada(); else if(appView==='ferias') renderFeriasPortada(); else if(appView==='editoriales') renderEditorialesPortada(); else if(appView==='fair') renderFairBoard(); else renderBoard(); saveView(); }
 function openArea(v){ appView=v; if(v==='editoriales'){ edGroupKey=null; edEntryId=null; } closePanel(); render(); }
 function goBack(){ if(appView==='game') appView='design'; else if(appView==='fair') appView='ferias'; else appView='home'; closePanel(); render(); }
 
@@ -2257,12 +2264,14 @@ $('drawAdd').onclick=()=>{ const cv=$('drawCanvas'); let url=null; try{ url=cv.t
 async function bootApp(){ await loadState(); if(normalizeStructures()) await saveState();
   if(dedupeLocalIds()) await saveLocal();
   if(Store.backend==='supabase'){ const sc=readSharedCache(); if(sc) sharedGames=sc; }
+  restoreView();
   render(); updateBackend(); updateSavedIndicator();
   if(Store.backend==='supabase' && !isOffline()){
     try{ await Store.upsertProfile(); }catch(e){}
     await Promise.allSettled([ Store.checkAdmin(), reloadDirectory(), reloadSharedGames(), reloadInvites(), reloadSentInvites(), reloadAnnouncements() ]);
     await reconcileSharedDuplicates();
     await syncPending();
+    restoreView();
     render(); updateBackend();
     await syncPendingShared();
   }
