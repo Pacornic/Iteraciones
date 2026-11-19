@@ -1615,7 +1615,7 @@ function renderEdDetailPage(){
   const ent=(state.editorials||[]).find(e=>e.id===edEntryId); if(!ent){ edEntryId=null; renderEditorialesPortada(); return; }
   const host=$('portada'); host.innerHTML='';
   const inner=document.createElement('div'); inner.className='pt-inner'; inner.id='edPage';
-  const backLabel = '← ' + (edByGame() ? (gameNameById(ent.gameId)||ent.gameName||'Juego') : (ent.editorial||'Editorial'));
+  const backLabel = '← Editoriales';
   ptBack(inner, backLabel, ()=>{ edEntryId=null; renderEditorialesPortada(); });
   const g=allGames().find(x=>x.id===ent.gameId); const gcolor=(g&&g.color)||colorFor(ent.gameName||'');
   const updates=(ent.updates||[]).slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
